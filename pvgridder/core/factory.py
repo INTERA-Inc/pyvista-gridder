@@ -10,6 +10,7 @@ from ._helpers import (
     generate_arc,
     generate_line_from_two_points,
     generate_plane_surface_from_two_lines,
+    generate_volume_from_two_surfaces,
 )
 
 
@@ -130,4 +131,18 @@ class MeshFactory2D(MeshFactoryBase):
             + mesh_x90.cast_to_unstructured_grid()
         )
         
+        return self.add_mesh(mesh, *args, **kwargs)
+
+
+class MeshFactory3D(MeshFactoryBase):
+    def add_volume(
+        self,
+        surface_a: pv.StructuredGrid | pv.UnstructuredGrid,
+        surface_b: pv.StructuredGrid | pv.UnstructuredGrid,
+        nsub: Optional[int | list[float]] = None,
+        *args,
+        **kwargs
+    ) -> pv.UnstructuredGrid | None:
+        mesh = generate_volume_from_two_surfaces(surface_a, surface_b, nsub)
+
         return self.add_mesh(mesh, *args, **kwargs)
