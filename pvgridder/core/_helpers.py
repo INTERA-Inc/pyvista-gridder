@@ -138,6 +138,24 @@ def generate_volume_from_two_surfaces(
     return mesh
 
 
+def stack_two_structured_grids(
+    mesh_a: pv.StructuredGrid,
+    mesh_b: pv.StructuredGrid,
+) -> pv.StructuredGrid:
+    if not (
+        np.allclose(mesh_a.x[..., -1], mesh_b.x[..., 0])
+        and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
+        and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
+    ):
+        raise ValueError("could not stack structured grids with non-matching top and bottom surfaces")
+
+    X = np.concatenate((mesh_a.x, mesh_b.x[..., 1:]), axis=-1)
+    Y = np.concatenate((mesh_a.y, mesh_b.y[..., 1:]), axis=-1)
+    Z = np.concatenate((mesh_a.z, mesh_b.z[..., 1:]), axis=-1)
+
+    return pv.StructuredGrid(X, Y, Z)
+
+
 def line_to_array(line: pv.PolyData | ArrayLike) -> ArrayLike:
     if isinstance(line, pv.PolyData):
         line = line.points
