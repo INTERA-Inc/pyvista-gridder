@@ -50,10 +50,92 @@ def generate_plane_surface_from_two_lines(
         raise ValueError("could not generate plane surface from two inhomogeneous lines")
 
     perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
-    X, Y = np.transpose(line_a + perc * (line_b - line_a), axes=(2, 1, 0))
+    X, Y = (line_a + perc * (line_b - line_a)).transpose((2, 1, 0))
     Z = np.zeros_like(X)
 
     return pv.StructuredGrid(X, Y, Z)
+
+
+def generate_volume_from_two_surfaces(
+    surface_a: pv.StructuredGrid | pv.UnstructuredGrid,
+    surface_b: pv.StructuredGrid | pv.UnstructuredGrid,
+    nsub: Optional[int | list[float]] = None,
+) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    if surface_a.points.shape != surface_b.points.shape or not isinstance(surface_a, type(surface_b)):
+        raise ValueError("could not generate volume from two inhomogeneous surfaces")
+
+    if isinstance(surface_a, pv.StructuredGrid):
+        if surface_a.dimensions != surface_b.dimensions:
+            raise ValueError("could not generate volume from two inhomogeneous structured surfaces")
+
+        if sum(n == 1 for n in surface_a.dimensions) != 1:
+            raise ValueError("could not generate volume from non 2D structured grid")
+
+        idx = surface_a.dimensions.index(1)
+        slice_ = (
+            (0,)
+            if idx == 0
+            else (slice(None), 0)
+            if idx == 1
+            else (slice(None), slice(None), 0)
+        )
+        xa, ya, za = surface_a.x[slice_], surface_a.y[slice_], surface_a.z[slice_]
+        xb, yb, zb = surface_b.x[slice_], surface_b.y[slice_], surface_b.z[slice_]
+
+        perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
+        X = (xa + perc * (xb - xa)).transpose((1, 2, 0))
+        Y = (ya + perc * (yb - ya)).transpose((1, 2, 0))
+        Z = (za + perc * (zb - za)).transpose((1, 2, 0))
+        mesh = pv.StructuredGrid(X, Y, Z)
+
+    elif isinstance(surface_a, pv.UnstructuredGrid):
+        celltypes = _celltype_map[surface_a.celltypes]
+
+        if (celltypes == -1).any():
+            raise ValueError("could not generate volume from surfaces with unsupported cell types")
+
+        if not np.allclose(surface_a.celltypes, surface_b.celltypes):
+            raise ValueError("could not generate volume from two inhomogeneous unstructured surfaces")
+
+        points_a = surface_a.points
+        points_b = surface_b.points
+
+        perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
+        points = points_a + perc * (points_b - points_a)
+
+        n = perc.size - 1
+        n_points = surface_a.n_points
+        offset = surface_a.offset
+        cell_connectivity = surface_a.cell_connectivity
+        cells = [[] for _ in range(n)]
+
+        for i1, i2, celltype in zip(offset[:-1], offset[1:], celltypes):
+            cell = cell_connectivity[i1 : i2]
+
+            if celltype == 42:  # POLYHEDRON
+                raise NotImplementedError()
+
+            else:
+                cell = np.concatenate((cell, cell + n_points))
+
+            for i, cells_ in enumerate(cells):
+                cells_ += [cell.size, *(cell + (i * n_points)).tolist()]
+
+        cells = np.concatenate(cells)
+        celltypes = np.tile(celltypes, n)
+        points = points.reshape((n_points * (n + 1), 3))
+        mesh = pv.UnstructuredGrid(cells, celltypes, points)
+
+    else:
+        raise ValueError(f"could not generate volume from {type(surface_a)}")
+
+    for k, v in surface_a.point_data.items():
+        mesh.point_data[k] = np.tile(v, perc.size)
+
+    for k, v in surface_a.cell_data.items():
+        mesh.cell_data[k] = np.tile(v, perc.size - 1)
+
+    return mesh
 
 
 def line_to_array(line: pv.PolyData | ArrayLike) -> ArrayLike:
@@ -78,3 +160,9 @@ def nsub_to_perc(nsub: int | list[float]) -> list[float]:
         raise ValueError("invalid subdivisions")
 
     return perc
+
+
+_celltype_map = np.full(int(max(pv.CellType)), -1)
+_celltype_map[int(pv.CellType["TRIANGLE"])] = int(pv.CellType["WEDGE"])
+_celltype_map[int(pv.CellType["QUAD"])] = int(pv.CellType["HEXAHEDRON"])
+# _celltype_map[int(pv.CellType["POLYGON"])] = int(pv.CellType["POLYHEDRON"])

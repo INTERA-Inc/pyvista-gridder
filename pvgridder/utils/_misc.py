@@ -1,7 +1,28 @@
 from __future__ import annotations
+from numpy.typing import ArrayLike
 
 import numpy as np
 import pyvista as pv
+
+from ..core._helpers import generate_volume_from_two_surfaces
+
+
+def extrude(
+    mesh: pv.StructuredGrid | pv.UnstructuredGrid,
+    vector: ArrayLike,
+    nsub: Optional[int | list[float]] = None,
+) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    vector = np.asarray(vector)
+
+    if vector.shape != (3,):
+        raise ValueError("invalid extrusion vector")
+
+    mesh_a = mesh
+    mesh_b = mesh.copy()
+    mesh_b.points += vector
+    mesh = generate_volume_from_two_surfaces(mesh_a, mesh_b, nsub)
+
+    return mesh
 
 
 def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
