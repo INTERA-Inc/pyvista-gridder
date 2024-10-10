@@ -140,17 +140,44 @@ def generate_volume_from_two_surfaces(
 def stack_two_structured_grids(
     mesh_a: pv.StructuredGrid,
     mesh_b: pv.StructuredGrid,
+    axis: int,
 ) -> pv.StructuredGrid:
-    if not (
-        np.allclose(mesh_a.x[..., -1], mesh_b.x[..., 0])
-        and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
-        and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
-    ):
-        raise ValueError("could not stack structured grids with non-matching top and bottom surfaces")
+    if sum(n == 1 for n in mesh_a.dimensions) == 1:
+        axis = min(axis, 1)
 
-    X = np.concatenate((mesh_a.x, mesh_b.x[..., 1:]), axis=-1)
-    Y = np.concatenate((mesh_a.y, mesh_b.y[..., 1:]), axis=-1)
-    Z = np.concatenate((mesh_a.z, mesh_b.z[..., 1:]), axis=-1)
+    if axis == 0:
+        if not (
+            np.allclose(mesh_a.x[-1], mesh_b.x[0])
+            and np.allclose(mesh_a.y[-1], mesh_b.y[0])
+            and np.allclose(mesh_a.z[-1], mesh_b.z[0])
+        ):
+            raise ValueError("could not stack structured grids with non-matching east and west surfaces")
+
+        slice_ = (slice(1, None),)
+
+    elif axis == 1:
+        if not (
+            np.allclose(mesh_a.x[:, -1], mesh_b.x[:, 0])
+            and np.allclose(mesh_a.y[:, -1], mesh_b.y[:, 0])
+            and np.allclose(mesh_a.z[:, -1], mesh_b.z[:, 0])
+        ):
+            raise ValueError("could not stack structured grids with non-matching north and south surfaces")
+
+        slice_ = (slice(None), slice(1, None))
+
+    else:
+        if not (
+            np.allclose(mesh_a.x[..., -1], mesh_b.x[..., 0])
+            and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
+            and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
+        ):
+            raise ValueError("could not stack structured grids with non-matching top and bottom surfaces")
+
+        slice_ = (slice(None), slice(None), slice(1, None))
+
+    X = np.concatenate((mesh_a.x, mesh_b.x[slice_]), axis=axis)
+    Y = np.concatenate((mesh_a.y, mesh_b.y[slice_]), axis=axis)
+    Z = np.concatenate((mesh_a.z, mesh_b.z[slice_]), axis=axis)
 
     return pv.StructuredGrid(X, Y, Z)
 
