@@ -132,28 +132,26 @@ class MeshStackBase(ABC):
         self.items.append(item)
 
     def stack(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
-        if len(self.items) > 1:
-            for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
-                mesh_b = self._extrude(
-                    item1["mesh"],
-                    item2["mesh"],
-                    item2["nsub"],
-                )
-                mesh_b.cell_data["group"] = np.full(mesh_b.n_cells, i)
+        if len(self.items) <= 1:
+            raise ValueError("not enough items to stack")
 
-                if i > 0:
-                    if isinstance(mesh, pv.StructuredGrid):
-                        # mesh = stack_two_structured_grids(mesh, mesh_b)
-                        mesh = mesh + mesh_b
+        group = []
 
-                    else:
-                        mesh += mesh_b
+        for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
+            mesh_b = self._extrude(item1["mesh"], item2["mesh"], item2["nsub"])
+            group += [i] * mesh_b.n_cells
+
+            if i > 0:
+                if isinstance(mesh, pv.StructuredGrid):
+                    mesh = stack_two_structured_grids(mesh, mesh_b, self.axis)
 
                 else:
-                    mesh = mesh_b
+                    mesh += mesh_b
 
-        else:
-            raise ValueError("not enough items to stack")
+            else:
+                mesh = mesh_b
+
+        mesh.cell_data["group"] = group
 
         return mesh
 
