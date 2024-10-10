@@ -50,8 +50,7 @@ def generate_plane_surface_from_two_lines(
         raise ValueError("could not generate plane surface from two inhomogeneous lines")
 
     perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
-    X, Y = (line_a + perc * (line_b - line_a)).transpose((2, 1, 0))
-    Z = np.zeros_like(X)
+    X, Y, Z = (line_a + perc * (line_b - line_a)).transpose((2, 1, 0))
 
     return pv.StructuredGrid(X, Y, Z)
 
@@ -160,7 +159,7 @@ def line_to_array(line: pv.PolyData | ArrayLike) -> ArrayLike:
     if isinstance(line, pv.PolyData):
         line = line.points
 
-    return np.asarray(line)[:, :2]
+    return np.asarray(line)
 
 
 def nsub_to_perc(nsub: int | list[float]) -> list[float]:
