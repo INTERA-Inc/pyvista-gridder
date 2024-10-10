@@ -43,8 +43,8 @@ def generate_plane_surface_from_two_lines(
     line_b: pv.PolyData | ArrayLike,
     nsub: Optional[int | list[float]] = None,
 ) -> pv.StructuredGrid:
-    line_a = line_to_array(line_a)
-    line_b = line_to_array(line_b)
+    line_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
+    line_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
     
     if line_a.shape != line_b.shape:
         raise ValueError("could not generate plane surface from two inhomogeneous lines")
@@ -153,13 +153,6 @@ def stack_two_structured_grids(
     Z = np.concatenate((mesh_a.z, mesh_b.z[..., 1:]), axis=-1)
 
     return pv.StructuredGrid(X, Y, Z)
-
-
-def line_to_array(line: pv.PolyData | ArrayLike) -> ArrayLike:
-    if isinstance(line, pv.PolyData):
-        line = line.points
-
-    return np.asarray(line)
 
 
 def nsub_to_perc(nsub: int | list[float]) -> list[float]:
