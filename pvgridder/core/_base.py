@@ -159,7 +159,7 @@ class MeshStackBase(ABC):
 
         # Postprocessing
         if isinstance(mesh, pv.StructuredGrid):
-            shape = [n - 1 for n in mesh.dimensions]
+            shape = [n - 1 for n in mesh.dimensions if n > 1]
             group = np.zeros(shape, dtype=int)
 
             for i, (i1, i2) in enumerate(zip(offset[:-1], offset[1:])):
