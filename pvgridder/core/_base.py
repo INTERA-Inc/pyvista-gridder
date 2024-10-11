@@ -87,6 +87,9 @@ class MeshStackBase(ABC):
         if axis not in {0, 1, 2}:
             raise ValueError(f"invalid axis {axis} (expected {{0, 1, 2}}, got {axis})")
 
+        if isinstance(mesh, pv.StructuredGrid) and mesh.dimensions[axis] != 1:
+            raise ValueError(f"invalid mesh or axis, dimension along axis {axis} should be 1 (got {mesh.dimensions[axis]})")
+
         self._mesh = mesh.copy()
         self._axis = axis
         self._items = []
@@ -112,9 +115,6 @@ class MeshStackBase(ABC):
                 arg = np.asarray(arg)
 
                 if arg.ndim == 2:
-                    if arg.shape[1] == 2:
-                        arg = np.column_stack((arg, np.zeros(len(arg))))
-
                     if arg.shape[1] != 3:
                         raise ValueError("invalid 2D array")
 
@@ -131,15 +131,21 @@ class MeshStackBase(ABC):
 
         self.items.append(item)
 
-    def stack(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
+    def stack(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         if len(self.items) <= 1:
             raise ValueError("not enough items to stack")
 
-        group = []
+        offset = [0]
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_b = self._extrude(item1["mesh"], item2["mesh"], item2["nsub"])
-            group += [i] * mesh_b.n_cells
+
+            if isinstance(mesh_b, pv.StructuredGrid):
+                nsub = item2["nsub"] if isinstance(item2["nsub"], int) else len(item2["nsub"]) - 1
+                offset.append(offset[-1] + nsub)
+
+            else:
+                mesh_b.cell_data["group"] = [i] * mesh_b.n_cells
 
             if i > 0:
                 if isinstance(mesh, pv.StructuredGrid):
@@ -151,7 +157,26 @@ class MeshStackBase(ABC):
             else:
                 mesh = mesh_b
 
-        mesh.cell_data["group"] = group
+        # Postprocessing
+        if isinstance(mesh, pv.StructuredGrid):
+            shape = [n - 1 for n in mesh.dimensions]
+            group = np.zeros(shape, dtype=int)
+
+            for i, (i1, i2) in enumerate(zip(offset[:-1], offset[1:])):
+                if self.axis == 0:
+                    group[i1 : i2] = i
+
+                elif self.axis == 1:
+                    group[:, i1 : i2] = i
+
+                else:
+                    group[..., i1 : i2] = i
+
+            group = group.ravel(order="F")
+            mesh.cell_data["group"] = group
+
+        else:
+            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
         return mesh
 

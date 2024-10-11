@@ -71,20 +71,26 @@ def generate_volume_from_two_surfaces(
             raise ValueError("could not generate volume from non 2D structured grid")
 
         idx = surface_a.dimensions.index(1)
-        slice_ = (
-            (0,)
-            if idx == 0
-            else (slice(None), 0)
-            if idx == 1
-            else (slice(None), slice(None), 0)
-        )
+
+        if idx == 0:
+            slice_ = (0,)
+            axis = (0, 1, 2)
+
+        elif idx == 1:
+            slice_ = (slice(None), 0)
+            axis = (2, 0, 1)
+
+        else:
+            slice_ = (slice(None), slice(None), 0)
+            axis = (1, 2, 0)
+
         xa, ya, za = surface_a.x[slice_], surface_a.y[slice_], surface_a.z[slice_]
         xb, yb, zb = surface_b.x[slice_], surface_b.y[slice_], surface_b.z[slice_]
 
         perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
-        X = (xa + perc * (xb - xa)).transpose((1, 2, 0))
-        Y = (ya + perc * (yb - ya)).transpose((1, 2, 0))
-        Z = (za + perc * (zb - za)).transpose((1, 2, 0))
+        X = (xa + perc * (xb - xa)).transpose(axis)
+        Y = (ya + perc * (yb - ya)).transpose(axis)
+        Z = (za + perc * (zb - za)).transpose(axis)
         mesh = pv.StructuredGrid(X, Y, Z)
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
