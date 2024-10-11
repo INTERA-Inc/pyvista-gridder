@@ -12,8 +12,12 @@ from ._helpers import stack_two_structured_grids
 
 
 class MeshFactoryBase(ABC):
-    def __init__(self):
-        self._meshes = {}
+    def __init__(
+        self,
+        group: Optional[str] = None,
+    ) -> None:
+        self._group = group if group else "default"
+        self._items = []
 
     def add_mesh(
         self,
@@ -35,47 +39,40 @@ class MeshFactoryBase(ABC):
             mesh = mesh.translate(origin)
 
         # Add group
-        group = group if group else "default"
-
-        if group in self.meshes:
-            self.meshes[group].append(mesh)
-
-        else:
-            self.meshes[group] = [mesh]
+        item = {
+            "mesh": mesh,
+            "group": group if group else self.group,
+        }
+        self.items.append(item)
 
         if return_mesh:
             return mesh
 
     def merge(
         self,
-        groups: Optional[list[str]] = None,
         tolerance: float = 1.0e-8,
     ) -> pv.UnstructuredGrid:
-        if groups is not None:
-            for group in groups:
-                if group not in self.meshes:
-                    raise ValueError(f"invalid group '{group}'")
-
-        else:
-            groups = list(self.meshes)    
-        
         mesh = pv.UnstructuredGrid()
+        groups = {}
 
-        for i, group in enumerate(groups):
-            try:
-                group_mesh = pv.merge(self.meshes[group])
+        for i, item in enumerate(self.items):
+            mesh_b = item["mesh"]
 
-            except KeyError:
-                raise ValueError(f"invalid group '{group}'")
+            if item["group"] not in groups:
+                groups[item["group"]] = len(groups)
 
-            group_mesh["group"] = np.full(group_mesh.n_cells, i)
-            mesh += group_mesh
+            mesh_b.cell_data["group"] = [groups[item["group"]]] * mesh_b.n_cells
+            mesh += mesh_b
 
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
     @property
-    def meshes(self) -> dict:
-        return self._meshes
+    def group(self) -> str:
+        return self._group
+
+    @property
+    def items(self) -> list:
+        return self._items
 
 
 class MeshStackBase(ABC):
@@ -83,6 +80,7 @@ class MeshStackBase(ABC):
         self,
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
+        group: Optional[str] = None,
     ) -> None:
         if axis not in {0, 1, 2}:
             raise ValueError(f"invalid axis {axis} (expected {{0, 1, 2}}, got {axis})")
@@ -92,6 +90,7 @@ class MeshStackBase(ABC):
 
         self._mesh = mesh.copy()
         self._axis = axis
+        self._group = group if group else "default"
         self._items = []
 
     def add(
@@ -99,7 +98,8 @@ class MeshStackBase(ABC):
         arg: float | ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         nsub: Optional[int] = None,
         group: Optional[str] = None,
-    ) -> None:
+        return_mesh: bool = False,
+    ) -> pv.StructuredGrid | pv.UnstructuredGrid | None:
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
             mesh = self._interpolate(arg.points)
 
@@ -127,25 +127,32 @@ class MeshStackBase(ABC):
 
         if self.items:
             item["nsub"] = nsub
-            item["group"] = group
+            item["group"] = group if group else self.group
 
         self.items.append(item)
+
+        if return_mesh:
+            return mesh
 
     def stack(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         if len(self.items) <= 1:
             raise ValueError("not enough items to stack")
 
         offset = [0]
+        groups = {}
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_b = self._extrude(item1["mesh"], item2["mesh"], item2["nsub"])
+
+            if item2["group"] not in groups:
+                groups[item2["group"]] = len(groups)
 
             if isinstance(mesh_b, pv.StructuredGrid):
                 nsub = item2["nsub"] if isinstance(item2["nsub"], int) else len(item2["nsub"]) - 1
                 offset.append(offset[-1] + nsub)
 
             else:
-                mesh_b.cell_data["group"] = [i] * mesh_b.n_cells
+                mesh_b.cell_data["group"] = [groups[item2["group"]]] * mesh_b.n_cells
 
             if i > 0:
                 if isinstance(mesh, pv.StructuredGrid):
@@ -162,20 +169,24 @@ class MeshStackBase(ABC):
             group = np.zeros(shape, dtype=int)
 
             for i, (i1, i2) in enumerate(zip(offset[:-1], offset[1:])):
+                group_name = self.items[i + 1]["group"]
+
                 if self.axis == 0:
-                    group[i1 : i2] = i
+                    group[i1 : i2] = groups[group_name]
 
                 elif self.axis == 1:
-                    group[:, i1 : i2] = i
+                    group[:, i1 : i2] = groups[group_name]
 
                 else:
-                    group[..., i1 : i2] = i
+                    group[..., i1 : i2] = groups[group_name]
 
             group = group.ravel(order="F")
             mesh.cell_data["group"] = group
 
         else:
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
+
+        mesh.user_dict["group"] = groups
 
         return mesh
 
@@ -204,6 +215,10 @@ class MeshStackBase(ABC):
     @property
     def axis(self) -> int:
         return self._axis
+
+    @property
+    def group(self) -> str:
+        return self._group
 
     @property
     def items(self) -> list:
