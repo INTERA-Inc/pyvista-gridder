@@ -157,7 +157,6 @@ class MeshStackBase(ABC):
             else:
                 mesh = mesh_b
 
-        # Postprocessing
         if isinstance(mesh, pv.StructuredGrid):
             shape = [n - 1 for n in mesh.dimensions if n > 1]
             group = np.zeros(shape, dtype=int)
@@ -181,7 +180,7 @@ class MeshStackBase(ABC):
         return mesh
 
     @abstractmethod
-    def _extrude(self, *args, **kwargs):
+    def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         pass
 
     def _interpolate(self, points: ArrayLike) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
