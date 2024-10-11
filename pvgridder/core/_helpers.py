@@ -67,7 +67,7 @@ def generate_volume_from_two_surfaces(
         if surface_a.dimensions != surface_b.dimensions:
             raise ValueError("could not generate volume from two inhomogeneous structured surfaces")
 
-        if sum(n == 1 for n in surface_a.dimensions) != 1:
+        if not is2d(surface_a):
             raise ValueError("could not generate volume from non 2D structured grid")
 
         idx = surface_a.dimensions.index(1)
@@ -94,9 +94,7 @@ def generate_volume_from_two_surfaces(
         mesh = pv.StructuredGrid(X, Y, Z)
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
-        celltypes = _celltype_map[surface_a.celltypes]
-
-        if (celltypes == -1).any():
+        if not is2d(surface_a):
             raise ValueError("could not generate volume from surfaces with unsupported cell types")
 
         if not np.allclose(surface_a.celltypes, surface_b.celltypes):
@@ -111,6 +109,7 @@ def generate_volume_from_two_surfaces(
         n = perc.size - 1
         n_points = surface_a.n_points
         offset = surface_a.offset
+        celltypes = _celltype_map[surface_a.celltypes]
         cell_connectivity = surface_a.cell_connectivity
         cells = [[] for _ in range(n)]
 
@@ -203,6 +202,14 @@ def nsub_to_perc(nsub: int | list[float]) -> list[float]:
         raise ValueError("invalid subdivisions")
 
     return perc
+
+
+def is2d(mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> bool:
+    if isinstance(mesh, pv.StructuredGrid):
+        return sum(n == 1 for n in mesh.dimensions) == 1
+
+    else:
+        return (_celltype_map[mesh.celltypes] != -1).all()
 
 
 _celltype_map = np.full(int(max(pv.CellType)), -1)
