@@ -64,6 +64,8 @@ class MeshFactoryBase(ABC):
             mesh_b.cell_data["group"] = [groups[item["group"]]] * mesh_b.n_cells
             mesh += mesh_b
 
+        mesh.user_dict["group"] = groups
+
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
     @property
