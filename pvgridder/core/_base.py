@@ -11,13 +11,23 @@ from scipy.interpolate import LinearNDInterpolator
 from ._helpers import stack_two_structured_grids
 
 
-class MeshFactoryBase(ABC):
-    def __init__(
-        self,
-        group: Optional[str] = None,
-    ) -> None:
+class MeshBase(ABC):
+    def __init__(self, group: Optional[str] = None) -> None:
         self._group = group if group else "default"
+
+    @abstractmethod
+    def generate_mesh(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        pass
+
+    @property
+    def group(self) -> str:
+        return self._group
+
+
+class MeshFactoryBase(MeshBase):
+    def __init__(self, group: Optional[str] = None) -> None:
         self._items = []
+        super().__init__(group)
 
     def add_mesh(
         self,
@@ -48,10 +58,7 @@ class MeshFactoryBase(ABC):
         if return_mesh:
             return mesh
 
-    def merge(
-        self,
-        tolerance: float = 1.0e-8,
-    ) -> pv.UnstructuredGrid:
+    def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.UnstructuredGrid:
         mesh = pv.UnstructuredGrid()
         groups = {}
 
@@ -69,15 +76,11 @@ class MeshFactoryBase(ABC):
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
     @property
-    def group(self) -> str:
-        return self._group
-
-    @property
     def items(self) -> list:
         return self._items
 
 
-class MeshStackBase(ABC):
+class MeshStackBase(MeshBase):
     def __init__(
         self,
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
@@ -92,8 +95,8 @@ class MeshStackBase(ABC):
 
         self._mesh = mesh.copy()
         self._axis = axis
-        self._group = group if group else "default"
         self._items = []
+        super().__init__(group)
 
     def add(
         self,
@@ -136,7 +139,7 @@ class MeshStackBase(ABC):
         if return_mesh:
             return mesh
 
-    def stack(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         if len(self.items) <= 1:
             raise ValueError("not enough items to stack")
 
@@ -192,10 +195,6 @@ class MeshStackBase(ABC):
     @property
     def axis(self) -> int:
         return self._axis
-
-    @property
-    def group(self) -> str:
-        return self._group
 
     @property
     def items(self) -> list:
