@@ -30,7 +30,7 @@ def clean(c, bytecode=False):
     patterns = [
         "build",
         "dist",
-        "pvgridder.egg-info",
+        "pyvista_gridder.egg-info",
         "doc/build",
         "doc/source/examples",
     ]
