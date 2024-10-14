@@ -1,5 +1,6 @@
 from . import utils
 from .core import (
+    MeshExtrude,
     MeshFactory2D,
     MeshFactory3D,
     MeshStack2D,
@@ -7,6 +8,7 @@ from .core import (
 )
 
 __all__ = [
+    "MeshExtrude",
     "MeshFactory2D",
     "MeshFactory3D",
     "MeshStack2D",
