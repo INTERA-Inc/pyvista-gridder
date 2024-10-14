@@ -140,7 +140,6 @@ class MeshStackBase(ABC):
         if len(self.items) <= 1:
             raise ValueError("not enough items to stack")
 
-        offset = [0]
         groups = {}
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
@@ -149,12 +148,7 @@ class MeshStackBase(ABC):
             if item2["group"] not in groups:
                 groups[item2["group"]] = len(groups)
 
-            if isinstance(mesh_b, pv.StructuredGrid):
-                nsub = item2["nsub"] if isinstance(item2["nsub"], int) else len(item2["nsub"]) - 1
-                offset.append(offset[-1] + nsub)
-
-            else:
-                mesh_b.cell_data["group"] = [groups[item2["group"]]] * mesh_b.n_cells
+            mesh_b.cell_data["group"] = [groups[item2["group"]]] * mesh_b.n_cells
 
             if i > 0:
                 if isinstance(mesh, pv.StructuredGrid):
@@ -166,29 +160,10 @@ class MeshStackBase(ABC):
             else:
                 mesh = mesh_b
 
-        if isinstance(mesh, pv.StructuredGrid):
-            shape = [n - 1 for n in mesh.dimensions if n > 1]
-            group = np.zeros(shape, dtype=int)
-
-            for i, (i1, i2) in enumerate(zip(offset[:-1], offset[1:])):
-                group_name = self.items[i + 1]["group"]
-
-                if self.axis == 0:
-                    group[i1 : i2] = groups[group_name]
-
-                elif self.axis == 1:
-                    group[:, i1 : i2] = groups[group_name]
-
-                else:
-                    group[..., i1 : i2] = groups[group_name]
-
-            group = group.ravel(order="F")
-            mesh.cell_data["group"] = group
-
-        else:
-            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
-
         mesh.user_dict["group"] = groups
+
+        if isinstance(mesh, pv.UnstructuredGrid):
+            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
         return mesh
 

@@ -183,8 +183,26 @@ def stack_two_structured_grids(
     X = np.concatenate((mesh_a.x, mesh_b.x[slice_]), axis=axis)
     Y = np.concatenate((mesh_a.y, mesh_b.y[slice_]), axis=axis)
     Z = np.concatenate((mesh_a.z, mesh_b.z[slice_]), axis=axis)
+    mesh = pv.StructuredGrid(X, Y, Z)
 
-    return pv.StructuredGrid(X, Y, Z)
+    if mesh_a.cell_data:
+        shape_a = [n - 1 for n in mesh_a.dimensions if n > 1]
+        shape_b = [n - 1 for n in mesh_b.dimensions if n > 1]
+        mesh.cell_data.update(
+            {
+                k: np.concatenate(
+                    (
+                        v.reshape(shape_a, order="F"),
+                        mesh_b.cell_data[k].reshape(shape_b, order="F"),
+                    ),
+                    axis=axis,
+                ).ravel(order="F")
+                for k, v in mesh_a.cell_data.items()
+                if k in mesh_b.cell_data
+            }
+        )
+
+    return mesh
 
 
 def nsub_to_perc(nsub: int | list[float]) -> list[float]:
