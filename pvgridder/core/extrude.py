@@ -19,6 +19,7 @@ class MeshExtrude(MeshBase):
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         vector: ArrayLike,
         angle: float = 0.0,
+        scale: float = 1.0,
         group: Optional[str] = None,
         ignore_group: bool = False,
     ) -> None:
@@ -28,6 +29,7 @@ class MeshExtrude(MeshBase):
         self._mesh = mesh
         self._vector = self._check_vector(vector)
         self._angle = angle
+        self._scale = scale
         self._items = [{"mesh": mesh}]
         self._ignore_group = ignore_group
         super().__init__(group)
@@ -36,6 +38,7 @@ class MeshExtrude(MeshBase):
         self,
         vector: Optional[ArrayLike] = None,
         angle: Optional[float] = None,
+        scale: Optional[float] = None,
         nsub: Optional[int | ArrayLike] = None,
         group: Optional[str | dict] = None,
         return_mesh: bool = False,
@@ -43,12 +46,16 @@ class MeshExtrude(MeshBase):
         vector = vector if vector is not None else self.vector
         vector = self._check_vector(vector)
         angle = angle if angle is not None else self.angle
+        scale = scale if scale is not None else self.scale
 
         mesh = self.items[-1]["mesh"].copy()
         mesh = mesh.translate(vector)
         
         if angle:
             mesh = mesh.rotate_vector(vector, angle, mesh.center)
+
+        if scale:
+            mesh.points = (mesh.points - mesh.center) * scale + mesh.center
 
         item = {
             "mesh": mesh,
@@ -131,6 +138,10 @@ class MeshExtrude(MeshBase):
     @property
     def angle(self) -> float:
         return self._angle
+
+    @property
+    def scale(self) -> float:
+        return self._scale
 
     @property
     def items(self) -> list:
