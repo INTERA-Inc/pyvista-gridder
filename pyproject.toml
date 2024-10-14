@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyvista-gridder"
+dynamic = ["version"]
+description = "Mesh generation using PyVista"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.8"
+license = {text = "BSD 3-Clause License"}
+authors = [
+    {name = "Keurfon Luu", email = "kluu@intera.com"}
+]
+keywords = [
+    "mesh generation",
+    "numerical modeling",
+    "pyvista",
+]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Natural Language :: English",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy >= 1.13.0",
+    "pyvista >= 0.36",
+    "scipy >= 0.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/keurfonluu/pvgridder"
+Code = "https://github.com/keurfonluu/pvgridder"
+Issues = "https://github.com/keurfonluu/pvgridder/issues"
+
+[tool.setuptools.packages.find]
+include = ["pvgridder*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pvgridder.__about__.__version__"}
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+exclude = [
+    "pvgridder/__about__.py"
+]
+
+[tool.ruff.lint]
+select = [
+    # docformatter, see <https://github.com/astral-sh/ruff/issues/1335>
+    "D104",
+    "D106",
+    "D200",
+    "D204",
+    "D206",
+    "D207",
+    "D208",
+    "D209",
+    "D210",
+    "D211",
+    "D213",
+    "D214",
+    "D215",
+    "D300",
+    "D301",
+    "D400",
+    "D403",
+    "D404",
+    "D405",
+    "D406",
+    "D407",
+    "D408",
+    "D409",
+    "D410",
+    "D411",
+    "D412",
+    "D413",
+    "D414",
+    "D415",
+    "D416",
+    "D418",
+    "D419",
+    # isort
+    "I",
+]
+
+[tool.ruff.lint.isort]
+force-wrap-aliases = true
+combine-as-imports = true
+from-first = false
+lines-after-imports = 2
+relative-imports-order = "closest-to-furthest"
