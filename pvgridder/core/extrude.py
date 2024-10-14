@@ -17,17 +17,15 @@ class MeshExtrude(MeshBase):
     def __init__(
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
-        vector: ArrayLike,
-        angle: float = 0.0,
-        scale: float = 1.0,
+        scale: Optional[float] = None,
+        angle: Optional[float] = None,
         group: Optional[str] = None,
         ignore_group: bool = False,
     ) -> None:
         if not is2d(mesh):
-            raise ValueError()
+            raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
 
         self._mesh = mesh
-        self._vector = self._check_vector(vector)
         self._angle = angle
         self._scale = scale
         self._items = [{"mesh": mesh}]
@@ -36,26 +34,29 @@ class MeshExtrude(MeshBase):
 
     def add(
         self,
-        vector: Optional[ArrayLike] = None,
-        angle: Optional[float] = None,
-        scale: Optional[float] = None,
+        vector: ArrayLike,
         nsub: Optional[int | ArrayLike] = None,
+        scale: Optional[float] = None,
+        angle: Optional[float] = None,
         group: Optional[str | dict] = None,
         return_mesh: bool = False,
     ) -> pv.StructuredGrid | pv.UnstructuredGrid | None:
-        vector = vector if vector is not None else self.vector
-        vector = self._check_vector(vector)
-        angle = angle if angle is not None else self.angle
+        vector = np.asarray(vector)
+
+        if vector.shape != (3,):
+            raise ValueError("invalid extrusion vector")
+
         scale = scale if scale is not None else self.scale
+        angle = angle if angle is not None else self.angle
 
         mesh = self.items[-1]["mesh"].copy()
         mesh = mesh.translate(vector)
         
-        if angle:
-            mesh = mesh.rotate_vector(vector, angle, mesh.center)
-
-        if scale:
+        if scale is not None:
             mesh.points = (mesh.points - mesh.center) * scale + mesh.center
+
+        if angle is not None:
+            mesh = mesh.rotate_vector(vector, angle, mesh.center)
 
         item = {
             "mesh": mesh,
@@ -118,30 +119,17 @@ class MeshExtrude(MeshBase):
 
         return mesh
 
-    @staticmethod
-    def _check_vector(vector: ArrayLike) -> ArrayLike:
-        vector = np.asarray(vector)
-
-        if vector.shape != (3,):
-            raise ValueError("invalid extrusion vector")
-
-        return vector
-
     @property
     def mesh(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
         return self._mesh
 
     @property
-    def vector(self) -> ArrayLike:
-        return self._vector
-
-    @property
-    def angle(self) -> float:
-        return self._angle
-
-    @property
-    def scale(self) -> float:
+    def scale(self) -> float | None:
         return self._scale
+
+    @property
+    def angle(self) -> float | None:
+        return self._angle
 
     @property
     def items(self) -> list:
