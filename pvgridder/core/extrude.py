@@ -104,7 +104,7 @@ class MeshExtrude(MeshBase):
 
             if i > 0:
                 if isinstance(mesh, pv.StructuredGrid):
-                    mesh = stack_two_structured_grids(mesh, mesh_b, self.axis)
+                    mesh = stack_two_structured_grids(mesh, mesh_b, self.mesh.dimensions.index(1))
 
                 else:
                     mesh += mesh_b
