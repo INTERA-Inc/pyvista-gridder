@@ -101,7 +101,7 @@ class MeshStackBase(MeshBase):
     def add(
         self,
         arg: float | ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
-        nsub: Optional[int] = None,
+        nsub: Optional[int | ArrayLike] = None,
         group: Optional[str] = None,
         return_mesh: bool = False,
     ) -> pv.StructuredGrid | pv.UnstructuredGrid | None:

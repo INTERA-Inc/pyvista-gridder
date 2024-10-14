@@ -19,7 +19,7 @@ class MeshFactory2D(MeshFactoryBase):
         self,
         line_a: pv.PolyData | ArrayLike,
         line_b: pv.PolyData | ArrayLike,
-        nsub: Optional[int | list[float]] = None,
+        nsub: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -33,8 +33,8 @@ class MeshFactory2D(MeshFactoryBase):
         point_1: ArrayLike,
         point_2: ArrayLike,
         point_3: ArrayLike,
-        nsub_x: Optional[int | list[float]] = None,
-        nsub_y: Optional[int | list[float]] = None,
+        nsub_x: Optional[int | ArrayLike] = None,
+        nsub_y: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -47,8 +47,8 @@ class MeshFactory2D(MeshFactoryBase):
         self,
         dx: float,
         dy: float,
-        nsub_x: Optional[int | list[float]] = None,
-        nsub_y: Optional[int | list[float]] = None,
+        nsub_x: Optional[int | ArrayLike] = None,
+        nsub_y: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -66,7 +66,7 @@ class MeshFactory2D(MeshFactoryBase):
         r: float,
         theta_min: Optional[float] = None,
         theta_max: Optional[float] = None,
-        nsub: Optional[int | list[float]] = None,
+        nsub: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -93,8 +93,8 @@ class MeshFactory2D(MeshFactoryBase):
         r_out: float,
         theta_min: Optional[float] = None,
         theta_max: Optional[float] = None,
-        nsub_r: Optional[int | list[float]] = None,
-        nsub_theta: Optional[int | list[float]] = None,
+        nsub_r: Optional[int | ArrayLike] = None,
+        nsub_theta: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -112,8 +112,8 @@ class MeshFactory2D(MeshFactoryBase):
         dx: float,
         dy: float,
         r: float,
-        nsub_r: Optional[int | list[float]] = None,
-        nsub_theta: Optional[int | list[float]] = None,
+        nsub_r: Optional[int | ArrayLike] = None,
+        nsub_theta: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -139,7 +139,7 @@ class MeshFactory3D(MeshFactoryBase):
         self,
         surface_a: pv.StructuredGrid | pv.UnstructuredGrid,
         surface_b: pv.StructuredGrid | pv.UnstructuredGrid,
-        nsub: Optional[int | list[float]] = None,
+        nsub: Optional[int | ArrayLike] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
