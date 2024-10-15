@@ -180,11 +180,22 @@ class MeshStackBase(MeshBase):
 
         if len(idx) > 1:
             interp = LinearNDInterpolator(points[:, idx], points[:, self.axis])
-            mesh.points[:, self.axis] = interp(mesh.points[:, idx])
+            tmp = interp(mesh.points[:, idx])
+
+            if np.isnan(tmp).any():
+                raise ValueError("could not interpolate from points not fully enclosing base mesh")
+
+            mesh.points[:, self.axis] = tmp
 
         else:
             idx = idx[0]
-            mesh.points[:, self.axis] = np.interp(mesh.points[:, idx], points[:, idx], points[:, self.axis])
+            x = mesh.points[:, idx]
+            xp = points[:, idx]
+
+            if not (xp[0] <= x[0] <= xp[-1] and xp[0] <= x[-1] <= xp[-1]):
+                raise ValueError("could not interpolate from points not fully enclosing base mesh")
+
+            mesh.points[:, self.axis] = np.interp(x, xp, points[:, self.axis])
 
         return mesh
 
