@@ -111,7 +111,7 @@ class MeshStackBase(MeshBase):
         else:
             if np.ndim(arg) == 0:
                 if not self.items:
-                    raise ValueError("could not add first item with scalar arg")
+                    self.items.append({"mesh": self.mesh})
 
                 mesh = self.items[-1]["mesh"].copy()
                 mesh.points[:, self.axis] += arg
