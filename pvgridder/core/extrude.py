@@ -19,8 +19,8 @@ class MeshExtrude(MeshBase):
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         scale: Optional[float] = None,
         angle: Optional[float] = None,
-        group: Optional[str] = None,
-        ignore_group: bool = False,
+        default_group: Optional[str] = None,
+        ignore_groups: Optional[list[str]] = None,
     ) -> None:
         if not is2d(mesh):
             raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
@@ -29,8 +29,7 @@ class MeshExtrude(MeshBase):
         self._angle = angle
         self._scale = scale
         self._items = [{"mesh": mesh}]
-        self._ignore_group = ignore_group
-        super().__init__(group)
+        super().__init__(default_group, ignore_groups)
 
     def add(
         self,
@@ -61,7 +60,7 @@ class MeshExtrude(MeshBase):
         item = {
             "mesh": mesh,
             "nsub": nsub,
-            "group": group if group else {},
+            "group": group,
         }
         self.items.append(item)
 
@@ -72,32 +71,22 @@ class MeshExtrude(MeshBase):
         if len(self.items) <= 1:
             raise ValueError("not enough items to extrude")
 
-        if self.ignore_group or "group" not in self.mesh.user_dict:
-            groups = {}
-
-        else:
-            groups = dict(self.mesh.user_dict["group"])
+        groups = {}
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1["mesh"].copy()
-            group = item2["group"]
-            tmp = (
-                np.full(mesh_a.n_cells, -1, dtype=int)
-                if self.ignore_group or "group" not in mesh_a.cell_data
-                else mesh_a.cell_data["group"]
-            )
+            tmp = self._initialize_group_array(mesh_a, groups)
+
+            group = item2["group"] if item2["group"] else {}
+
+            if isinstance(group, str):
+                group = {group: lambda x: np.ones(x.n_cells, dtype=bool)}
 
             for k, v in group.items():
-                if k not in groups:
-                    groups[k] = len(groups)
-
-                tmp[v(mesh_a)] = groups[k]
+                tmp[v(mesh_a)] = self._get_group_number(k, groups)
 
             if (tmp == -1).any():
-                if self.group not in groups:
-                    groups[self.group] = len(groups)
-
-                tmp = np.where(tmp >= 0, tmp, groups[self.group])
+                tmp[tmp == -1] = self._get_group_number(self.default_group, groups)
 
             mesh_a.cell_data["group"] = tmp
             mesh_b = generate_volume_from_two_surfaces(mesh_a, item2["mesh"], item2["nsub"])
@@ -134,7 +123,3 @@ class MeshExtrude(MeshBase):
     @property
     def items(self) -> list:
         return self._items
-
-    @property
-    def ignore_group(self) -> bool:
-        return self._ignore_group

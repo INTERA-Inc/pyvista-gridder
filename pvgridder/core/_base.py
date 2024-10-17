@@ -12,22 +12,58 @@ from ._helpers import stack_two_structured_grids
 
 
 class MeshBase(ABC):
-    def __init__(self, group: Optional[str] = None) -> None:
-        self._group = group if group else "default"
+    def __init__(
+        self,
+        default_group: Optional[str] = None,
+        ignore_groups: Optional[list[str]] = None,
+    ) -> None:
+        self._default_group = default_group if default_group else "default"
+        self._ignore_groups = list(ignore_groups) if ignore_groups else []
+
+    def _initialize_group_array(
+        self,
+        mesh: pv.StructuredGrid | pv.UnstructuredGrid,
+        groups: dict,
+    ) -> ArrayLike:
+        group = np.full(mesh.n_cells, -1, dtype=int)
+
+        if ("group" in mesh.cell_data and "group" in mesh.user_dict):
+            for k, v in mesh.user_dict["group"].items():
+                if k in self.ignore_groups:
+                    continue
+
+                group[mesh.cell_data["group"] == v] = self._get_group_number(k, groups)
+
+        return group
+
+    @staticmethod
+    def _get_group_number(group: str, groups: dict) -> int:
+        if group not in groups:
+            groups[group] = len(groups)
+
+        return groups[group]
 
     @abstractmethod
     def generate_mesh(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         pass
 
     @property
-    def group(self) -> str:
-        return self._group
+    def default_group(self) -> str:
+        return self._default_group
+
+    @property
+    def ignore_groups(self) -> bool:
+        return self._ignore_groups
 
 
 class MeshFactoryBase(MeshBase):
-    def __init__(self, group: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        default_group: Optional[str] = None,
+        ignore_groups: Optional[list[str]] = None,
+    ) -> None:
         self._items = []
-        super().__init__(group)
+        super().__init__(default_group, ignore_groups)
 
     def add_mesh(
         self,
@@ -51,7 +87,7 @@ class MeshFactoryBase(MeshBase):
         # Add group
         item = {
             "mesh": mesh,
-            "group": group if group else self.group,
+            "group": group,
         }
         self.items.append(item)
 
@@ -59,17 +95,26 @@ class MeshFactoryBase(MeshBase):
             return mesh
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.UnstructuredGrid:
-        mesh = pv.UnstructuredGrid()
+        if len(self.items) == 0:
+            raise ValueError("not enough items to merge")
+
         groups = {}
 
         for i, item in enumerate(self.items):
             mesh_b = item["mesh"]
+            tmp = self._initialize_group_array(mesh_b, groups)
 
-            if item["group"] not in groups:
-                groups[item["group"]] = len(groups)
+            if (tmp == -1).any():
+                group = item["group"] if item["group"] else self.default_group
+                tmp[tmp == -1] = self._get_group_number(group, groups)
 
-            mesh_b.cell_data["group"] = [groups[item["group"]]] * mesh_b.n_cells
-            mesh += mesh_b
+            mesh_b.cell_data["group"] = tmp
+
+            if i > 0:
+                mesh += mesh_b
+
+            else:
+                mesh = mesh_b.cast_to_unstructured_grid()
 
         mesh.user_dict["group"] = groups
 
@@ -132,7 +177,7 @@ class MeshStackBase(MeshBase):
 
         if self.items:
             item["nsub"] = nsub
-            item["group"] = group if group else self.group
+            item["group"] = group
 
         self.items.append(item)
 
@@ -146,12 +191,15 @@ class MeshStackBase(MeshBase):
         groups = {}
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
-            mesh_b = self._extrude(item1["mesh"], item2["mesh"], item2["nsub"])
+            mesh_a = item1["mesh"].copy()
+            tmp = self._initialize_group_array(mesh_a, groups)
 
-            if item2["group"] not in groups:
-                groups[item2["group"]] = len(groups)
+            if (tmp == -1).any():
+                group = item2["group"] if item2["group"] else self.default_group
+                tmp[tmp == -1] = self._get_group_number(group, groups)
 
-            mesh_b.cell_data["group"] = [groups[item2["group"]]] * mesh_b.n_cells
+            mesh_a.cell_data["group"] = tmp
+            mesh_b = self._extrude(mesh_a, item2["mesh"], item2["nsub"])
 
             if i > 0:
                 if isinstance(mesh, pv.StructuredGrid):
