@@ -31,7 +31,7 @@ class MeshStack2D(MeshStackBase):
                 np.roll(np.arange(n_cells), -1),
             )
         ).ravel()
-        super().__init__(pv.PolyData(points, lines=lines), axis)
+        super().__init__(pv.PolyData(points, lines=cells), axis)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid:
         return generate_plane_surface_from_two_lines(*args, **kwargs)

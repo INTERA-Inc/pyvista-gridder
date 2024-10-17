@@ -43,16 +43,26 @@ def generate_plane_surface_from_two_lines(
     line_b: pv.PolyData | ArrayLike,
     nsub: Optional[int | list[float]] = None,
 ) -> pv.StructuredGrid:
-    line_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
-    line_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
+    line_points_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
+    line_points_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
     
-    if line_a.shape != line_b.shape:
+    if line_points_a.shape != line_points_b.shape:
         raise ValueError("could not generate plane surface from two inhomogeneous lines")
 
     perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
-    X, Y, Z = (line_a + perc * (line_b - line_a)).transpose((2, 1, 0))
+    X, Y, Z = (line_points_a + perc * (line_points_b - line_points_a)).transpose((2, 1, 0))
+    mesh = pv.StructuredGrid(X, Y, Z)
 
-    return pv.StructuredGrid(X, Y, Z)
+    if isinstance(line_a, pv.PolyData):
+        reps = (perc.size, 1)
+        for k, v in line_a.point_data.items():
+            mesh.point_data[k] = np.tile(v, reps[:v.ndim])
+
+        reps = (perc.size - 1, 1)
+        for k, v in line_a.cell_data.items():
+            mesh.cell_data[k] = np.tile(v, reps[:v.ndim])
+
+    return mesh
 
 
 def generate_volume_from_two_surfaces(
@@ -133,11 +143,13 @@ def generate_volume_from_two_surfaces(
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")
 
+    reps = (perc.size, 1)
     for k, v in surface_a.point_data.items():
-        mesh.point_data[k] = np.tile(v, perc.size)
+        mesh.point_data[k] = np.tile(v, reps[:v.ndim])
 
+    reps = (perc.size - 1, 1)
     for k, v in surface_a.cell_data.items():
-        mesh.cell_data[k] = np.tile(v, perc.size - 1)
+        mesh.cell_data[k] = np.tile(v, reps[:v.ndim])
 
     return mesh
 
