@@ -42,6 +42,7 @@ def generate_plane_surface_from_two_lines(
     line_a: pv.PolyData | ArrayLike,
     line_b: pv.PolyData | ArrayLike,
     nsub: Optional[int | list[float]] = None,
+    axis: int = 2,
 ) -> pv.StructuredGrid:
     line_points_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
     line_points_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
@@ -51,6 +52,22 @@ def generate_plane_surface_from_two_lines(
 
     perc = nsub_to_perc(nsub)[:, np.newaxis, np.newaxis]
     X, Y, Z = (line_points_a + perc * (line_points_b - line_points_a)).transpose((2, 1, 0))
+
+    if axis == 0:
+        X = np.expand_dims(X.transpose(), 2)
+        Y = np.expand_dims(Y.transpose(), 2)
+        Z = np.expand_dims(Z.transpose(), 2)
+
+    elif axis == 1:
+        X = np.expand_dims(X, 2)
+        Y = np.expand_dims(Y, 2)
+        Z = np.expand_dims(Z, 2)
+
+    else:
+        X = np.expand_dims(X, 1)
+        Y = np.expand_dims(Y, 1)
+        Z = np.expand_dims(Z, 1)
+
     mesh = pv.StructuredGrid(X, Y, Z)
 
     if isinstance(line_a, pv.PolyData):
@@ -159,9 +176,6 @@ def stack_two_structured_grids(
     mesh_b: pv.StructuredGrid,
     axis: int,
 ) -> pv.StructuredGrid:
-    if sum(n == 1 for n in mesh_a.dimensions) == 1:
-        axis = min(axis, 1)
-
     if axis == 0:
         if not (
             np.allclose(mesh_a.x[-1], mesh_b.x[0])
@@ -198,8 +212,8 @@ def stack_two_structured_grids(
     mesh = pv.StructuredGrid(X, Y, Z)
 
     if mesh_a.cell_data:
-        shape_a = [n - 1 for n in mesh_a.dimensions if n > 1]
-        shape_b = [n - 1 for n in mesh_b.dimensions if n > 1]
+        shape_a = [max(1, n - 1) for n in mesh_a.dimensions]
+        shape_b = [max(1, n - 1) for n in mesh_b.dimensions]
         mesh.cell_data.update(
             {
                 k: np.concatenate(
