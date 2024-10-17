@@ -1,4 +1,3 @@
-from . import utils
 from .__about__ import __version__
 from .core import (
     MeshExtrude,
@@ -7,6 +6,11 @@ from .core import (
     MeshStack2D,
     MeshStack3D,
 )
+from .utils import (
+    get_connectivity,
+    get_neighborhood,
+    quadraticize,
+)
 
 __all__ = [
     "MeshExtrude",
@@ -14,6 +18,8 @@ __all__ = [
     "MeshFactory3D",
     "MeshStack2D",
     "MeshStack3D",
-    "utils",
+    "get_connectivity",
+    "get_neighborhood",
+    "quadraticize",
     "__version__",
 ]
