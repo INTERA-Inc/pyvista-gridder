@@ -9,6 +9,7 @@ from .core import (
 from .utils import (
     get_connectivity,
     get_neighborhood,
+    merge,
     quadraticize,
 )
 
@@ -20,6 +21,7 @@ __all__ = [
     "MeshStack3D",
     "get_connectivity",
     "get_neighborhood",
+    "merge",
     "quadraticize",
     "__version__",
 ]

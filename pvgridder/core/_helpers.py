@@ -171,66 +171,6 @@ def generate_volume_from_two_surfaces(
     return mesh
 
 
-def stack_two_structured_grids(
-    mesh_a: pv.StructuredGrid,
-    mesh_b: pv.StructuredGrid,
-    axis: int,
-) -> pv.StructuredGrid:
-    if axis == 0:
-        if not (
-            np.allclose(mesh_a.x[-1], mesh_b.x[0])
-            and np.allclose(mesh_a.y[-1], mesh_b.y[0])
-            and np.allclose(mesh_a.z[-1], mesh_b.z[0])
-        ):
-            raise ValueError("could not stack structured grids with non-matching east and west surfaces")
-
-        slice_ = (slice(1, None),)
-
-    elif axis == 1:
-        if not (
-            np.allclose(mesh_a.x[:, -1], mesh_b.x[:, 0])
-            and np.allclose(mesh_a.y[:, -1], mesh_b.y[:, 0])
-            and np.allclose(mesh_a.z[:, -1], mesh_b.z[:, 0])
-        ):
-            raise ValueError("could not stack structured grids with non-matching north and south surfaces")
-
-        slice_ = (slice(None), slice(1, None))
-
-    else:
-        if not (
-            np.allclose(mesh_a.x[..., -1], mesh_b.x[..., 0])
-            and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
-            and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
-        ):
-            raise ValueError("could not stack structured grids with non-matching top and bottom surfaces")
-
-        slice_ = (slice(None), slice(None), slice(1, None))
-
-    X = np.concatenate((mesh_a.x, mesh_b.x[slice_]), axis=axis)
-    Y = np.concatenate((mesh_a.y, mesh_b.y[slice_]), axis=axis)
-    Z = np.concatenate((mesh_a.z, mesh_b.z[slice_]), axis=axis)
-    mesh = pv.StructuredGrid(X, Y, Z)
-
-    if mesh_a.cell_data:
-        shape_a = [max(1, n - 1) for n in mesh_a.dimensions]
-        shape_b = [max(1, n - 1) for n in mesh_b.dimensions]
-        mesh.cell_data.update(
-            {
-                k: np.concatenate(
-                    (
-                        v.reshape(shape_a, order="F"),
-                        mesh_b.cell_data[k].reshape(shape_b, order="F"),
-                    ),
-                    axis=axis,
-                ).ravel(order="F")
-                for k, v in mesh_a.cell_data.items()
-                if k in mesh_b.cell_data
-            }
-        )
-
-    return mesh
-
-
 def nsub_to_perc(nsub: int | list[float]) -> list[float]:
     if np.ndim(nsub) == 0:
         nsub = nsub if nsub else 1

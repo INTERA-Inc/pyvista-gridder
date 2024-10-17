@@ -8,7 +8,6 @@ import pyvista as pv
 from ._base import MeshBase
 from ._helpers import (
     generate_volume_from_two_surfaces,
-    stack_two_structured_grids,
     is2d,
 )
 
@@ -68,6 +67,8 @@ class MeshExtrude(MeshBase):
             return mesh
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        from .. import merge
+        
         if len(self.items) <= 1:
             raise ValueError("not enough items to extrude")
 
@@ -92,12 +93,9 @@ class MeshExtrude(MeshBase):
             mesh_b = generate_volume_from_two_surfaces(mesh_a, item2["mesh"], item2["nsub"])
 
             if i > 0:
-                if isinstance(mesh, pv.StructuredGrid):
-                    mesh = stack_two_structured_grids(mesh, mesh_b, self.mesh.dimensions.index(1))
-
-                else:
-                    mesh += mesh_b
-
+                axis = self.mesh.dimensions.index(1) if isinstance(mesh, pv.StructuredGrid) else None
+                mesh = merge(mesh, mesh_b, axis)
+                
             else:
                 mesh = mesh_b
 

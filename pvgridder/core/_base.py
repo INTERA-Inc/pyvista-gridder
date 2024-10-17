@@ -8,8 +8,6 @@ import numpy as np
 import pyvista as pv
 from scipy.interpolate import LinearNDInterpolator
 
-from ._helpers import stack_two_structured_grids
-
 
 class MeshBase(ABC):
     def __init__(
@@ -185,6 +183,8 @@ class MeshStackBase(MeshBase):
             return mesh
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        from .. import merge
+        
         if len(self.items) <= 1:
             raise ValueError("not enough items to stack")
 
@@ -202,11 +202,7 @@ class MeshStackBase(MeshBase):
             mesh_b = self._extrude(mesh_a, item2["mesh"], item2["nsub"])
 
             if i > 0:
-                if isinstance(mesh, pv.StructuredGrid):
-                    mesh = stack_two_structured_grids(mesh, mesh_b, self.axis)
-
-                else:
-                    mesh += mesh_b
+                mesh = merge(mesh, mesh_b, self.axis)
 
             else:
                 mesh = mesh_b
