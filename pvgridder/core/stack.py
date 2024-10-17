@@ -17,6 +17,8 @@ class MeshStack2D(MeshStackBase):
         self,
         mesh: pv.PolyData,
         axis: int = 2,
+        group: Optional[str] = None,
+        ignore_groups: Optional[list[str]] = None,
     ) -> None:
         if not isinstance(mesh, pv.PolyData) and not mesh.n_lines:
             raise ValueError("invalid mesh, input mesh should be a line or a polyline")
@@ -31,7 +33,7 @@ class MeshStack2D(MeshStackBase):
                 np.roll(np.arange(n_cells), -1),
             )
         ).ravel()
-        super().__init__(pv.PolyData(points, lines=cells), axis)
+        super().__init__(pv.PolyData(points, lines=cells), axis, group, ignore_groups)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid:
         return generate_plane_surface_from_two_lines(*args, axis=self.axis, **kwargs)
@@ -42,6 +44,8 @@ class MeshStack3D(MeshStackBase):
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
+        group: Optional[str] = None,
+        ignore_groups: Optional[list[str]] = None,
     ) -> None:
         if isinstance(mesh, (pv.StructuredGrid, pv.UnstructuredGrid)):
             if not is2d(mesh):
@@ -50,7 +54,7 @@ class MeshStack3D(MeshStackBase):
         else:
             raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
 
-        super().__init__(mesh, axis)
+        super().__init__(mesh, axis, group, ignore_groups)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         return generate_volume_from_two_surfaces(*args, **kwargs)

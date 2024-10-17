@@ -129,6 +129,7 @@ class MeshStackBase(MeshBase):
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
         group: Optional[str] = None,
+        ignore_groups: Optional[list[str]] = None,
     ) -> None:
         if axis not in {0, 1, 2}:
             raise ValueError(f"invalid axis {axis} (expected {{0, 1, 2}}, got {axis})")
@@ -139,7 +140,7 @@ class MeshStackBase(MeshBase):
         self._mesh = mesh.copy()
         self._axis = axis
         self._items = []
-        super().__init__(group)
+        super().__init__(group, ignore_groups)
 
     def add(
         self,
