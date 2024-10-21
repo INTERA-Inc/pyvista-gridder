@@ -1,6 +1,6 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
-from typing import Optional
+from typing import Literal, Optional
 
 from abc import ABC, abstractmethod
 
@@ -146,6 +146,7 @@ class MeshStackBase(MeshBase):
         self,
         arg: float | ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         nsub: Optional[int | ArrayLike] = None,
+        method: Optional[Literal["constant", "log", "log_r"]] = None,
         group: Optional[str] = None,
         return_mesh: bool = False,
     ) -> pv.StructuredGrid | pv.UnstructuredGrid | None:
@@ -176,6 +177,7 @@ class MeshStackBase(MeshBase):
 
         if self.items:
             item["nsub"] = nsub
+            item["method"] = method
             item["group"] = group
 
         self.items.append(item)
@@ -200,7 +202,7 @@ class MeshStackBase(MeshBase):
                 tmp[tmp == -1] = self._get_group_number(group, groups)
 
             mesh_a.cell_data["group"] = tmp
-            mesh_b = self._extrude(mesh_a, item2["mesh"], item2["nsub"])
+            mesh_b = self._extrude(mesh_a, item2["mesh"], item2["nsub"], item2["method"])
 
             if i > 0:
                 mesh = merge(mesh, mesh_b, self.axis)

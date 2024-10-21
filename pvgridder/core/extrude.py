@@ -1,6 +1,6 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
-from typing import Optional
+from typing import Literal, Optional
 
 import numpy as np
 import pyvista as pv
@@ -34,6 +34,7 @@ class MeshExtrude(MeshBase):
         self,
         vector: ArrayLike,
         nsub: Optional[int | ArrayLike] = None,
+        method: Optional[Literal["constant", "log", "log_r"]] = None,
         scale: Optional[float] = None,
         angle: Optional[float] = None,
         group: Optional[str | dict] = None,
@@ -59,6 +60,7 @@ class MeshExtrude(MeshBase):
         item = {
             "mesh": mesh,
             "nsub": nsub,
+            "method": method,
             "group": group,
         }
         self.items.append(item)
@@ -90,7 +92,7 @@ class MeshExtrude(MeshBase):
                 tmp[tmp == -1] = self._get_group_number(self.default_group, groups)
 
             mesh_a.cell_data["group"] = tmp
-            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2["mesh"], item2["nsub"])
+            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2["mesh"], item2["nsub"], item2["method"])
 
             if i > 0:
                 axis = self.mesh.dimensions.index(1) if isinstance(mesh, pv.StructuredGrid) else None

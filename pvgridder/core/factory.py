@@ -20,10 +20,11 @@ class MeshFactory2D(MeshFactoryBase):
         line_a: pv.PolyData | ArrayLike,
         line_b: pv.PolyData | ArrayLike,
         nsub: Optional[int | ArrayLike] = None,
+        method: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
-        mesh = generate_plane_surface_from_two_lines(line_a, line_b, nsub)
+        mesh = generate_plane_surface_from_two_lines(line_a, line_b, nsub, method)
 
         return self.add_mesh(mesh, *args, **kwargs)
 
@@ -35,13 +36,15 @@ class MeshFactory2D(MeshFactoryBase):
         point_3: ArrayLike,
         nsub_x: Optional[int | ArrayLike] = None,
         nsub_y: Optional[int | ArrayLike] = None,
+        method_x: Optional[Literal["constant", "log", "log_r"]] = None,
+        method_y: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
-        line_a = generate_line_from_two_points(point_0, point_1, nsub_x)
-        line_b = generate_line_from_two_points(point_3, point_2, nsub_x)
+        line_a = generate_line_from_two_points(point_0, point_1, nsub_x, method_x)
+        line_b = generate_line_from_two_points(point_3, point_2, nsub_x, method_x)
 
-        return self.add_plane_surface(line_a, line_b, nsub_y, *args, **kwargs)
+        return self.add_plane_surface(line_a, line_b, nsub_y, method_y, *args, **kwargs)
 
     def add_rectangle(
         self,
@@ -49,6 +52,8 @@ class MeshFactory2D(MeshFactoryBase):
         dy: float,
         nsub_x: Optional[int | ArrayLike] = None,
         nsub_y: Optional[int | ArrayLike] = None,
+        method_x: Optional[Literal["constant", "log", "log_r"]] = None,
+        method_y: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
@@ -59,7 +64,7 @@ class MeshFactory2D(MeshFactoryBase):
             [0.0, dy],
         ]
 
-        return self.add_quad(*points, nsub_x, nsub_y, *args, **kwargs)
+        return self.add_quad(*points, nsub_x, nsub_y, method_x, method_y, *args, **kwargs)
 
     def add_sector(
         self,
@@ -67,13 +72,14 @@ class MeshFactory2D(MeshFactoryBase):
         theta_min: Optional[float] = None,
         theta_max: Optional[float] = None,
         nsub: Optional[int | ArrayLike] = None,
+        method: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
         if r <= 0.0:
             raise ValueError("invalid sector radius")
 
-        points = generate_arc(r, theta_min, theta_max, nsub).points
+        points = generate_arc(r, theta_min, theta_max, nsub, method).points
         n_cells = len(points) - 1
         cells = np.column_stack(
             (
@@ -95,15 +101,17 @@ class MeshFactory2D(MeshFactoryBase):
         theta_max: Optional[float] = None,
         nsub_r: Optional[int | ArrayLike] = None,
         nsub_theta: Optional[int | ArrayLike] = None,
+        method_r: Optional[Literal["constant", "log", "log_r"]] = None,
+        method_theta: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
         if not 0.0 < r_in < r_out:
             raise ValueError("invalid annular sector radii")
 
-        line_a = generate_arc(r_in, theta_min, theta_max, nsub_theta)
-        line_b = generate_arc(r_out, theta_min, theta_max, nsub_theta)
-        mesh = generate_plane_surface_from_two_lines(line_a, line_b, nsub_r)
+        line_a = generate_arc(r_in, theta_min, theta_max, nsub_theta, method_theta)
+        line_b = generate_arc(r_out, theta_min, theta_max, nsub_theta, method_theta)
+        mesh = generate_plane_surface_from_two_lines(line_a, line_b, nsub_r, method_r)
 
         return self.add_mesh(mesh, *args, **kwargs)
 
@@ -114,18 +122,20 @@ class MeshFactory2D(MeshFactoryBase):
         r: float,
         nsub_r: Optional[int | ArrayLike] = None,
         nsub_theta: Optional[int | ArrayLike] = None,
+        method_r: Optional[Literal["constant", "log", "log_r"]] = None,
+        method_theta: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
         if r <= 0.0:
             raise ValueError("invalid sector radius")
 
-        line_x = generate_line_from_two_points([dx, dy], [0.0, dy], nsub_theta)
-        line_y = generate_line_from_two_points([dx, 0.0], [dx, dy], nsub_theta)
+        line_x = generate_line_from_two_points([dx, dy], [0.0, dy], nsub_theta, method_theta)
+        line_y = generate_line_from_two_points([dx, 0.0], [dx, dy], nsub_theta, method_theta)
         line_45 = generate_arc(r, 0.0, 45.0, nsub_theta)
         line_90 = generate_arc(r, 45.0, 90.0, nsub_theta)
-        mesh_y45 = generate_plane_surface_from_two_lines(line_45, line_y, nsub_r)
-        mesh_x90 = generate_plane_surface_from_two_lines(line_90, line_x, nsub_r)
+        mesh_y45 = generate_plane_surface_from_two_lines(line_45, line_y, nsub_r, method_r)
+        mesh_x90 = generate_plane_surface_from_two_lines(line_90, line_x, nsub_r, method_r)
         mesh = (
             mesh_y45.cast_to_unstructured_grid()
             + mesh_x90.cast_to_unstructured_grid()
@@ -140,9 +150,10 @@ class MeshFactory3D(MeshFactoryBase):
         surface_a: pv.StructuredGrid | pv.UnstructuredGrid,
         surface_b: pv.StructuredGrid | pv.UnstructuredGrid,
         nsub: Optional[int | ArrayLike] = None,
+        method: Optional[Literal["constant", "log", "log_r"]] = None,
         *args,
         **kwargs
     ) -> pv.UnstructuredGrid | None:
-        mesh = generate_volume_from_two_surfaces(surface_a, surface_b, nsub)
+        mesh = generate_volume_from_two_surfaces(surface_a, surface_b, nsub, method)
 
         return self.add_mesh(mesh, *args, **kwargs)
