@@ -215,6 +215,25 @@ def is2d(mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> bool:
         return (_celltype_map[mesh.celltypes] != -1).all()
 
 
+def translate(
+    mesh: pv.StructuredGrid | pv.UnstructuredGrid,
+    center: ArrayLike | None,
+) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    if center is not None:
+        center = np.ravel(center)
+        
+        if center.size != 3:
+            if center.size == 2:
+                center = np.append(center, 0.0)
+
+            else:
+                raise ValueError("invalid translation vector")
+
+        mesh = mesh.translate(center)
+
+    return mesh
+
+
 _celltype_map = np.full(int(max(pv.CellType)), -1)
 _celltype_map[int(pv.CellType["TRIANGLE"])] = int(pv.CellType["WEDGE"])
 _celltype_map[int(pv.CellType["QUAD"])] = int(pv.CellType["HEXAHEDRON"])
