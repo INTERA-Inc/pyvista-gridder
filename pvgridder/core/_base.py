@@ -36,10 +36,7 @@ class MeshBase(ABC):
 
     @staticmethod
     def _get_group_number(group: str, groups: dict) -> int:
-        if group not in groups:
-            groups[group] = len(groups)
-
-        return groups[group]
+        return groups.setdefault(group, len(groups))
 
     @abstractmethod
     def generate_mesh(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
