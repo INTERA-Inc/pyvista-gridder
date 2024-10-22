@@ -68,7 +68,7 @@ def merge(
                 and np.allclose(mesh_a.y[-1], mesh_b.y[0])
                 and np.allclose(mesh_a.z[-1], mesh_b.z[0])
             ):
-                raise ValueError("could not merge structured grids with non-matching east and west surfaces")
+                raise ValueError("could not merge structured grids with non-matching east and west interfaces")
 
             slice_ = (slice(1, None),)
 
@@ -78,7 +78,7 @@ def merge(
                 and np.allclose(mesh_a.y[:, -1], mesh_b.y[:, 0])
                 and np.allclose(mesh_a.z[:, -1], mesh_b.z[:, 0])
             ):
-                raise ValueError("could not merge structured grids with non-matching north and south surfaces")
+                raise ValueError("could not merge structured grids with non-matching north and south interfaces")
 
             slice_ = (slice(None), slice(1, None))
 
@@ -88,7 +88,7 @@ def merge(
                 and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
                 and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
             ):
-                raise ValueError("could not merge structured grids with non-matching top and bottom surfaces")
+                raise ValueError("could not merge structured grids with non-matching top and bottom interfaces")
 
             slice_ = (slice(None), slice(None), slice(1, None))
 
