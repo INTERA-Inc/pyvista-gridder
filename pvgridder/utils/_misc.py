@@ -6,6 +6,53 @@ import numpy as np
 import pyvista as pv
 
 
+def extract_boundary_polygons(
+    mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+) -> list[pv.PolyData]:
+    poly = mesh.extract_feature_edges(
+        boundary_edges=True,
+        non_manifold_edges=False,
+        feature_edges=False,
+        manifold_edges=False,
+        clear_data=True,
+    )
+    lines = poly.lines.reshape((poly.n_cells, 3))[:, 1:]
+    lines = np.sort(lines, axis=1).tolist()
+    polygon, polygons = [], []
+
+    while lines:
+        if not polygon:
+            polygon += lines.pop(0)
+
+        cond = np.array(lines) == polygon[-1]
+
+        if cond[:, 0].any():
+            j1, j2 = 0, 1
+
+        elif cond[:, 1].any():
+            j1, j2 = 1, 0
+
+        else:
+            raise ValueError("could not match end point with another start point")
+
+        i = np.flatnonzero(cond[:, j1])[0]
+        polygon.append(lines[i][j2])
+        _ = lines.pop(i)
+
+        if polygon[-1] == polygon[0]:
+            polygons.append(polygon)
+            polygon = []
+
+    return [
+        pv.PolyData(
+            poly.points[polygon[:-1]],
+            lines=[len(polygon), *list(range(len(polygon) - 1)), 0],
+            faces=[len(polygon) - 1, *list(range(len(polygon) - 1))],
+        )
+        for polygon in polygons
+    ]
+
+
 def merge(
     mesh_a: pv.StructuredGrid | pv.UnstructuredGrid,
     mesh_b: pv.StructuredGrid | pv.UnstructuredGrid,
