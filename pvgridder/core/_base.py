@@ -17,6 +17,7 @@ class MeshBase(ABC):
     ) -> None:
         self._default_group = default_group if default_group else "default"
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
+        self._items = []
 
     def _initialize_group_array(
         self,
@@ -50,73 +51,8 @@ class MeshBase(ABC):
     def ignore_groups(self) -> bool:
         return self._ignore_groups
 
-
-class MeshFactoryBase(MeshBase):
-    def __init__(
-        self,
-        default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
-    ) -> None:
-        self._items = []
-        super().__init__(default_group, ignore_groups)
-
-    def add_mesh(
-        self,
-        mesh: pv.Grid, 
-        origin: Optional[ArrayLike] = None,
-        angle: Optional[float] = None,
-        group: Optional[str] = None,
-        return_mesh: bool = False,
-    ) -> pv.UnstructuredGrid | None:
-        mesh = mesh.cast_to_unstructured_grid()
-        
-        # Rotate
-        if angle is not None:
-            mesh = mesh.rotate_z(angle)
-
-        # Translate
-        if origin is not None:
-            origin = np.append(origin, 0.0) if len(origin) == 2 else origin[:3]
-            mesh = mesh.translate(origin)
-
-        # Add group
-        item = {
-            "mesh": mesh,
-            "group": group,
-        }
-        self.items.append(item)
-
-        if return_mesh:
-            return mesh
-
-    def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.UnstructuredGrid:
-        if len(self.items) == 0:
-            raise ValueError("not enough items to merge")
-
-        groups = {}
-
-        for i, item in enumerate(self.items):
-            mesh_b = item["mesh"]
-            tmp = self._initialize_group_array(mesh_b, groups)
-
-            if (tmp == -1).any():
-                group = item["group"] if item["group"] else self.default_group
-                tmp[tmp == -1] = self._get_group_number(group, groups)
-
-            mesh_b.cell_data["group"] = tmp
-
-            if i > 0:
-                mesh += mesh_b
-
-            else:
-                mesh = mesh_b.cast_to_unstructured_grid()
-
-        mesh.user_dict["group"] = groups
-
-        return mesh.clean(tolerance=tolerance, produce_merge_map=False)
-
     @property
-    def items(self) -> list:
+    def items(self) -> list[dict]:
         return self._items
 
 
@@ -134,10 +70,9 @@ class MeshStackBase(MeshBase):
         if isinstance(mesh, pv.StructuredGrid) and mesh.dimensions[axis] != 1:
             raise ValueError(f"invalid mesh or axis, dimension along axis {axis} should be 1 (got {mesh.dimensions[axis]})")
 
+        super().__init__(group, ignore_groups)
         self._mesh = mesh.copy()
         self._axis = axis
-        self._items = []
-        super().__init__(group, ignore_groups)
 
     def add(
         self,
@@ -250,7 +185,3 @@ class MeshStackBase(MeshBase):
     @property
     def axis(self) -> int:
         return self._axis
-
-    @property
-    def items(self) -> list:
-        return self._items
