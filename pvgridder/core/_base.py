@@ -9,15 +9,32 @@ import pyvista as pv
 from scipy.interpolate import LinearNDInterpolator
 
 
+class MeshItem:
+    def __init__(
+        self,
+        mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+        **kwargs
+    ) -> None:
+        self._mesh = mesh
+        
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
+        return self._mesh
+
+
 class MeshBase(ABC):
     def __init__(
         self,
         default_group: Optional[str] = None,
         ignore_groups: Optional[list[str]] = None,
+        items: Optional[list[MeshItem]] = None,
     ) -> None:
         self._default_group = default_group if default_group else "default"
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
-        self._items = []
+        self._items = items if items else []
 
     def _initialize_group_array(
         self,
@@ -52,7 +69,7 @@ class MeshBase(ABC):
         return self._ignore_groups
 
     @property
-    def items(self) -> list[dict]:
+    def items(self) -> list[MeshItem]:
         return self._items
 
 
@@ -80,18 +97,19 @@ class MeshStackBase(MeshBase):
         nsub: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         group: Optional[str] = None,
-        return_mesh: bool = False,
-    ) -> pv.StructuredGrid | pv.UnstructuredGrid | None:
+    ) -> None:
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
             mesh = self._interpolate(arg.points)
 
         else:
             if np.ndim(arg) == 0:
                 if not self.items:
-                    self.items.append({"mesh": self.mesh})
+                    mesh = self.mesh.copy()
+                    mesh.points[:, self.axis] = arg
 
-                mesh = self.items[-1]["mesh"].copy()
-                mesh.points[:, self.axis] += arg
+                else:
+                    mesh = self.items[-1].mesh.copy()
+                    mesh.points[:, self.axis] += arg
 
             else:
                 arg = np.asarray(arg)
@@ -105,17 +123,12 @@ class MeshStackBase(MeshBase):
                 else:
                     raise ValueError(f"could not add {arg.ndim}D array to stack")
 
-        item = {"mesh": mesh}
-
-        if self.items:
-            item["nsub"] = nsub
-            item["method"] = method
-            item["group"] = group
-
+        item = (
+            MeshItem(mesh, nsub=nsub, method=method, group=group)
+            if self.items
+            else MeshItem(mesh)
+        )
         self.items.append(item)
-
-        if return_mesh:
-            return mesh
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         from .. import merge
@@ -126,15 +139,15 @@ class MeshStackBase(MeshBase):
         groups = {}
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
-            mesh_a = item1["mesh"].copy()
+            mesh_a = item1.mesh.copy()
             tmp = self._initialize_group_array(mesh_a, groups)
 
             if (tmp == -1).any():
-                group = item2["group"] if item2["group"] else self.default_group
+                group = item2.group if item2.group else self.default_group
                 tmp[tmp == -1] = self._get_group_number(group, groups)
 
             mesh_a.cell_data["group"] = tmp
-            mesh_b = self._extrude(mesh_a, item2["mesh"], item2["nsub"], item2["method"])
+            mesh_b = self._extrude(mesh_a, item2.mesh, item2.nsub, item2.method)
 
             if i > 0:
                 mesh = merge(mesh, mesh_b, self.axis)

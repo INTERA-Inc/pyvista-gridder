@@ -5,7 +5,7 @@ from typing import Literal, Optional
 import numpy as np
 import pyvista as pv
 
-from ._base import MeshBase
+from ._base import MeshBase, MeshItem
 from ._helpers import (
     generate_volume_from_two_surfaces,
     is2d,
@@ -24,11 +24,10 @@ class MeshExtrude(MeshBase):
         if not is2d(mesh):
             raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
 
+        super().__init__(default_group, ignore_groups, items=[MeshItem(mesh)])
         self._mesh = mesh
         self._angle = angle
         self._scale = scale
-        self._items = [{"mesh": mesh}]
-        super().__init__(default_group, ignore_groups)
 
     def add(
         self,
@@ -38,8 +37,7 @@ class MeshExtrude(MeshBase):
         scale: Optional[float] = None,
         angle: Optional[float] = None,
         group: Optional[str | dict] = None,
-        return_mesh: bool = False,
-    ) -> pv.StructuredGrid | pv.UnstructuredGrid | None:
+    ) -> None:
         vector = np.asarray(vector)
 
         if vector.shape != (3,):
@@ -48,7 +46,7 @@ class MeshExtrude(MeshBase):
         scale = scale if scale is not None else self.scale
         angle = angle if angle is not None else self.angle
 
-        mesh = self.items[-1]["mesh"].copy()
+        mesh = self.items[-1].mesh.copy()
         mesh = mesh.translate(vector)
         
         if scale is not None:
@@ -57,16 +55,8 @@ class MeshExtrude(MeshBase):
         if angle is not None:
             mesh = mesh.rotate_vector(vector, angle, mesh.center)
 
-        item = {
-            "mesh": mesh,
-            "nsub": nsub,
-            "method": method,
-            "group": group,
-        }
+        item = MeshItem(mesh, nsub=nsub, method=method, group=group)
         self.items.append(item)
-
-        if return_mesh:
-            return mesh
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         from .. import merge
@@ -77,10 +67,10 @@ class MeshExtrude(MeshBase):
         groups = {}
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
-            mesh_a = item1["mesh"].copy()
+            mesh_a = item1.mesh.copy()
             tmp = self._initialize_group_array(mesh_a, groups)
 
-            group = item2["group"] if item2["group"] else {}
+            group = item2.group if item2.group else {}
 
             if isinstance(group, str):
                 group = {group: lambda x: np.ones(x.n_cells, dtype=bool)}
@@ -92,7 +82,7 @@ class MeshExtrude(MeshBase):
                 tmp[tmp == -1] = self._get_group_number(self.default_group, groups)
 
             mesh_a.cell_data["group"] = tmp
-            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2["mesh"], item2["nsub"], item2["method"])
+            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2.mesh, item2.nsub, item2.method)
 
             if i > 0:
                 axis = self.mesh.dimensions.index(1) if isinstance(mesh, pv.StructuredGrid) else None
@@ -119,7 +109,3 @@ class MeshExtrude(MeshBase):
     @property
     def angle(self) -> float | None:
         return self._angle
-
-    @property
-    def items(self) -> list:
-        return self._items
