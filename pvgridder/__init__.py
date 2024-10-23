@@ -14,6 +14,7 @@ __all__ = [
     "MeshFactory",
     "MeshStack2D",
     "MeshStack3D",
+    "VoronoiMesh2D",
     "get_connectivity",
     "get_neighborhood",
     "extract_boundary_polygons",
