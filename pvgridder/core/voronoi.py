@@ -26,23 +26,11 @@ class VoronoiMesh2D(MeshBase):
 
     def add(
         self,
-        mesh_or_points: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid | ArrayLike,
+        mesh_or_points: ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         group: Optional[str] = None,
     ) -> None:
         if not isinstance(mesh_or_points, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
-            mesh_or_points = np.asarray(mesh_or_points)
-
-            if mesh_or_points.shape[1] == 2:
-                mesh_or_points = np.insert(
-                    mesh_or_points,
-                    self.axis,
-                    np.zeros(len(mesh_or_points)),
-                    axis=-1,
-                )
-
-            if mesh_or_points.shape[2] != 3:
-                raise ValueError(f"could not add points with shape {mesh_or_points.shape}")
-
+            mesh_or_points = self._check_point_array(mesh_or_points)
             mesh = pv.PolyData(mesh_or_points)
 
         else:
@@ -115,13 +103,7 @@ class VoronoiMesh2D(MeshBase):
             points += points_
             n_points += len(points_)
 
-        points = np.array(points)
-        points = np.insert(
-            points,
-            self.axis,
-            np.zeros(len(points)),
-            axis=-1,
-        )
+        points = self._check_point_array(points)
         mesh = pv.PolyData(points, faces=cells)
         mesh = mesh.cast_to_unstructured_grid()
 

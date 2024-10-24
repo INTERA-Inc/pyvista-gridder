@@ -36,6 +36,33 @@ class MeshBase(ABC):
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
         self._items = items if items else []
 
+    def _check_point_array(self, points: ArrayLike, axis: Optional[int] = None) -> ArrayLike:
+        points = np.asarray(points)
+        axis = (
+            axis
+            if axis is not None
+            else self.axis
+            if hasattr(self, "axis")
+            else 2
+        )
+
+        if points.ndim == 1:
+            points = np.insert(points, axis, 0.0) if points.size == 2 else points
+
+            if points.shape != (3,):
+                raise ValueError(f"invalid 1D point array (expected shape (2,) or (3,), got {points.shape})")
+
+        elif points.ndim == 2:
+            points = np.insert(points, axis, np.zeros(len(points)), axis=1) if points.shape[1] == 2 else points
+
+            if points.shape[1] != 3:
+                raise ValueError(f"invalid 2D point array (expected size 2 or 3 along axis 1, got {points.shape[1]})")
+
+        else:
+            raise ValueError(f"invalid point array (expected 1D or 2D array, got {points.ndim}D array)")
+
+        return points
+
     def _initialize_group_array(
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
