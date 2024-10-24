@@ -40,6 +40,7 @@ class MeshBase(ABC):
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         groups: dict,
+        default_group: Optional[str] = None,
     ) -> ArrayLike:
         group = np.full(mesh.n_cells, -1, dtype=int)
 
@@ -49,6 +50,10 @@ class MeshBase(ABC):
                     continue
 
                 group[mesh.cell_data["group"] == v] = self._get_group_number(k, groups)
+
+        if (group == -1).any():
+            default_group = default_group if default_group else self.default_group
+            group[group == -1] = self._get_group_number(default_group, groups)
 
         return group
 
@@ -140,13 +145,7 @@ class MeshStackBase(MeshBase):
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
-            tmp = self._initialize_group_array(mesh_a, groups)
-
-            if (tmp == -1).any():
-                group = item2.group if item2.group else self.default_group
-                tmp[tmp == -1] = self._get_group_number(group, groups)
-
-            mesh_a.cell_data["group"] = tmp
+            mesh_a.cell_data["group"] = self._initialize_group_array(mesh_a, groups, item2.group)
             mesh_b = self._extrude(mesh_a, item2.mesh, item2.nsub, item2.method)
 
             if i > 0:

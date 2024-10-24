@@ -38,13 +38,7 @@ class MeshFactory(MeshBase):
 
         for i, item in enumerate(self.items):
             mesh_b = item.mesh
-            tmp = self._initialize_group_array(mesh_b, groups)
-
-            if (tmp == -1).any():
-                group = item.group if item.group else self.default_group
-                tmp[tmp == -1] = self._get_group_number(group, groups)
-
-            mesh_b.cell_data["group"] = tmp
+            mesh_b.cell_data["group"] = self._initialize_group_array(mesh_b, groups, item.group)
 
             if i > 0:
                 mesh += mesh_b

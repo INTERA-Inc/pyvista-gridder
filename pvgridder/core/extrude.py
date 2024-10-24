@@ -78,9 +78,6 @@ class MeshExtrude(MeshBase):
             for k, v in group.items():
                 tmp[v(mesh_a)] = self._get_group_number(k, groups)
 
-            if (tmp == -1).any():
-                tmp[tmp == -1] = self._get_group_number(self.default_group, groups)
-
             mesh_a.cell_data["group"] = tmp
             mesh_b = generate_volume_from_two_surfaces(mesh_a, item2.mesh, item2.nsub, item2.method)
 
