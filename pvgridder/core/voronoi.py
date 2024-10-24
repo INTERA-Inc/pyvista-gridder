@@ -1,6 +1,6 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
-from typing import Literal, Optional
+from typing import Optional
 
 import numpy as np
 import pyvista as pv
@@ -27,7 +27,6 @@ class VoronoiMesh2D(MeshBase):
     def add(
         self,
         mesh_or_points: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid | ArrayLike,
-        preference: Literal["point", "cell"] = "cell",
         group: Optional[str] = None,
     ) -> None:
         if not isinstance(mesh_or_points, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
@@ -49,7 +48,7 @@ class VoronoiMesh2D(MeshBase):
         else:
             mesh = mesh_or_points
         
-        item = MeshItem(mesh, preference=preference, group=group)
+        item = MeshItem(mesh, group=group)
         self.items.append(item)
 
     def generate_mesh(
@@ -63,31 +62,39 @@ class VoronoiMesh2D(MeshBase):
         points = self.mesh.cell_centers().points.tolist()
         active = np.ones(len(points), dtype=bool)
 
+        groups = {}
+        group_array = self._initialize_group_array(self.mesh, groups)
+
         for i, item in enumerate(self.items):
-            mesh = item.mesh
+            mesh_a = item.mesh
+            points_ = mesh_a.cell_centers().points
 
-            if item.preference == "cell":
-                points_ = mesh.cell_centers().points
-                idx = mesh.find_containing_cell(points)
-                active[idx != -1] = False
+            # Remove out of bound points from item mesh
+            mask = self.mesh.find_containing_cell(points_) != -1
+            points_ = points_[mask]
 
-            else:
-                points_ = mesh.points
+            # Disable points from point list contained by item mesh
+            mask = mesh_a.find_containing_cell(points) != -1
+            active[mask] = False
+            group_array[mask] = False
 
-            idx = self.mesh.find_containing_cell(points_)
-            points_ = points_[idx != -1]
-
+            # Append points to point list
             points += points_.tolist()
             active = np.concatenate((active, np.ones(len(points_), dtype=bool)))
+            group_array = np.concatenate(
+                (
+                    group_array,
+                    self._initialize_group_array(mesh_a, groups, item.group),
+                )
+            )
 
-        idx = [i for i in range(3) if i != self.axis]
-        points = np.array(points)[:, idx]
+        points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
         regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity)
 
         # Generate boundary polygon
         boundary = extract_boundary_polygons(self.mesh)
-        boundary = Polygon(boundary[0].points[:, idx])
+        boundary = Polygon(np.delete(boundary[0].points, self.axis, axis=1))
 
         # Generate polygonal mesh
         points, cells = [], []
@@ -117,6 +124,9 @@ class VoronoiMesh2D(MeshBase):
         )
         mesh = pv.PolyData(points, faces=cells)
         mesh = mesh.cast_to_unstructured_grid()
+
+        mesh.cell_data["group"] = group_array[active]
+        mesh.user_dict["group"] = groups
 
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
