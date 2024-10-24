@@ -7,8 +7,10 @@ import pyvista as pv
 from scipy.spatial import Voronoi
 
 from ._base import MeshBase, MeshItem
+from .._common import require_package
 
 
+@require_package("shapely", (2, 0))
 class VoronoiMesh2D(MeshBase):
     def __init__(
         self,
@@ -17,12 +19,6 @@ class VoronoiMesh2D(MeshBase):
         default_group: Optional[str] = None,
         ignore_groups: Optional[list[str]] = None,
     ) -> None:
-        try:
-            import shapely
-        
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError("VoronoiMesh2D requires shapely")
-
         super().__init__(default_group, ignore_groups)
         self._mesh = mesh.copy()
         self._axis = axis
