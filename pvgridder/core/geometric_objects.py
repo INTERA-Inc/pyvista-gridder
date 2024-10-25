@@ -31,7 +31,7 @@ def AnnularSector(
     line_a = generate_arc(inner_radius, theta_min, theta_max, theta_resolution, theta_method)
     line_b = generate_arc(outer_radius, theta_min, theta_max, theta_resolution, theta_method)
     mesh = generate_plane_surface_from_two_lines(line_a, line_b, r_resolution, r_method)
-    center = translate(mesh, center)
+    mesh = translate(mesh, center)
 
     return mesh
 
@@ -68,7 +68,7 @@ def Quadrilateral(
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
     mesh = PlaneSurface(line_a, line_b, y_resolution, y_method)
-    center = translate(mesh, center)
+    mesh = translate(mesh, center)
 
     return mesh
 
@@ -114,7 +114,7 @@ def Sector(
     ).astype(int)
     points = np.row_stack((np.zeros(3), points))
     mesh = pv.UnstructuredGrid({pv.CellType.TRIANGLE: cells}, points)
-    center = translate(mesh, center)
+    mesh = translate(mesh, center)
 
     return mesh
 
@@ -142,7 +142,7 @@ def SectorRectangle(
         mesh_y45.cast_to_unstructured_grid()
         + mesh_x90.cast_to_unstructured_grid()
     )
-    center = translate(mesh, center)
+    mesh = translate(mesh, center)
 
     return mesh
 
