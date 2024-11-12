@@ -8,6 +8,7 @@ import pyvista as pv
 
 def extract_boundary_polygons(
     mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+    fill: bool = False,
 ) -> list[pv.PolyData]:
     poly = mesh.extract_feature_edges(
         boundary_edges=True,
@@ -48,6 +49,11 @@ def extract_boundary_polygons(
             poly.points[polygon[:-1]],
             lines=[len(polygon), *list(range(len(polygon) - 1)), 0],
             faces=[len(polygon) - 1, *list(range(len(polygon) - 1))],
+        )
+        if fill
+        else pv.PolyData(
+            poly.points[polygon[:-1]],
+            lines=[len(polygon), *list(range(len(polygon) - 1)), 0],
         )
         for polygon in polygons
     ]
