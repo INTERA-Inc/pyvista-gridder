@@ -141,7 +141,7 @@ def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
             (
                 np.full(n_points - 1, 2),
                 np.arange(n_points - 1),
-                np.roll(np.arange(n_points - 1), -1),
+                np.arange(1, n_points),
             )
         ).ravel()
         out.append(pv.PolyData(points, lines=cells))
