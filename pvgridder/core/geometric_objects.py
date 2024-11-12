@@ -36,7 +36,7 @@ def AnnularSector(
     return mesh
 
 
-def PlaneSurface(
+def Surface(
     line_a: Optional[pv.PolyData | ArrayLike] = None,
     line_b: Optional[pv.PolyData | ArrayLike] = None,
     resolution: Optional[int | ArrayLike] = None,
@@ -67,7 +67,7 @@ def Quadrilateral(
 
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
-    mesh = PlaneSurface(line_a, line_b, y_resolution, y_method)
+    mesh = Surface(line_a, line_b, y_resolution, y_method)
     mesh = translate(mesh, center)
 
     return mesh

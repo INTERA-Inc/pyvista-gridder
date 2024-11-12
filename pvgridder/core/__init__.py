@@ -6,7 +6,7 @@ from .voronoi import VoronoiMesh2D
 
 __all__ = [
     "AnnularSector",
-    "PlaneSurface",
+    "Surface",
     "Quadrilateral",
     "Rectangle",
     "Sector",
