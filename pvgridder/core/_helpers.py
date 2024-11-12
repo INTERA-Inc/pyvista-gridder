@@ -10,10 +10,10 @@ def generate_arc(
     radius: float,
     theta_min: float = 0.0,
     theta_max: float = 90.0,
-    nsub: Optional[int | list[float]] = None,
+    resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.PolyData:
-    perc = nsub_to_perc(nsub, method)
+    perc = resolution_to_perc(resolution, method)
     angles = theta_min + perc * (theta_max - theta_min)
     angles = np.deg2rad(angles)
     points = radius * np.column_stack((np.cos(angles), np.sin(angles), np.zeros(len(angles))))
@@ -24,7 +24,7 @@ def generate_arc(
 def generate_line_from_two_points(
     point_a: ArrayLike,
     point_b: ArrayLike,
-    nsub: Optional[int | list[float]] = None,
+    resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.PolyData:
     point_a = np.asarray(point_a)
@@ -33,7 +33,7 @@ def generate_line_from_two_points(
     if point_a.shape != point_b.shape:
         raise ValueError("could not generate a line from two inhomogeneous points")
 
-    perc = nsub_to_perc(nsub, method)[:, np.newaxis]
+    perc = resolution_to_perc(resolution, method)[:, np.newaxis]
     points = point_a + perc * (point_b - point_a)
     points = points if points.shape[1] == 3 else np.column_stack((points, np.zeros(len(points))))
 
@@ -43,7 +43,7 @@ def generate_line_from_two_points(
 def generate_plane_surface_from_two_lines(
     line_a: pv.PolyData | ArrayLike,
     line_b: pv.PolyData | ArrayLike,
-    nsub: Optional[int | list[float]] = None,
+    resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
     axis: int = 2,
 ) -> pv.StructuredGrid:
@@ -53,7 +53,7 @@ def generate_plane_surface_from_two_lines(
     if line_points_a.shape != line_points_b.shape:
         raise ValueError("could not generate plane surface from two inhomogeneous lines")
 
-    perc = nsub_to_perc(nsub, method)[:, np.newaxis, np.newaxis]
+    perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
     X, Y, Z = (line_points_a + perc * (line_points_b - line_points_a)).transpose((2, 1, 0))
 
     if axis == 0:
@@ -88,7 +88,7 @@ def generate_plane_surface_from_two_lines(
 def generate_volume_from_two_surfaces(
     surface_a: pv.StructuredGrid | pv.UnstructuredGrid,
     surface_b: pv.StructuredGrid | pv.UnstructuredGrid,
-    nsub: Optional[int | list[float]] = None,
+    resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
     if surface_a.points.shape != surface_b.points.shape or not isinstance(surface_a, type(surface_b)):
@@ -118,7 +118,7 @@ def generate_volume_from_two_surfaces(
         xa, ya, za = surface_a.x[slice_], surface_a.y[slice_], surface_a.z[slice_]
         xb, yb, zb = surface_b.x[slice_], surface_b.y[slice_], surface_b.z[slice_]
 
-        perc = nsub_to_perc(nsub, method)[:, np.newaxis, np.newaxis]
+        perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
         X = (xa + perc * (xb - xa)).transpose(axis)
         Y = (ya + perc * (yb - ya)).transpose(axis)
         Z = (za + perc * (zb - za)).transpose(axis)
@@ -134,7 +134,7 @@ def generate_volume_from_two_surfaces(
         points_a = surface_a.points
         points_b = surface_b.points
 
-        perc = nsub_to_perc(nsub, method)[:, np.newaxis, np.newaxis]
+        perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
         points = points_a + perc * (points_b - points_a)
 
         n = perc.size - 1
@@ -175,19 +175,19 @@ def generate_volume_from_two_surfaces(
     return mesh
 
 
-def nsub_to_perc(
-    nsub: int | ArrayLike,
+def resolution_to_perc(
+    resolution: int | ArrayLike,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
-) -> list[float]:
-    if np.ndim(nsub) == 0:
-        nsub = nsub if nsub else 1
+) -> ArrayLike:
+    if np.ndim(resolution) == 0:
+        resolution = resolution if resolution else 1
         method = method if method else "constant"
 
         if method == "constant":
-            perc = np.linspace(0.0, 1.0, nsub + 1)
+            perc = np.linspace(0.0, 1.0, resolution + 1)
 
         elif method in {"log", "log_r"}:
-            perc = np.log10(np.linspace(1.0, 10.0, nsub + 1))
+            perc = np.log10(np.linspace(1.0, 10.0, resolution + 1))
 
         else:
             raise ValueError(f"invalid subdivision method '{method}'")
@@ -195,14 +195,14 @@ def nsub_to_perc(
         if method.endswith("_r"):
             perc = 1.0 - perc
 
-    elif np.ndim(nsub) == 1:
-        if not all(0.0 <= n <= 1 for n in nsub):
-            raise ValueError(f"invalid subdivision value '{nsub}'")
+    elif np.ndim(resolution) == 1:
+        if not all(0.0 <= n <= 1 for n in resolution):
+            raise ValueError(f"invalid subdivision value '{resolution}'")
 
-        perc = np.sort(nsub)
+        perc = np.sort(resolution)
 
     else:
-        raise ValueError(f"invalid subdivision value '{nsub}'")
+        raise ValueError(f"invalid subdivision value '{resolution}'")
 
     return perc
 

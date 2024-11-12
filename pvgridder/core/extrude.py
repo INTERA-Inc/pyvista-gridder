@@ -32,7 +32,7 @@ class MeshExtrude(MeshBase):
     def add(
         self,
         vector: ArrayLike,
-        nsub: Optional[int | ArrayLike] = None,
+        resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         scale: Optional[float] = None,
         angle: Optional[float] = None,
@@ -55,7 +55,7 @@ class MeshExtrude(MeshBase):
         if angle is not None:
             mesh = mesh.rotate_vector(vector, angle, mesh.center)
 
-        item = MeshItem(mesh, nsub=nsub, method=method, group=group)
+        item = MeshItem(mesh, resolution=resolution, method=method, group=group)
         self.items.append(item)
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
@@ -79,7 +79,7 @@ class MeshExtrude(MeshBase):
                 tmp[v(mesh_a)] = self._get_group_number(k, groups)
 
             mesh_a.cell_data["group"] = tmp
-            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2.mesh, item2.nsub, item2.method)
+            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2.mesh, item2.resolution, item2.method)
 
             if i > 0:
                 axis = self.mesh.dimensions.index(1) if isinstance(mesh, pv.StructuredGrid) else None

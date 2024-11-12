@@ -126,7 +126,7 @@ class MeshStackBase(MeshBase):
     def add(
         self,
         arg: float | ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
-        nsub: Optional[int | ArrayLike] = None,
+        resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         group: Optional[str] = None,
     ) -> None:
@@ -156,7 +156,7 @@ class MeshStackBase(MeshBase):
                     raise ValueError(f"could not add {arg.ndim}D array to stack")
 
         item = (
-            MeshItem(mesh, nsub=nsub, method=method, group=group)
+            MeshItem(mesh, resolution=resolution, method=method, group=group)
             if self.items
             else MeshItem(mesh)
         )
@@ -173,7 +173,7 @@ class MeshStackBase(MeshBase):
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
             mesh_a.cell_data["group"] = self._initialize_group_array(mesh_a, groups, item2.group)
-            mesh_b = self._extrude(mesh_a, item2.mesh, item2.nsub, item2.method)
+            mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
 
             if i > 0:
                 mesh = merge(mesh, mesh_b, self.axis)
