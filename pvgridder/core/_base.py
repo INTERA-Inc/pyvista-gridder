@@ -1,6 +1,7 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
 from typing import Literal, Optional
+from typing_extensions import Self
 
 from abc import ABC, abstractmethod
 
@@ -129,7 +130,7 @@ class MeshStackBase(MeshBase):
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         group: Optional[str] = None,
-    ) -> None:
+    ) -> Self:
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
             mesh = self._interpolate(arg.points)
 
@@ -161,6 +162,8 @@ class MeshStackBase(MeshBase):
             else MeshItem(mesh)
         )
         self.items.append(item)
+
+        return self
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         from .. import merge

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional
+from typing_extensions import Self
 
 import pyvista as pv
 
@@ -19,7 +20,7 @@ class MeshFactory(MeshBase):
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         angle: Optional[float] = None,
         group: Optional[str] = None,
-    ) -> pv.UnstructuredGrid | None:
+    ) -> Self:
         mesh = mesh.cast_to_unstructured_grid()
         
         # Rotate
@@ -29,6 +30,8 @@ class MeshFactory(MeshBase):
         # Add group
         item = MeshItem(mesh, group=group)
         self.items.append(item)
+
+        return self
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.UnstructuredGrid:
         if len(self.items) == 0:

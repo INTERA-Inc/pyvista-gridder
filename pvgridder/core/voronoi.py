@@ -1,6 +1,7 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
 from typing import Optional
+from typing_extensions import Self
 
 import numpy as np
 import pyvista as pv
@@ -28,7 +29,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         mesh_or_points: ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         group: Optional[str] = None,
-    ) -> None:
+    ) -> Self:
         if not isinstance(mesh_or_points, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
             mesh_or_points = self._check_point_array(mesh_or_points)
             mesh = pv.PolyData(mesh_or_points)
@@ -38,6 +39,8 @@ class VoronoiMesh2D(MeshBase):
         
         item = MeshItem(mesh, group=group)
         self.items.append(item)
+
+        return self
 
     def generate_mesh(
         self,

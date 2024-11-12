@@ -1,6 +1,7 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
 from typing import Literal, Optional
+from typing_extensions import Self
 
 import numpy as np
 import pyvista as pv
@@ -37,7 +38,7 @@ class MeshExtrude(MeshBase):
         scale: Optional[float] = None,
         angle: Optional[float] = None,
         group: Optional[str | dict] = None,
-    ) -> None:
+    ) -> Self:
         vector = np.asarray(vector)
 
         if vector.shape != (3,):
@@ -57,6 +58,8 @@ class MeshExtrude(MeshBase):
 
         item = MeshItem(mesh, resolution=resolution, method=method, group=group)
         self.items.append(item)
+
+        return self
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
         from .. import merge
