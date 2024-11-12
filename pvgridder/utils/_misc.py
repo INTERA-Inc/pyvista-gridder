@@ -126,6 +126,31 @@ def merge(
     return mesh
 
 
+def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
+    if mesh.n_lines == 0:
+        return []
+
+    lines = mesh.lines
+    offset = 0
+    out = []
+
+    for _ in range(mesh.n_lines):
+        n_points = lines[offset]
+        points = mesh.points[lines[offset + 1 : offset + n_points + 1]]
+        cells = np.column_stack(
+            (
+                np.full(n_points - 1, 2),
+                np.arange(n_points - 1),
+                np.roll(np.arange(n_points - 1), -1),
+            )
+        ).ravel()
+        out.append(pv.PolyData(points, lines=cells))
+        
+        offset += n_points + 1
+
+    return out
+
+
 def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
     n_points = mesh.n_points
 

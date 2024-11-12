@@ -20,20 +20,13 @@ class MeshStack2D(MeshStackBase):
         group: Optional[str] = None,
         ignore_groups: Optional[list[str]] = None,
     ) -> None:
+        from .. import split_lines
+
         if not isinstance(mesh, pv.PolyData) and not mesh.n_lines:
             raise ValueError("invalid mesh, input mesh should be a line or a polyline")
 
-        lines = mesh.lines
-        n_cells = lines[0] - 1
-        points = mesh.points[lines[1 : lines[0] + 1]]
-        cells = np.column_stack(
-            (
-                np.full(n_cells, 2),
-                np.arange(n_cells),
-                np.roll(np.arange(n_cells), -1),
-            )
-        ).ravel()
-        super().__init__(pv.PolyData(points, lines=cells), axis, group, ignore_groups)
+        lines = split_lines(mesh)
+        super().__init__(lines[0], axis, group, ignore_groups)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid:
         return generate_plane_surface_from_two_lines(*args, axis=self.axis, **kwargs)
@@ -58,4 +51,3 @@ class MeshStack3D(MeshStackBase):
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         return generate_volume_from_two_surfaces(*args, **kwargs)
-
