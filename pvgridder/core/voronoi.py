@@ -8,6 +8,7 @@ import pyvista as pv
 from scipy.spatial import Voronoi
 
 from ._base import MeshBase, MeshItem
+from ._helpers import generate_plane_surface_from_two_lines
 from .._common import require_package
 
 
@@ -35,10 +36,72 @@ class VoronoiMesh2D(MeshBase):
             mesh = pv.PolyData(mesh_or_points)
 
         else:
-            mesh = mesh_or_points
+            mesh = mesh_or_points.copy()
         
-        item = MeshItem(mesh, group=group)
+        item = MeshItem(mesh, group=group, type_="mesh")
         self.items.append(item)
+
+        return self
+
+    def add_polyline(
+        self,
+        mesh_or_points: ArrayLike | pv.PolyData,
+        width: float,
+        group: Optional[str] = None,
+    ) -> Self:
+        from .. import split_lines
+
+        if not isinstance(mesh_or_points, pv.PolyData):
+            mesh = pv.MultipleLines(mesh_or_points)
+
+        else:
+            mesh = mesh_or_points.copy()
+
+        mesh.points[:, self.axis] = 0.0
+        polylines = split_lines(mesh)
+
+        # Loop over polylines
+        for polyline in polylines:
+            # Remove axis from points
+            points = np.delete(polyline.points, self.axis, axis=1)
+
+            # Calculate forward direction vectors
+            fdvec = np.diff(points, axis=0)
+            fdvec = np.row_stack((fdvec, fdvec[-1]))
+            
+            # Calculate backward direction vectors
+            bdvec = np.diff(points[::-1], axis=0)[::-1]
+            bdvec = np.row_stack((bdvec[0], bdvec))
+
+            # Append constraint points at the beginning and at the end of the polyline
+            points = np.row_stack((points[0] - fdvec[0], points, points[-1] - bdvec[-1]))
+
+            # Calculate normal vectors
+            fnorm = np.column_stack((-fdvec[:, 1], fdvec[:, 0]))
+            bnorm = np.column_stack((bdvec[:, 1], -bdvec[:, 0]))
+            normals = 0.5 * (fnorm + bnorm)
+            normals = np.row_stack((normals[0], normals, normals[-1]))
+            normals /= np.linalg.norm(normals, axis=1)[:, None]
+
+            # Generate structured grid with constraint cells
+            points = np.insert(points, self.axis, 0.0, axis=1)
+            normals = np.insert(normals, self.axis, 0.0, axis=1)
+
+            line_a = points - 1.5 * width * normals
+            line_b = points + 1.5 * width * normals
+            mesh = generate_plane_surface_from_two_lines(line_a, line_b, 3, axis=self.axis)
+
+            # Identify constraint cells
+            shape = [n - 1 for n in mesh.dimensions if n != 1]
+            nx = shape[0]
+
+            constraint = np.ones(mesh.n_cells, dtype=bool)
+            constraint[nx + 1 : -(nx + 1)] = False
+            mesh.cell_data["constraint"] = constraint
+
+            # Add to items
+            item = MeshItem(mesh, group=group, type_="line")
+            self.items.append(item)
 
         return self
 
@@ -72,12 +135,19 @@ class VoronoiMesh2D(MeshBase):
             # Append points to point list
             points += points_.tolist()
             active = np.concatenate((active, np.ones(len(points_), dtype=bool)))
-            group_array = np.concatenate(
-                (
-                    group_array,
-                    self._initialize_group_array(mesh_a, groups, item.group),
+
+            if item.type_ == "line":
+                item_group_array = self._initialize_group_array(mesh_a, groups)
+                item_group_array = np.where(
+                    mesh_a.cell_data["constraint"],
+                    self._get_group_number(self.default_group, groups),
+                    self._get_group_number(item.group, groups),
                 )
-            )
+
+            else:
+                item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
+            
+            group_array = np.concatenate((group_array, item_group_array))
 
         points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
