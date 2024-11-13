@@ -48,6 +48,8 @@ class VoronoiMesh2D(MeshBase):
         self,
         mesh_or_points: ArrayLike | pv.PolyData,
         width: float,
+        constrain_start: bool = True,
+        constrain_end: bool = True,
         zorder: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -75,14 +77,21 @@ class VoronoiMesh2D(MeshBase):
             bdvec = np.diff(points[::-1], axis=0)[::-1]
             bdvec = np.row_stack((bdvec[0], bdvec))
 
-            # Append constraint points at the beginning and at the end of the polyline
-            points = np.row_stack((points[0] - fdvec[0], points, points[-1] - bdvec[-1]))
+            # Append constraint points at the start and at the end of the polyline
+            if constrain_start:
+                points = np.row_stack((points[0] - fdvec[0], points))
+                fdvec = np.row_stack((fdvec[0], fdvec))
+                bdvec = np.row_stack((bdvec[0], bdvec))
+
+            if constrain_end:
+                points = np.row_stack((points, points[-1] - bdvec[-1]))
+                fdvec = np.row_stack((fdvec, fdvec[-1]))
+                bdvec = np.row_stack((bdvec, bdvec[-1]))
 
             # Calculate normal vectors
             fnorm = np.column_stack((-fdvec[:, 1], fdvec[:, 0]))
             bnorm = np.column_stack((bdvec[:, 1], -bdvec[:, 0]))
             normals = 0.5 * (fnorm + bnorm)
-            normals = np.row_stack((normals[0], normals, normals[-1]))
             normals /= np.linalg.norm(normals, axis=1)[:, None]
 
             # Generate structured grid with constraint cells
@@ -98,7 +107,7 @@ class VoronoiMesh2D(MeshBase):
             nx = shape[0]
 
             constraint = np.ones(mesh.n_cells, dtype=bool)
-            constraint[nx + 1 : -(nx + 1)] = False
+            constraint[nx + int(constrain_start) : -(nx + int(constrain_end))] = False
             mesh.cell_data["constraint"] = constraint
 
             # Add to items
