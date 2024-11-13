@@ -29,6 +29,7 @@ class VoronoiMesh2D(MeshBase):
     def add(
         self,
         mesh_or_points: ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+        zorder: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
         if not isinstance(mesh_or_points, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
@@ -38,7 +39,7 @@ class VoronoiMesh2D(MeshBase):
         else:
             mesh = mesh_or_points.copy()
         
-        item = MeshItem(mesh, group=group, type_="mesh")
+        item = MeshItem(mesh, group=group, zorder=zorder, type_="mesh")
         self.items.append(item)
 
         return self
@@ -47,6 +48,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         mesh_or_points: ArrayLike | pv.PolyData,
         width: float,
+        zorder: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
         from .. import split_lines
@@ -100,7 +102,7 @@ class VoronoiMesh2D(MeshBase):
             mesh.cell_data["constraint"] = constraint
 
             # Add to items
-            item = MeshItem(mesh, group=group, type_="line")
+            item = MeshItem(mesh, group=group, zorder=zorder, type_="line")
             self.items.append(item)
 
         return self
@@ -118,36 +120,45 @@ class VoronoiMesh2D(MeshBase):
 
         groups = {}
         group_array = self._initialize_group_array(self.mesh, groups)
+        zorder_array = np.zeros(self.mesh.n_cells)
 
         for i, item in enumerate(self.items):
             mesh_a = item.mesh
+            zorder = item.zorder if item.zorder else 0
+            group = item.group if item.group else self.default_group
             points_ = mesh_a.cell_centers().points
-
-            # Remove out of bound points from item mesh
-            mask = self.mesh.find_containing_cell(points_) != -1
-            points_ = points_[mask]
-
-            # Disable points from point list contained by item mesh
-            mask = mesh_a.find_containing_cell(points) != -1
-            active[mask] = False
-            group_array[mask] = False
-
-            # Append points to point list
-            points += points_.tolist()
-            active = np.concatenate((active, np.ones(len(points_), dtype=bool)))
 
             if item.type_ == "line":
                 item_group_array = self._initialize_group_array(mesh_a, groups)
                 item_group_array = np.where(
                     mesh_a.cell_data["constraint"],
                     self._get_group_number(self.default_group, groups),
-                    self._get_group_number(item.group, groups),
+                    self._get_group_number(group, groups),
                 )
+                item_zorder_array = np.where(mesh_a.cell_data["constraint"], 0, zorder)
 
             else:
                 item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
-            
+                item_zorder_array = np.full(mesh_a.n_cells, zorder)
+
+            # Remove out of bound points from item mesh
+            mask = self.mesh.find_containing_cell(points_) != -1
+            points_ = points_[mask]
+
+            # Disable points from point list contained by item mesh and with lower priority
+            idx = mesh_a.find_containing_cell(points)
+            mask = np.logical_and(
+                idx != -1,
+                zorder_array <= item_zorder_array[idx],
+            )
+            active[mask] = False
+            group_array[mask] = False
+
+            # Append points to point list
+            points += points_.tolist()
+            active = np.concatenate((active, np.ones(len(points_), dtype=bool)))
             group_array = np.concatenate((group_array, item_group_array))
+            zorder_array = np.concatenate((zorder_array, item_zorder_array))
 
         points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
