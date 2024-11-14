@@ -1,6 +1,6 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
-from typing import Optional
+from typing import Literal, Optional
 from typing_extensions import Self
 
 import numpy as np
@@ -48,6 +48,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         mesh_or_points: ArrayLike | pv.PolyData,
         width: float,
+        preference: Optional[Literal["cell", "point"]] = "cell",
         constrain_start: bool = True,
         constrain_end: bool = True,
         resolution: int = 1,
@@ -62,13 +63,21 @@ class VoronoiMesh2D(MeshBase):
         else:
             mesh = mesh_or_points.copy()
 
-        mesh.points[:, self.axis] = 0.0
-        polylines = split_lines(mesh)
-
         # Loop over polylines
-        for polyline in polylines:
+        for polyline in split_lines(mesh):
             # Remove axis from points
             points = np.delete(polyline.points, self.axis, axis=1)
+
+            # Calculate new point coordinates if cell centers
+            if preference == "cell":
+                f = 0.5 * width
+                points = np.row_stack(
+                    (
+                        points[0] + f * (points[0] - points[1]) / np.linalg.norm(points[0] - points[1]),
+                        0.5 * (points[:-1] + points[1:]),
+                        points[-1] + f * (points[-1] - points[-2]) / np.linalg.norm(points[-1] - points[-2]),
+                    )
+                )
 
             # Calculate forward direction vectors
             fdvec = np.diff(points, axis=0)
