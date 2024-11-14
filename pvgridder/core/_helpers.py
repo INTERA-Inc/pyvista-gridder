@@ -196,9 +196,6 @@ def resolution_to_perc(
             perc = 1.0 - perc
 
     elif np.ndim(resolution) == 1:
-        if not all(0.0 <= n <= 1 for n in resolution):
-            raise ValueError(f"invalid subdivision value '{resolution}'")
-
         perc = np.sort(resolution)
 
     else:

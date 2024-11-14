@@ -8,7 +8,7 @@ import pyvista as pv
 from scipy.spatial import Voronoi
 
 from ._base import MeshBase, MeshItem
-from ._helpers import generate_surface_from_two_lines
+from ._helpers import generate_surface_from_two_lines, resolution_to_perc
 from .._common import require_package
 
 
@@ -51,7 +51,7 @@ class VoronoiMesh2D(MeshBase):
         preference: Optional[Literal["cell", "point"]] = "cell",
         constrain_start: bool = True,
         constrain_end: bool = True,
-        resolution: int = 1,
+        resolution: Optional[int | ArrayLike] = None,
         zorder: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -62,6 +62,9 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
+
+        perc = resolution_to_perc(resolution)
+        perc = [2.0 * perc[0] - perc[1], *perc.tolist(), 2.0 * perc[-1] - perc[-2]]
 
         # Loop over polylines
         for polyline in split_lines(mesh):
@@ -108,10 +111,10 @@ class VoronoiMesh2D(MeshBase):
             points = np.insert(points, self.axis, 0.0, axis=1)
             normals = np.insert(normals, self.axis, 0.0, axis=1)
 
-            tvec = (0.5 + 1.0 / resolution) * width * normals
+            tvec = 0.5 * width * normals
             line_a = points - tvec
             line_b = points + tvec
-            mesh = generate_surface_from_two_lines(line_a, line_b, resolution + 2, axis=self.axis)
+            mesh = generate_surface_from_two_lines(line_a, line_b, perc, axis=self.axis)
 
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
