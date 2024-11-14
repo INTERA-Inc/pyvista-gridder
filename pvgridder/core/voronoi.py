@@ -108,16 +108,15 @@ class VoronoiMesh2D(MeshBase):
             points = np.insert(points, self.axis, 0.0, axis=1)
             normals = np.insert(normals, self.axis, 0.0, axis=1)
 
-            line_a = points - 1.5 * width * normals
-            line_b = points + 1.5 * width * normals
+            tvec = (0.5 + 1.0 / resolution) * width * normals
+            line_a = points - tvec
+            line_b = points + tvec
             mesh = generate_surface_from_two_lines(line_a, line_b, resolution + 2, axis=self.axis)
 
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
-            nx = shape[0]
-
             constraint = np.ones(shape, dtype=bool)
-            constraint[int(constrain_start) : nx - int(constrain_end), 1 : -1] = False
+            constraint[int(constrain_start) : shape[0] - int(constrain_end), 1 : -1] = False
             constraint = constraint.ravel(order="F")
 
             # Add to items
