@@ -8,7 +8,7 @@ import pyvista as pv
 from scipy.spatial import Voronoi
 
 from ._base import MeshBase, MeshItem
-from ._helpers import generate_plane_surface_from_two_lines
+from ._helpers import generate_surface_from_two_lines
 from .._common import require_package
 
 
@@ -110,7 +110,7 @@ class VoronoiMesh2D(MeshBase):
 
             line_a = points - 1.5 * width * normals
             line_b = points + 1.5 * width * normals
-            mesh = generate_plane_surface_from_two_lines(line_a, line_b, resolution + 2, axis=self.axis)
+            mesh = generate_surface_from_two_lines(line_a, line_b, resolution + 2, axis=self.axis)
 
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]

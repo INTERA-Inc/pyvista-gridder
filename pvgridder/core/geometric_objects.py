@@ -8,7 +8,7 @@ import pyvista as pv
 from ._helpers import (
     generate_arc,
     generate_line_from_two_points,
-    generate_plane_surface_from_two_lines,
+    generate_surface_from_two_lines,
     generate_volume_from_two_surfaces,
     translate
 )
@@ -30,7 +30,7 @@ def AnnularSector(
 
     line_a = generate_arc(inner_radius, theta_min, theta_max, theta_resolution, theta_method)
     line_b = generate_arc(outer_radius, theta_min, theta_max, theta_resolution, theta_method)
-    mesh = generate_plane_surface_from_two_lines(line_a, line_b, r_resolution, r_method)
+    mesh = generate_surface_from_two_lines(line_a, line_b, r_resolution, r_method)
     mesh = translate(mesh, center)
 
     return mesh
@@ -44,7 +44,7 @@ def Surface(
 ) -> pv.StructuredGrid:
     line_a = line_a if line_a is not None else [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
     line_b = line_b if line_b is not None else [(0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
-    mesh = generate_plane_surface_from_two_lines(line_a, line_b, resolution, method)
+    mesh = generate_surface_from_two_lines(line_a, line_b, resolution, method)
 
     return mesh
 
@@ -136,8 +136,8 @@ def SectorRectangle(
     line_y = generate_line_from_two_points([dx, 0.0], [dx, dy], theta_resolution, theta_method)
     line_45 = generate_arc(radius, 0.0, 45.0, theta_resolution)
     line_90 = generate_arc(radius, 45.0, 90.0, theta_resolution)
-    mesh_y45 = generate_plane_surface_from_two_lines(line_45, line_y, r_resolution, r_method)
-    mesh_x90 = generate_plane_surface_from_two_lines(line_90, line_x, r_resolution, r_method)
+    mesh_y45 = generate_surface_from_two_lines(line_45, line_y, r_resolution, r_method)
+    mesh_x90 = generate_surface_from_two_lines(line_90, line_x, r_resolution, r_method)
     mesh = (
         mesh_y45.cast_to_unstructured_grid()
         + mesh_x90.cast_to_unstructured_grid()

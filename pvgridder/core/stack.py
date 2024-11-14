@@ -6,7 +6,7 @@ import pyvista as pv
 
 from ._base import MeshStackBase
 from ._helpers import (
-    generate_plane_surface_from_two_lines,
+    generate_surface_from_two_lines,
     generate_volume_from_two_surfaces,
     is2d,
 )
@@ -29,7 +29,7 @@ class MeshStack2D(MeshStackBase):
         super().__init__(lines[0], axis, group, ignore_groups)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid:
-        return generate_plane_surface_from_two_lines(*args, axis=self.axis, **kwargs)
+        return generate_surface_from_two_lines(*args, axis=self.axis, **kwargs)
 
 
 class MeshStack3D(MeshStackBase):

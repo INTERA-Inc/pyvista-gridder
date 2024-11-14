@@ -40,7 +40,7 @@ def generate_line_from_two_points(
     return pv.MultipleLines(points)
 
 
-def generate_plane_surface_from_two_lines(
+def generate_surface_from_two_lines(
     line_a: pv.PolyData | ArrayLike,
     line_b: pv.PolyData | ArrayLike,
     resolution: Optional[int | ArrayLike] = None,
