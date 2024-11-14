@@ -39,7 +39,7 @@ class VoronoiMesh2D(MeshBase):
         else:
             mesh = mesh_or_points.copy()
         
-        item = MeshItem(mesh, group=group, zorder=zorder, type_="mesh")
+        item = MeshItem(mesh, group=group, zorder=zorder if zorder else 0)
         self.items.append(item)
 
         return self
@@ -108,10 +108,12 @@ class VoronoiMesh2D(MeshBase):
 
             constraint = np.ones(mesh.n_cells, dtype=bool)
             constraint[nx + int(constrain_start) : -(nx + int(constrain_end))] = False
-            mesh.cell_data["constraint"] = constraint
 
             # Add to items
-            item = MeshItem(mesh, group=group, zorder=zorder, type_="line")
+            item = MeshItem(mesh.extract_cells(~constraint), group=group, zorder=zorder if zorder else 0)
+            self.items.append(item)
+
+            item = MeshItem(mesh.extract_cells(constraint), group=None, zorder=0)
             self.items.append(item)
 
         return self
@@ -130,32 +132,21 @@ class VoronoiMesh2D(MeshBase):
 
         groups = {}
         group_array = self._initialize_group_array(self.mesh, groups)
-        zorder_array = np.zeros(self.mesh.n_cells)
+        zorder_array = np.full(self.mesh.n_cells, -np.inf)
+        items = sorted(self.items, key=lambda item: item.zorder)
 
-        for i, item in enumerate(self.items):
+        for i, item in enumerate(items):
             mesh_a = item.mesh
-            zorder = item.zorder if item.zorder else 0
             group = item.group if item.group else self.default_group
             points_ = mesh_a.cell_centers().points
-
-            if item.type_ == "line":
-                item_group_array = self._initialize_group_array(mesh_a, groups)
-                item_group_array = np.where(
-                    mesh_a.cell_data["constraint"],
-                    self._get_group_number(self.default_group, groups),
-                    self._get_group_number(group, groups),
-                )
-                item_zorder_array = np.where(mesh_a.cell_data["constraint"], 0, zorder)
-
-            else:
-                item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
-                item_zorder_array = np.full(mesh_a.n_cells, zorder)
+            item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
+            item_zorder_array = np.full(mesh_a.n_cells, item.zorder)
 
             # Remove out of bound points from item mesh
             mask = self.mesh.find_containing_cell(points_) != -1
             points_ = points_[mask]
 
-            # Disable points from point list contained by item mesh and with lower priority
+            # Disable existing points contained by item mesh and with lower (or equal) priority
             idx = mesh_a.find_containing_cell(points)
             mask = np.logical_and(
                 idx != -1,
