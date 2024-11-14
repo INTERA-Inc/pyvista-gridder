@@ -50,6 +50,7 @@ class VoronoiMesh2D(MeshBase):
         width: float,
         constrain_start: bool = True,
         constrain_end: bool = True,
+        resolution: int = 1,
         zorder: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -100,14 +101,15 @@ class VoronoiMesh2D(MeshBase):
 
             line_a = points - 1.5 * width * normals
             line_b = points + 1.5 * width * normals
-            mesh = generate_plane_surface_from_two_lines(line_a, line_b, 3, axis=self.axis)
+            mesh = generate_plane_surface_from_two_lines(line_a, line_b, resolution + 2, axis=self.axis)
 
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
             nx = shape[0]
 
-            constraint = np.ones(mesh.n_cells, dtype=bool)
-            constraint[nx + int(constrain_start) : -(nx + int(constrain_end))] = False
+            constraint = np.ones(shape, dtype=bool)
+            constraint[int(constrain_start) : nx - int(constrain_end), 1 : -1] = False
+            constraint = constraint.ravel(order="F")
 
             # Add to items
             item = MeshItem(mesh.extract_cells(~constraint), group=group, zorder=zorder if zorder else 0)
