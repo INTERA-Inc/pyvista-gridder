@@ -149,14 +149,14 @@ class VoronoiMesh2D(MeshBase):
         groups = {}
         group_array = self._initialize_group_array(self.mesh, groups)
         zorder_array = np.full(self.mesh.n_cells, -np.inf)
-        items = sorted(self.items, key=lambda item: item.zorder)
+        items = sorted(self.items, key=lambda item: abs(item.zorder))
 
         for i, item in enumerate(items):
             mesh_a = item.mesh
             group = item.group if item.group else self.default_group
             points_ = mesh_a.cell_centers().points
             item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
-            item_zorder_array = np.full(mesh_a.n_cells, item.zorder)
+            item_zorder_array = np.full(mesh_a.n_cells, abs(item.zorder))
 
             # Remove out of bound points from item mesh
             mask = self.mesh.find_containing_cell(points_) != -1
@@ -166,7 +166,11 @@ class VoronoiMesh2D(MeshBase):
             idx = mesh_a.find_containing_cell(points)
             mask = np.logical_and(
                 idx != -1,
-                zorder_array <= item_zorder_array[idx],
+                (
+                    zorder_array <= item_zorder_array[idx]
+                    if item.zorder >= 0
+                    else zorder_array < item_zorder_array[idx]
+                ),
             )
             active[mask] = False
             group_array[mask] = False
