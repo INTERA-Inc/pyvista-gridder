@@ -19,6 +19,8 @@ __all__ = [
     "get_neighborhood",
     "extract_boundary_polygons",
     "merge",
+    "reconstruct_line",
+    "split_lines",
     "quadraticize",
     "__version__",
 ]

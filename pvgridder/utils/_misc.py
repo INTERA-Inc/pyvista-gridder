@@ -126,6 +126,52 @@ def merge(
     return mesh
 
 
+def reconstruct_line(
+    points: ArrayLike,
+    start: int = 0,
+    close: bool = False,
+    tolerance: float = 1.0e-8,
+) -> pv.PolyData:
+    points = np.asarray(points)
+
+    if not (points.ndim == 2 and points.shape[1] in {2, 3}):
+        raise ValueError(f"could not reconstruct polyline from {points.shape[1]}D points")
+
+    def path_length(path):
+        if close:
+            path = np.append(path, path[0])
+
+        return np.linalg.norm(np.diff(points[path], axis=0), axis=1).sum()
+    
+    n = len(points)
+    shortest_path = np.roll(np.arange(n), -start)
+    shortest_length = path_length(shortest_path)
+    path = shortest_path.copy()
+
+    while True:
+        best_length = shortest_length
+
+        for first in range(1, n - 2):
+            for last in range(first + 2, n + 1):
+                path[first : last] = np.flip(path[first : last])
+                length = path_length(path)
+
+                if length < shortest_length:
+                    shortest_path[:] = path
+                    shortest_length = length
+
+                else:
+                    path[first : last] = np.flip(path[first : last])  # reset path to current shortest path
+
+        if shortest_length > (1.0 - tolerance) * best_length:
+            break
+
+    points = points[shortest_path]
+    points = points if points.shape[1] == 3 else np.column_stack((points, np.zeros(len(points))))
+
+    return pv.lines_from_points(points, close=close)
+
+
 def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
     if mesh.n_lines == 0:
         return []
