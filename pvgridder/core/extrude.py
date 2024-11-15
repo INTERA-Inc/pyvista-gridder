@@ -14,6 +14,9 @@ from ._helpers import (
 
 
 class MeshExtrude(MeshBase):
+    __name__: str = "MeshExtrude"
+    __qualname__: str = "pvgridder.MeshExtrude"
+
     def __init__(
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,

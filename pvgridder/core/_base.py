@@ -11,6 +11,9 @@ from scipy.interpolate import LinearNDInterpolator
 
 
 class MeshItem:
+    __name__: str = "MeshItem"
+    __qualname__: str = "pvgridder.MeshItem"
+
     def __init__(
         self,
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
@@ -27,6 +30,9 @@ class MeshItem:
 
 
 class MeshBase(ABC):
+    __name__: str = "MeshBase"
+    __qualname__: str = "pvgridder.MeshBase"
+
     def __init__(
         self,
         default_group: Optional[str] = None,
@@ -107,6 +113,9 @@ class MeshBase(ABC):
 
 
 class MeshStackBase(MeshBase):
+    __name__: str = "MeshStackBase"
+    __qualname__: str = "pvgridder.MeshStackBase"
+
     def __init__(
         self,
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,

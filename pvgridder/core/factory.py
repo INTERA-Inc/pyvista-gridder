@@ -8,6 +8,9 @@ from ._base import MeshBase, MeshItem
 
 
 class MeshFactory(MeshBase):
+    __name__: str = "MeshFactory"
+    __qualname__: str = "pvgridder.MeshFactory"
+
     def __init__(
         self,
         default_group: Optional[str] = None,

@@ -14,6 +14,9 @@ from .._common import require_package
 
 @require_package("shapely", (2, 0))
 class VoronoiMesh2D(MeshBase):
+    __name__: str = "VoronoiMesh2D"
+    __qualname__: str = "pvgridder.VoronoiMesh2D"
+
     def __init__(
         self,
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,

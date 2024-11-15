@@ -13,6 +13,9 @@ from ._helpers import (
 
 
 class MeshStack2D(MeshStackBase):
+    __name__: str = "MeshStack2D"
+    __qualname__: str = "pvgridder.MeshStack2D"
+
     def __init__(
         self,
         mesh: pv.PolyData,
@@ -33,6 +36,9 @@ class MeshStack2D(MeshStackBase):
 
 
 class MeshStack3D(MeshStackBase):
+    __name__: str = "MeshStack3D"
+    __qualname__: str = "pvgridder.MeshStack3D"
+
     def __init__(
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
