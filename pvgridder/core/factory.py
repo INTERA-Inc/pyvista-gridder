@@ -44,7 +44,7 @@ class MeshFactory(MeshBase):
 
         for i, item in enumerate(self.items):
             mesh_b = item.mesh
-            mesh_b.cell_data["group"] = self._initialize_group_array(mesh_b, groups, item.group)
+            mesh_b.cell_data["Group"] = self._initialize_group_array(mesh_b, groups, item.group)
 
             if i > 0:
                 mesh += mesh_b
@@ -52,6 +52,6 @@ class MeshFactory(MeshBase):
             else:
                 mesh = mesh_b.cast_to_unstructured_grid()
 
-        mesh.user_dict["group"] = groups
+        mesh.user_dict["Group"] = groups
 
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)

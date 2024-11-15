@@ -84,7 +84,7 @@ class MeshExtrude(MeshBase):
             for k, v in group.items():
                 tmp[v(mesh_a)] = self._get_group_number(k, groups)
 
-            mesh_a.cell_data["group"] = tmp
+            mesh_a.cell_data["Group"] = tmp
             mesh_b = generate_volume_from_two_surfaces(mesh_a, item2.mesh, item2.resolution, item2.method)
 
             if i > 0:
@@ -94,7 +94,7 @@ class MeshExtrude(MeshBase):
             else:
                 mesh = mesh_b
 
-        mesh.user_dict["group"] = groups
+        mesh.user_dict["Group"] = groups
 
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)

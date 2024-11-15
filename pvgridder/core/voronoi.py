@@ -208,13 +208,13 @@ class VoronoiMesh2D(MeshBase):
         mesh = pv.PolyData(points, faces=cells)
         mesh = mesh.cast_to_unstructured_grid()
 
-        mesh.cell_data["group"] = group_array[active]
-        mesh.user_dict["group"] = groups
+        mesh.cell_data["Group"] = group_array[active]
+        mesh.user_dict["Group"] = groups
         mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
         if return_points:
             points = pv.PolyData(np.insert(voronoi_points, self.axis, 0.0, axis=1))
-            points.cell_data["group"] = group_array[active]
+            points.cell_data["Group"] = group_array[active]
 
             return mesh, points
 
