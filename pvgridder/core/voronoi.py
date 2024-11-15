@@ -52,6 +52,7 @@ class VoronoiMesh2D(MeshBase):
         mesh_or_points: ArrayLike | pv.PolyData,
         width: float,
         preference: Optional[Literal["cell", "point"]] = "cell",
+        padding: Optional[float] = None,
         constrain_start: bool = True,
         constrain_end: bool = True,
         resolution: Optional[int | ArrayLike] = None,
@@ -76,12 +77,12 @@ class VoronoiMesh2D(MeshBase):
 
             # Calculate new point coordinates if cell centers
             if preference == "cell":
-                f = 0.5 * width
+                padding = padding if padding else 0.5 * width
                 points = np.row_stack(
                     (
-                        points[0] + f * (points[0] - points[1]) / np.linalg.norm(points[0] - points[1]),
+                        points[0] + padding * (points[0] - points[1]) / np.linalg.norm(points[0] - points[1]),
                         0.5 * (points[:-1] + points[1:]),
-                        points[-1] + f * (points[-1] - points[-2]) / np.linalg.norm(points[-1] - points[-2]),
+                        points[-1] + padding * (points[-1] - points[-2]) / np.linalg.norm(points[-1] - points[-2]),
                     )
                 )
 
