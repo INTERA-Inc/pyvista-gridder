@@ -39,12 +39,13 @@ def AnnularSector(
 def Surface(
     line_a: Optional[pv.PolyData | ArrayLike] = None,
     line_b: Optional[pv.PolyData | ArrayLike] = None,
+    plane: Literal["xy", "yx", "xz", "zx", "yz", "zy"] = "xy",
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid:
     line_a = line_a if line_a is not None else [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
     line_b = line_b if line_b is not None else [(0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
-    mesh = generate_surface_from_two_lines(line_a, line_b, resolution, method)
+    mesh = generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
 
     return mesh
 

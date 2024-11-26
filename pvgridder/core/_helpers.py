@@ -43,9 +43,9 @@ def generate_line_from_two_points(
 def generate_surface_from_two_lines(
     line_a: pv.PolyData | ArrayLike,
     line_b: pv.PolyData | ArrayLike,
+    plane: Literal["xy", "yx", "xz", "zx", "yz", "zy"] = "xy",
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
-    axis: int = 2,
 ) -> pv.StructuredGrid:
     line_points_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
     line_points_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
@@ -56,20 +56,38 @@ def generate_surface_from_two_lines(
     perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
     X, Y, Z = (line_points_a + perc * (line_points_b - line_points_a)).transpose((2, 1, 0))
 
-    if axis == 0:
-        X = np.expand_dims(X.transpose(), 2)
-        Y = np.expand_dims(Y.transpose(), 2)
-        Z = np.expand_dims(Z.transpose(), 2)
-
-    elif axis == 1:
+    if plane == "xy":
         X = np.expand_dims(X, 2)
         Y = np.expand_dims(Y, 2)
         Z = np.expand_dims(Z, 2)
 
-    else:
+    elif plane == "yx":
+        X = np.expand_dims(X.T, 2)
+        Y = np.expand_dims(Y.T, 2)
+        Z = np.expand_dims(Z.T, 2)
+
+    elif plane == "xz":
         X = np.expand_dims(X, 1)
         Y = np.expand_dims(Y, 1)
         Z = np.expand_dims(Z, 1)
+
+    elif plane == "zx":
+        X = np.expand_dims(X.T, 1)
+        Y = np.expand_dims(Y.T, 1)
+        Z = np.expand_dims(Z.T, 1)
+
+    elif plane == "yz":
+        X = np.expand_dims(X, 0)
+        Y = np.expand_dims(Y, 0)
+        Z = np.expand_dims(Z, 0)
+
+    elif plane == "zy":
+        X = np.expand_dims(X.T, 0)
+        Y = np.expand_dims(Y.T, 0)
+        Z = np.expand_dims(Z.T, 0)
+
+    else:
+        raise ValueError(f"invalid plane '{plane}'")
 
     mesh = pv.StructuredGrid(X, Y, Z)
 
