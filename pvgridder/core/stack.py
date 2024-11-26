@@ -31,8 +31,11 @@ class MeshStack2D(MeshStackBase):
         lines = split_lines(mesh)
         super().__init__(lines[0], axis, group, ignore_groups)
 
-    def _extrude(self, *args, **kwargs) -> pv.StructuredGrid:
-        return generate_surface_from_two_lines(*args, axis=self.axis, **kwargs)
+    def _extrude(self, *args) -> pv.StructuredGrid:
+        line_a, line_b, resolution, method = args
+        plane = "yz" if self.axis == 0 else "xz" if self.axis == 1 else "xy"
+
+        return generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
 
 
 class MeshStack3D(MeshStackBase):

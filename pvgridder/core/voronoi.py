@@ -118,7 +118,8 @@ class VoronoiMesh2D(MeshBase):
             tvec = 0.5 * width * normals
             line_a = points - tvec
             line_b = points + tvec
-            mesh = generate_surface_from_two_lines(line_a, line_b, perc, axis=self.axis)
+            plane = "yz" if self.axis == 0 else "xz" if self.axis == 1 else "xy"
+            mesh = generate_surface_from_two_lines(line_a, line_b, plane, perc)
 
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
