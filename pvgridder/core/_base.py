@@ -1,6 +1,6 @@
 from __future__ import annotations
 from numpy.typing import ArrayLike
-from typing import Literal, Optional
+from typing import Callable, Literal, Optional
 from typing_extensions import Self
 
 from abc import ABC, abstractmethod
@@ -135,13 +135,18 @@ class MeshStackBase(MeshBase):
 
     def add(
         self,
-        arg: float | ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+        arg: float | ArrayLike | Callable | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         group: Optional[str] = None,
     ) -> Self:
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
             mesh = self._interpolate(arg.points)
+
+        elif hasattr(arg, "__call__"):
+            idx = [i for i in range(3) if i != self.axis]
+            mesh = self.mesh.copy()
+            mesh.points[:, self.axis] = arg(mesh.points[:, idx])
 
         else:
             if np.ndim(arg) == 0:
