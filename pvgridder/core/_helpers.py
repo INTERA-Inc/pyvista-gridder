@@ -119,27 +119,35 @@ def generate_volume_from_two_surfaces(
         if not is2d(surface_a):
             raise ValueError("could not generate volume from non 2D structured grid")
 
-        idx = surface_a.dimensions.index(1)
+        nx, ny, nz = surface_a.dimensions
+        perc = resolution_to_perc(resolution, method)
 
-        if idx == 0:
+        if nx == 1:
+            axis = 0
             slice_ = (0,)
-            axis = (0, 1, 2)
+            perc = perc[:, np.newaxis, np.newaxis]
 
-        elif idx == 1:
+        elif ny == 1:
+            axis = 1
             slice_ = (slice(None), 0)
-            axis = (2, 0, 1)
+            perc = perc[:, np.newaxis]
 
-        else:
+        elif nz == 1:
+            axis = 2
             slice_ = (slice(None), slice(None), 0)
-            axis = (1, 2, 0)
 
         xa, ya, za = surface_a.x[slice_], surface_a.y[slice_], surface_a.z[slice_]
         xb, yb, zb = surface_b.x[slice_], surface_b.y[slice_], surface_b.z[slice_]
+        xa = np.expand_dims(xa, axis)
+        ya = np.expand_dims(ya, axis)
+        za = np.expand_dims(za, axis)
+        xb = np.expand_dims(xb, axis)
+        yb = np.expand_dims(yb, axis)
+        zb = np.expand_dims(zb, axis)
 
-        perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
-        X = (xa + perc * (xb - xa)).transpose(axis)
-        Y = (ya + perc * (yb - ya)).transpose(axis)
-        Z = (za + perc * (zb - za)).transpose(axis)
+        X = (xa + perc * (xb - xa))
+        Y = (ya + perc * (yb - ya))
+        Z = (za + perc * (zb - za))
         mesh = pv.StructuredGrid(X, Y, Z)
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
