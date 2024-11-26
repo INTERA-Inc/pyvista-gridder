@@ -30,7 +30,7 @@ def AnnularSector(
 
     line_a = generate_arc(inner_radius, theta_min, theta_max, theta_resolution, theta_method)
     line_b = generate_arc(outer_radius, theta_min, theta_max, theta_resolution, theta_method)
-    mesh = generate_surface_from_two_lines(line_a, line_b, r_resolution, r_method)
+    mesh = Surface(line_a, line_b, "xy", r_resolution, r_method)
     mesh = translate(mesh, center)
 
     return mesh
@@ -68,7 +68,7 @@ def Quadrilateral(
 
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
-    mesh = Surface(line_a, line_b, y_resolution, y_method)
+    mesh = Surface(line_a, line_b, "xy", y_resolution, y_method)
     mesh = translate(mesh, center)
 
     return mesh
@@ -137,8 +137,8 @@ def SectorRectangle(
     line_y = generate_line_from_two_points([dx, 0.0], [dx, dy], theta_resolution, theta_method)
     line_45 = generate_arc(radius, 0.0, 45.0, theta_resolution)
     line_90 = generate_arc(radius, 45.0, 90.0, theta_resolution)
-    mesh_y45 = generate_surface_from_two_lines(line_45, line_y, r_resolution, r_method)
-    mesh_x90 = generate_surface_from_two_lines(line_90, line_x, r_resolution, r_method)
+    mesh_y45 = Surface(line_45, line_y, "xy", r_resolution, r_method)
+    mesh_x90 = Surface(line_90, line_x, "xy", r_resolution, r_method)
     mesh = (
         mesh_y45.cast_to_unstructured_grid()
         + mesh_x90.cast_to_unstructured_grid()
