@@ -173,14 +173,23 @@ def generate_volume_from_two_surfaces(
         for i1, i2, celltype in zip(offset[:-1], offset[1:], celltypes):
             cell = cell_connectivity[i1 : i2]
 
-            if celltype == 42:  # POLYHEDRON
-                raise NotImplementedError()
+            if celltype == 42:
+                faces = [cell, cell + n_points]
+                faces += [
+                    np.array([p0, p1, p2, p3])
+                    for p0, p1, p2, p3 in zip(faces[0], np.roll(faces[0], -1), np.roll(faces[1], -1), faces[1])
+                ]
+                n_faces = len(faces)
+
+                for i, cells_ in enumerate(cells):
+                    cell = np.concatenate([[face.size, *(face + (i * n_points))] for face in faces])
+                    cells_ += [cell.size + 1, n_faces, *cell]
 
             else:
                 cell = np.concatenate((cell, cell + n_points))
 
-            for i, cells_ in enumerate(cells):
-                cells_ += [cell.size, *(cell + (i * n_points)).tolist()]
+                for i, cells_ in enumerate(cells):
+                    cells_ += [cell.size, *(cell + (i * n_points))]
 
         cells = np.concatenate(cells)
         celltypes = np.tile(celltypes, n)
@@ -258,6 +267,6 @@ def translate(
 
 
 _celltype_map = np.full(int(max(pv.CellType)), -1)
-_celltype_map[int(pv.CellType["TRIANGLE"])] = int(pv.CellType["WEDGE"])
-_celltype_map[int(pv.CellType["QUAD"])] = int(pv.CellType["HEXAHEDRON"])
-# _celltype_map[int(pv.CellType["POLYGON"])] = int(pv.CellType["POLYHEDRON"])
+_celltype_map[int(pv.CellType.TRIANGLE)] = int(pv.CellType.WEDGE)
+_celltype_map[int(pv.CellType.QUAD)] = int(pv.CellType.HEXAHEDRON)
+_celltype_map[int(pv.CellType.POLYGON)] = int(pv.CellType.POLYHEDRON)
