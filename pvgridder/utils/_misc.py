@@ -6,6 +6,45 @@ import numpy as np
 import pyvista as pv
 
 
+def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
+
+    def decimate(points):
+        u = points[-1] - points[0]
+        un = np.linalg.norm(u)
+        dist = (
+            np.linalg.norm(np.cross(u, points[0] - points), axis=1) / un
+            if un > 0.0
+            else np.linalg.norm(points - points[0], axis=1)
+        )
+        imax = dist.argmax()
+
+        if dist[imax] > tolerance:
+            res1 = decimate(points[:imax + 1])
+            res2 = decimate(points[imax:])
+
+            return np.row_stack((res1[:-1], res2))
+
+        else:
+            return np.row_stack((points[0], points[-1]))
+
+    lines = []
+    points = []
+
+    for i in range(mesh.n_cells):
+        cell = mesh.get_cell(i)
+
+        if cell.type.name in {"LINE", "POLY_LINE"}:
+            points_ = mesh.points[cell.point_ids]
+
+            if cell.type.name == "POLY_LINE":
+                points_ = decimate(points_)
+
+            lines += [len(points_), *(np.arange(len(points_)) + len(points))]
+            points += points_.tolist()
+
+    return pv.PolyData(points, lines=lines).clean()
+
+
 def extract_boundary_polygons(
     mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
     fill: bool = False,
