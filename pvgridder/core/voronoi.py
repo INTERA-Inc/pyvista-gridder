@@ -143,7 +143,7 @@ class VoronoiMesh2D(MeshBase):
         return_points: bool = False,
     ) -> pv.UnstructuredGrid | tuple[pv.UnstructuredGrid, pv.PolyData]:
         from shapely import Polygon
-        from .. import extract_boundary_polygons
+        from .. import decimate_rdp, extract_boundary_polygons
 
         points = self.mesh.cell_centers().points.tolist()
         active = np.ones(len(points), dtype=bool)
@@ -188,8 +188,9 @@ class VoronoiMesh2D(MeshBase):
         regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity)
 
         # Generate boundary polygon
-        boundary = extract_boundary_polygons(self.mesh)
-        boundary = Polygon(np.delete(boundary[0].points, self.axis, axis=1))
+        boundary = extract_boundary_polygons(self.mesh)[0]
+        boundary = decimate_rdp(boundary)
+        boundary = Polygon(np.delete(boundary.points, self.axis, axis=1))
 
         # Generate polygonal mesh
         points, cells = [], []
@@ -205,7 +206,7 @@ class VoronoiMesh2D(MeshBase):
             points_ = np.array(polygon.exterior.coords[:-1])
             mask = np.linalg.norm(np.diff(points_, axis=0), axis=1) > tolerance
             points_ = points_[np.insert(mask, 0, True)].tolist()
-            cells += [len(points_), *(np.arange(len(points_)) + n_points).tolist()]
+            cells += [len(points_), *(np.arange(len(points_)) + n_points)]
 
             points += points_
             n_points += len(points_)
