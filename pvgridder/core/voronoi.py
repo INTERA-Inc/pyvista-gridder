@@ -140,8 +140,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         infinity: Optional[float] = None,
         tolerance: float = 1.0e-4,
-        return_points: bool = False,
-    ) -> pv.UnstructuredGrid | tuple[pv.UnstructuredGrid, pv.PolyData]:
+    ) -> pv.UnstructuredGrid:
         from shapely import Polygon
         from .. import decimate_rdp, extract_boundary_polygons
 
@@ -219,14 +218,13 @@ class VoronoiMesh2D(MeshBase):
         mesh.user_dict["Group"] = groups
         mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
-        if return_points:
-            points = pv.PolyData(np.insert(voronoi_points, self.axis, 0.0, axis=1))
-            points.cell_data["Group"] = group_array[active]
-
-            return mesh, points
-
-        else:
-            return mesh
+        # Add coordinates of Voronoi points
+        voronoi_points = np.insert(voronoi_points, self.axis, 0.0, axis=1)
+        mesh.cell_data["X"] = voronoi_points[:, 0]
+        mesh.cell_data["Y"] = voronoi_points[:, 1]
+        mesh.cell_data["Z"] = voronoi_points[:, 2]
+        
+        return mesh
 
     def _generate_voronoi_tesselation(
         self,
