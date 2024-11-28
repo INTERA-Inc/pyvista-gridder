@@ -187,6 +187,7 @@ class MeshStackBase(MeshBase):
 
         groups = {}
 
+        # Cut intersecting meshes w.r.t. priority
         for item1, item2 in zip(self.items[:-1], self.items[1:]):
             shift = item2.mesh.points[:, self.axis] - item1.mesh.points[:, self.axis]
 
@@ -219,6 +220,10 @@ class MeshStackBase(MeshBase):
 
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
+
+        # Flag zero volume cells as inactive
+        volumes = mesh.compute_cell_sizes(length=False, area=False, volume=True).cell_data["Volume"]
+        mesh.cell_data["Active"] = (np.abs(volumes) > 0.0).astype(int)
 
         return mesh
 
