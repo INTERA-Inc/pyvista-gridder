@@ -145,9 +145,8 @@ class MeshStackBase(MeshBase):
             mesh = self._interpolate(arg.points)
 
         elif hasattr(arg, "__call__"):
-            idx = [i for i in range(3) if i != self.axis]
             mesh = self.mesh.copy()
-            mesh.points[:, self.axis] = arg(mesh.points[:, idx])
+            mesh.points[:, self.axis] = arg(*mesh.points.T)
 
         else:
             if np.ndim(arg) == 0:
