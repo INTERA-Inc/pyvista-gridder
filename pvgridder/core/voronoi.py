@@ -32,7 +32,7 @@ class VoronoiMesh2D(MeshBase):
     def add(
         self,
         mesh_or_points: ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
-        zorder: Optional[int] = None,
+        priority: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
         if not isinstance(mesh_or_points, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
@@ -42,7 +42,7 @@ class VoronoiMesh2D(MeshBase):
         else:
             mesh = mesh_or_points.copy()
         
-        item = MeshItem(mesh, group=group, zorder=zorder if zorder else 0)
+        item = MeshItem(mesh, group=group, priority=priority if priority else 0)
         self.items.append(item)
 
         return self
@@ -56,7 +56,7 @@ class VoronoiMesh2D(MeshBase):
         constrain_start: bool = True,
         constrain_end: bool = True,
         resolution: Optional[int | ArrayLike] = None,
-        zorder: Optional[int] = None,
+        priority: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
         from .. import split_lines
@@ -128,10 +128,10 @@ class VoronoiMesh2D(MeshBase):
             constraint = constraint.ravel(order="F")
 
             # Add to items
-            item = MeshItem(mesh.extract_cells(~constraint), group=group, zorder=zorder if zorder else 0)
+            item = MeshItem(mesh.extract_cells(~constraint), group=group, priority=priority if priority else 0)
             self.items.append(item)
 
-            item = MeshItem(mesh.extract_cells(constraint), group=None, zorder=0)
+            item = MeshItem(mesh.extract_cells(constraint), group=None, priority=0)
             self.items.append(item)
 
         return self
@@ -149,15 +149,15 @@ class VoronoiMesh2D(MeshBase):
 
         groups = {}
         group_array = self._initialize_group_array(self.mesh, groups)
-        zorder_array = np.full(self.mesh.n_cells, -np.inf)
-        items = sorted(self.items, key=lambda item: abs(item.zorder))
+        priority_array = np.full(self.mesh.n_cells, -np.inf)
+        items = sorted(self.items, key=lambda item: abs(item.priority))
 
         for i, item in enumerate(items):
             mesh_a = item.mesh
             group = item.group if item.group else self.default_group
             points_ = mesh_a.cell_centers().points
             item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
-            item_zorder_array = np.full(mesh_a.n_cells, abs(item.zorder))
+            item_priority_array = np.full(mesh_a.n_cells, abs(item.priority))
 
             # Remove out of bound points from item mesh
             mask = self.mesh.find_containing_cell(points_) != -1
@@ -168,9 +168,9 @@ class VoronoiMesh2D(MeshBase):
             mask = np.logical_and(
                 idx != -1,
                 (
-                    zorder_array <= item_zorder_array[idx]
-                    if item.zorder >= 0
-                    else zorder_array < item_zorder_array[idx]
+                    priority_array <= item_priority_array[idx]
+                    if item.priority >= 0
+                    else priority_array < item_priority_array[idx]
                 ),
             )
             active[mask] = False
@@ -180,7 +180,7 @@ class VoronoiMesh2D(MeshBase):
             points += points_.tolist()
             active = np.concatenate((active, np.ones(len(points_), dtype=bool)))
             group_array = np.concatenate((group_array, item_group_array))
-            zorder_array = np.concatenate((zorder_array, item_zorder_array))
+            priority_array = np.concatenate((priority_array, item_priority_array))
 
         points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
