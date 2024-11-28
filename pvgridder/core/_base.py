@@ -221,14 +221,17 @@ class MeshStackBase(MeshBase):
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
-        # Flag zero volume cells as inactive
-        volumes = mesh.compute_cell_sizes(length=False, area=False, volume=True).cell_data["Volume"]
-        mesh.cell_data["Active"] = (np.abs(volumes) > 0.0).astype(int)
+        # Flag zero area/volume cells as inactive
+        self._set_active(mesh)
 
         return mesh
 
     @abstractmethod
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        pass
+
+    @abstractmethod
+    def _set_active(self, *args) -> None:
         pass
 
     def _interpolate(self, points: ArrayLike) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:

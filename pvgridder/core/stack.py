@@ -37,6 +37,10 @@ class MeshStack2D(MeshStackBase):
 
         return generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
 
+    def _set_active(self, mesh: pv.StructuredGrid) -> None:
+        areas = mesh.compute_cell_sizes(length=False, area=True, volume=False).cell_data["Area"]
+        mesh.cell_data["Active"] = (np.abs(areas) > 0.0).astype(int)
+
 
 class MeshStack3D(MeshStackBase):
     __name__: str = "MeshStack3D"
@@ -60,3 +64,7 @@ class MeshStack3D(MeshStackBase):
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         return generate_volume_from_two_surfaces(*args, **kwargs)
+
+    def _set_active(self, mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> None:
+        volumes = mesh.compute_cell_sizes(length=False, area=False, volume=True).cell_data["Volume"]
+        mesh.cell_data["Active"] = (np.abs(volumes) > 0.0).astype(int)
