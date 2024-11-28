@@ -138,6 +138,7 @@ class MeshStackBase(MeshBase):
         arg: float | ArrayLike | Callable | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
+        priority: int = 0,
         group: Optional[str] = None,
     ) -> Self:
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
@@ -171,9 +172,9 @@ class MeshStackBase(MeshBase):
                     raise ValueError(f"could not add {arg.ndim}D array to stack")
 
         item = (
-            MeshItem(mesh, resolution=resolution, method=method, group=group)
+            MeshItem(mesh, resolution=resolution, method=method, priority=priority, group=group)
             if self.items
-            else MeshItem(mesh)
+            else MeshItem(mesh, priority=priority)
         )
         self.items.append(item)
 
@@ -186,6 +187,23 @@ class MeshStackBase(MeshBase):
             raise ValueError("not enough items to stack")
 
         groups = {}
+
+        for item1, item2 in zip(self.items[:-1], self.items[1:]):
+            shift = item2.mesh.points[:, self.axis] - item1.mesh.points[:, self.axis]
+
+            if item2.priority < item1.priority:
+                item2.mesh.points[:, self.axis] = np.where(
+                    shift < 0.0,
+                    item2.mesh.points[:, self.axis] - shift,
+                    item2.mesh.points[:, self.axis],
+                )
+
+            else:
+                item1.mesh.points[:, self.axis] = np.where(
+                    shift < 0.0,
+                    item1.mesh.points[:, self.axis] + shift,
+                    item1.mesh.points[:, self.axis],
+                )
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
