@@ -30,9 +30,7 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
     lines = []
     points = []
 
-    for i in range(mesh.n_cells):
-        cell = mesh.get_cell(i)
-
+    for cell in mesh.cell:
         if cell.type.name in {"LINE", "POLY_LINE"}:
             points_ = mesh.points[cell.point_ids]
 
