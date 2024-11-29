@@ -1,15 +1,17 @@
 from __future__ import annotations
+from typing import Literal, Optional
 
 import pyvista as pv
 
 
 def get_neighborhood(
     mesh: pv.UnstructuredGrid,
+    connections: Optional[Literal["points", "edges", "faces"]] = None,
 ) -> list:
     neighbors = []
     
     for i in range(mesh.n_cells):
-        cell_neighbors = mesh.cell_neighbors(i, connections="edges")
+        cell_neighbors = mesh.cell_neighbors(i, connections=connections)
         neighbors.append(cell_neighbors)
 
     return neighbors
@@ -17,9 +19,10 @@ def get_neighborhood(
 
 def get_connectivity(
     mesh: pv.UnstructuredGrid,
+    connections: Optional[Literal["points", "edges", "faces"]] = None,
     return_polydata: bool = False,
 ) -> list | pv.PolyData:
-    neighborhood = get_neighborhood(mesh)
+    neighborhood = get_neighborhood(mesh, connections)
     connectivity = set()
 
     for i, cell_neighbors in enumerate(neighborhood):
