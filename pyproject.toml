@@ -34,6 +34,7 @@ dependencies = [
     "numpy >= 1.13.0",
     "pyvista >= 0.36",
     "scipy >= 0.9",
+    "shapely >= 2.0",
 ]
 
 [project.urls]
@@ -87,7 +88,6 @@ select = [
     "D413",
     "D414",
     "D415",
-    "D416",
     "D418",
     "D419",
     # isort

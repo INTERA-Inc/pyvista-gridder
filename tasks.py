@@ -5,8 +5,6 @@ import tarfile
 
 from invoke import task
 
-import pvgridder
-
 
 @task
 def build(c):
@@ -21,6 +19,8 @@ def html(c):
 
 @task
 def tag(c):
+    import pvgridder
+    
     c.run(f"git tag v{pvgridder.__version__}")
     c.run("git push --tags")
 
