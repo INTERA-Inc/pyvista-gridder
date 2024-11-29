@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 from typing import Literal, Optional
-from numpy.typing import ArrayLike
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 
 from ._helpers import (
     generate_arc,
     generate_line_from_two_points,
     generate_surface_from_two_lines,
     generate_volume_from_two_surfaces,
-    translate
+    translate,
 )
 
 
@@ -32,7 +33,7 @@ def AnnularSector(
     ----------
     inner_radius : scalar, default 0.5
         Annulus inner radius.
-    outer_radius : scalar, optional 1.0 
+    outer_radius : scalar, optional 1.0
         Annulus outer radius.
     theta_min : scalar, default 0.0
         Starting angle (in degree).
@@ -65,13 +66,17 @@ def AnnularSector(
     -------
     :class:`pyvista.StructuredGrid`
         Annular sector mesh.
-    
+
     """
     if not 0.0 < inner_radius < outer_radius:
         raise ValueError("invalid annular sector radii")
 
-    line_a = generate_arc(inner_radius, theta_min, theta_max, theta_resolution, theta_method)
-    line_b = generate_arc(outer_radius, theta_min, theta_max, theta_resolution, theta_method)
+    line_a = generate_arc(
+        inner_radius, theta_min, theta_max, theta_resolution, theta_method
+    )
+    line_b = generate_arc(
+        outer_radius, theta_min, theta_max, theta_resolution, theta_method
+    )
     mesh = Surface(line_a, line_b, "xy", r_resolution, r_method)
     mesh = translate(mesh, center)
 
@@ -230,7 +235,7 @@ def Rectangle(
         (dx, dy),
         (0.0, dy),
     ]
-    
+
     return Quadrilateral(points, x_resolution, y_resolution, x_method, y_method, center)
 
 
@@ -344,16 +349,17 @@ def SectorRectangle(
     if not 0.0 < radius < min(dx, dy):
         raise ValueError("invalid sector radius")
 
-    line_x = generate_line_from_two_points([dx, dy], [0.0, dy], theta_resolution, theta_method)
-    line_y = generate_line_from_two_points([dx, 0.0], [dx, dy], theta_resolution, theta_method)
+    line_x = generate_line_from_two_points(
+        [dx, dy], [0.0, dy], theta_resolution, theta_method
+    )
+    line_y = generate_line_from_two_points(
+        [dx, 0.0], [dx, dy], theta_resolution, theta_method
+    )
     line_45 = generate_arc(radius, 0.0, 45.0, theta_resolution)
     line_90 = generate_arc(radius, 45.0, 90.0, theta_resolution)
     mesh_y45 = Surface(line_45, line_y, "xy", r_resolution, r_method)
     mesh_x90 = Surface(line_90, line_x, "xy", r_resolution, r_method)
-    mesh = (
-        mesh_y45.cast_to_unstructured_grid()
-        + mesh_x90.cast_to_unstructured_grid()
-    )
+    mesh = mesh_y45.cast_to_unstructured_grid() + mesh_x90.cast_to_unstructured_grid()
     mesh = translate(mesh, center)
 
     return mesh

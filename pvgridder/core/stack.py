@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Optional
 
 import numpy as np
@@ -28,6 +29,7 @@ class MeshStack2D(MeshStackBase):
         List of groups to ignore.
 
     """
+
     __name__: str = "MeshStack2D"
     __qualname__: str = "pvgridder.MeshStack2D"
 
@@ -52,11 +54,15 @@ class MeshStack2D(MeshStackBase):
         line_a, line_b, resolution, method = args
         plane = "yx" if self.axis == 0 else "xy" if self.axis == 1 else "xz"
 
-        return generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
+        return generate_surface_from_two_lines(
+            line_a, line_b, plane, resolution, method
+        )
 
     def _set_active(self, mesh: pv.StructuredGrid) -> None:
         """Set active cell data."""
-        areas = mesh.compute_cell_sizes(length=False, area=True, volume=False).cell_data["Area"]
+        areas = mesh.compute_cell_sizes(
+            length=False, area=True, volume=False
+        ).cell_data["Area"]
         mesh.cell_data["Active"] = (np.abs(areas) > 0.0).astype(int)
 
 
@@ -76,6 +82,7 @@ class MeshStack3D(MeshStackBase):
         List of groups to ignore.
 
     """
+
     __name__: str = "MeshStack3D"
     __qualname__: str = "pvgridder.MeshStack3D"
 
@@ -91,7 +98,9 @@ class MeshStack3D(MeshStackBase):
                 raise ValueError("invalid mesh, input mesh should be 2D")
 
         else:
-            raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
+            raise ValueError(
+                "invalid mesh, input mesh should be a 2D structured grid or an unstructured grid"
+            )
 
         super().__init__(mesh, axis, default_group, ignore_groups)
 
@@ -101,5 +110,7 @@ class MeshStack3D(MeshStackBase):
 
     def _set_active(self, mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> None:
         """Set active cell data."""
-        volumes = mesh.compute_cell_sizes(length=False, area=False, volume=True).cell_data["Volume"]
+        volumes = mesh.compute_cell_sizes(
+            length=False, area=False, volume=True
+        ).cell_data["Volume"]
         mesh.cell_data["Active"] = (np.abs(volumes) > 0.0).astype(int)

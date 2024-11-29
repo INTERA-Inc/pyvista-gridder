@@ -1,10 +1,11 @@
 from __future__ import annotations
-from numpy.typing import ArrayLike
+
 from typing import Literal, Optional
-from typing_extensions import Self
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
+from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
 from ._helpers import (
@@ -31,6 +32,7 @@ class MeshExtrude(MeshBase):
         List of groups to ignore.
 
     """
+
     __name__: str = "MeshExtrude"
     __qualname__: str = "pvgridder.MeshExtrude"
 
@@ -44,7 +46,9 @@ class MeshExtrude(MeshBase):
     ) -> None:
         """Initialize a new mesh extrusion."""
         if not is2d(mesh):
-            raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
+            raise ValueError(
+                "invalid mesh, input mesh should be a 2D structured grid or an unstructured grid"
+            )
 
         super().__init__(default_group, ignore_groups, items=[MeshItem(mesh)])
         self._mesh = mesh
@@ -100,7 +104,7 @@ class MeshExtrude(MeshBase):
 
         mesh = self.items[-1].mesh.copy()
         mesh = mesh.translate(vector)
-        
+
         if scale is not None:
             mesh.points = (mesh.points - mesh.center) * scale + mesh.center
 
@@ -112,7 +116,9 @@ class MeshExtrude(MeshBase):
 
         return self
 
-    def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    def generate_mesh(
+        self, tolerance: float = 1.0e-8
+    ) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """
         Generate mesh by extruding all items.
 
@@ -128,7 +134,7 @@ class MeshExtrude(MeshBase):
 
         """
         from .. import merge
-        
+
         if len(self.items) <= 1:
             raise ValueError("not enough items to extrude")
 
@@ -147,12 +153,18 @@ class MeshExtrude(MeshBase):
                 tmp[v(mesh_a)] = self._get_group_number(k, groups)
 
             mesh_a.cell_data["Group"] = tmp
-            mesh_b = generate_volume_from_two_surfaces(mesh_a, item2.mesh, item2.resolution, item2.method)
+            mesh_b = generate_volume_from_two_surfaces(
+                mesh_a, item2.mesh, item2.resolution, item2.method
+            )
 
             if i > 0:
-                axis = self.mesh.dimensions.index(1) if isinstance(mesh, pv.StructuredGrid) else None
+                axis = (
+                    self.mesh.dimensions.index(1)
+                    if isinstance(mesh, pv.StructuredGrid)
+                    else None
+                )
                 mesh = merge(mesh, mesh_b, axis)
-                
+
             else:
                 mesh = mesh_b
 

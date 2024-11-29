@@ -1,11 +1,12 @@
 from __future__ import annotations
-from numpy.typing import ArrayLike
+
 from typing import Literal, Optional
-from typing_extensions import Self
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 from scipy.spatial import Voronoi
+from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
 from ._helpers import generate_surface_from_two_lines, resolution_to_perc
@@ -29,6 +30,7 @@ class VoronoiMesh2D(MeshBase):
         List of groups to ignore.
 
     """
+
     __name__: str = "VoronoiMesh2D"
     __qualname__: str = "pvgridder.VoronoiMesh2D"
 
@@ -76,7 +78,7 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
-        
+
         item = MeshItem(mesh, group=group, priority=priority)
         self.items.append(item)
 
@@ -105,7 +107,7 @@ class VoronoiMesh2D(MeshBase):
             Width of polyline.
         preference : {'cell', 'point'}, default 'cell'
             Determine which coordinates to add:
-            
+
              - if 'cell', add cell centers of polyline.
              - if 'point', add polyline point coordinates.
 
@@ -153,16 +155,22 @@ class VoronoiMesh2D(MeshBase):
                 padding = padding if padding is not None else 0.5 * width
                 points = np.row_stack(
                     (
-                        points[0] + padding * (points[0] - points[1]) / np.linalg.norm(points[0] - points[1]),
+                        points[0]
+                        + padding
+                        * (points[0] - points[1])
+                        / np.linalg.norm(points[0] - points[1]),
                         0.5 * (points[:-1] + points[1:]),
-                        points[-1] + padding * (points[-1] - points[-2]) / np.linalg.norm(points[-1] - points[-2]),
+                        points[-1]
+                        + padding
+                        * (points[-1] - points[-2])
+                        / np.linalg.norm(points[-1] - points[-2]),
                     )
                 )
 
             # Calculate forward direction vectors
             fdvec = np.diff(points, axis=0)
             fdvec = np.row_stack((fdvec, fdvec[-1]))
-            
+
             # Calculate backward direction vectors
             bdvec = np.diff(points[::-1], axis=0)[::-1]
             bdvec = np.row_stack((bdvec[0], bdvec))
@@ -197,11 +205,17 @@ class VoronoiMesh2D(MeshBase):
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
             constraint = np.ones(shape, dtype=bool)
-            constraint[int(constrain_start) : shape[0] - int(constrain_end), 1 : -1] = False
+            constraint[int(constrain_start) : shape[0] - int(constrain_end), 1:-1] = (
+                False
+            )
             constraint = constraint.ravel(order="F")
 
             # Add to items
-            item = MeshItem(mesh.extract_cells(~constraint), group=group, priority=priority if priority else 0)
+            item = MeshItem(
+                mesh.extract_cells(~constraint),
+                group=group,
+                priority=priority if priority else 0,
+            )
             self.items.append(item)
 
             item = MeshItem(mesh.extract_cells(constraint), group=None, priority=0)
@@ -231,6 +245,7 @@ class VoronoiMesh2D(MeshBase):
 
         """
         from shapely import Polygon
+
         from .. import decimate_rdp, extract_boundary_polygons
 
         points = self.mesh.cell_centers().points.tolist()
@@ -312,7 +327,7 @@ class VoronoiMesh2D(MeshBase):
         mesh.cell_data["X"] = voronoi_points[:, 0]
         mesh.cell_data["Y"] = voronoi_points[:, 1]
         mesh.cell_data["Z"] = voronoi_points[:, 2]
-        
+
         return mesh
 
     def _generate_voronoi_tesselation(

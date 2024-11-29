@@ -1,9 +1,10 @@
 from __future__ import annotations
-from numpy.typing import ArrayLike
+
 from typing import Literal, Optional
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 
 
 def generate_arc(
@@ -38,12 +39,14 @@ def generate_arc(
     -------
     :class:`pyvista.PolyData`
         Arc polyline mesh.
-    
+
     """
     perc = resolution_to_perc(resolution, method)
     angles = theta_min + perc * (theta_max - theta_min)
     angles = np.deg2rad(angles)
-    points = radius * np.column_stack((np.cos(angles), np.sin(angles), np.zeros(len(angles))))
+    points = radius * np.column_stack(
+        (np.cos(angles), np.sin(angles), np.zeros(len(angles)))
+    )
 
     return pv.MultipleLines(points)
 
@@ -87,7 +90,11 @@ def generate_line_from_two_points(
 
     perc = resolution_to_perc(resolution, method)[:, np.newaxis]
     points = point_a + perc * (point_b - point_a)
-    points = points if points.shape[1] == 3 else np.column_stack((points, np.zeros(len(points))))
+    points = (
+        points
+        if points.shape[1] == 3
+        else np.column_stack((points, np.zeros(len(points))))
+    )
 
     return pv.MultipleLines(points)
 
@@ -124,16 +131,24 @@ def generate_surface_from_two_lines(
     -------
     :class:`pyvista.StructuredGrid`
         Surface mesh.
-    
+
     """
-    line_points_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
-    line_points_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
-    
+    line_points_a = (
+        line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
+    )
+    line_points_b = (
+        line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
+    )
+
     if line_points_a.shape != line_points_b.shape:
-        raise ValueError("could not generate plane surface from two inhomogeneous lines")
+        raise ValueError(
+            "could not generate plane surface from two inhomogeneous lines"
+        )
 
     perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
-    X, Y, Z = (line_points_a + perc * (line_points_b - line_points_a)).transpose((2, 1, 0))
+    X, Y, Z = (line_points_a + perc * (line_points_b - line_points_a)).transpose(
+        (2, 1, 0)
+    )
 
     if plane == "xy":
         X = np.expand_dims(X, 2)
@@ -173,11 +188,11 @@ def generate_surface_from_two_lines(
     if isinstance(line_a, pv.PolyData):
         reps = (perc.size, 1)
         for k, v in line_a.point_data.items():
-            mesh.point_data[k] = np.tile(v, reps[:v.ndim])
+            mesh.point_data[k] = np.tile(v, reps[: v.ndim])
 
         reps = (perc.size - 1, 1)
         for k, v in line_a.cell_data.items():
-            mesh.cell_data[k] = np.tile(v, reps[:v.ndim])
+            mesh.cell_data[k] = np.tile(v, reps[: v.ndim])
 
     return mesh
 
@@ -213,12 +228,16 @@ def generate_volume_from_two_surfaces(
         Volume mesh.
 
     """
-    if surface_a.points.shape != surface_b.points.shape or not isinstance(surface_a, type(surface_b)):
+    if surface_a.points.shape != surface_b.points.shape or not isinstance(
+        surface_a, type(surface_b)
+    ):
         raise ValueError("could not generate volume from two inhomogeneous surfaces")
 
     if isinstance(surface_a, pv.StructuredGrid):
         if surface_a.dimensions != surface_b.dimensions:
-            raise ValueError("could not generate volume from two inhomogeneous structured surfaces")
+            raise ValueError(
+                "could not generate volume from two inhomogeneous structured surfaces"
+            )
 
         if not is2d(surface_a):
             raise ValueError("could not generate volume from non 2D structured grid")
@@ -249,30 +268,38 @@ def generate_volume_from_two_surfaces(
         yb = np.expand_dims(yb, axis)
         zb = np.expand_dims(zb, axis)
 
-        X = (xa + perc * (xb - xa))
-        Y = (ya + perc * (yb - ya))
-        Z = (za + perc * (zb - za))
+        X = xa + perc * (xb - xa)
+        Y = ya + perc * (yb - ya)
+        Z = za + perc * (zb - za)
         mesh = pv.StructuredGrid(X, Y, Z)
 
         # Repeat data
         shape = [n for n in surface_a.dimensions if n != 1]
         for k, v in surface_a.point_data.items():
             mesh.point_data[k] = np.repeat(
-                v.reshape(shape, order="F"), perc.size, axis,
+                v.reshape(shape, order="F"),
+                perc.size,
+                axis,
             ).ravel(order="F")
 
         shape = [n - 1 for n in surface_a.dimensions if n != 1]
         for k, v in surface_a.cell_data.items():
             mesh.cell_data[k] = np.repeat(
-                v.reshape(shape, order="F"), perc.size - 1, axis,
+                v.reshape(shape, order="F"),
+                perc.size - 1,
+                axis,
             ).ravel(order="F")
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
         if not is2d(surface_a):
-            raise ValueError("could not generate volume from surfaces with unsupported cell types")
+            raise ValueError(
+                "could not generate volume from surfaces with unsupported cell types"
+            )
 
         if not np.allclose(surface_a.celltypes, surface_b.celltypes):
-            raise ValueError("could not generate volume from two inhomogeneous unstructured surfaces")
+            raise ValueError(
+                "could not generate volume from two inhomogeneous unstructured surfaces"
+            )
 
         points_a = surface_a.points
         points_b = surface_b.points
@@ -288,18 +315,22 @@ def generate_volume_from_two_surfaces(
         cells = [[] for _ in range(n)]
 
         for i1, i2, celltype in zip(offset[:-1], offset[1:], celltypes):
-            cell = cell_connectivity[i1 : i2]
+            cell = cell_connectivity[i1:i2]
 
             if celltype == 42:
                 faces = [cell, cell + n_points]
                 faces += [
                     np.array([p0, p1, p2, p3])
-                    for p0, p1, p2, p3 in zip(faces[0], np.roll(faces[0], -1), np.roll(faces[1], -1), faces[1])
+                    for p0, p1, p2, p3 in zip(
+                        faces[0], np.roll(faces[0], -1), np.roll(faces[1], -1), faces[1]
+                    )
                 ]
                 n_faces = len(faces)
 
                 for i, cells_ in enumerate(cells):
-                    cell = np.concatenate([[face.size, *(face + (i * n_points))] for face in faces])
+                    cell = np.concatenate(
+                        [[face.size, *(face + (i * n_points))] for face in faces]
+                    )
                     cells_ += [cell.size + 1, n_faces, *cell]
 
             else:
@@ -316,11 +347,11 @@ def generate_volume_from_two_surfaces(
         # Repeat data
         reps = (perc.size, 1)
         for k, v in surface_a.point_data.items():
-            mesh.point_data[k] = np.tile(v, reps[:v.ndim])
+            mesh.point_data[k] = np.tile(v, reps[: v.ndim])
 
         reps = (perc.size - 1, 1)
         for k, v in surface_a.cell_data.items():
-            mesh.cell_data[k] = np.tile(v, reps[:v.ndim])
+            mesh.cell_data[k] = np.tile(v, reps[: v.ndim])
 
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")
@@ -345,7 +376,7 @@ def resolution_to_perc(
          - if 'constant', subdivisions are equally spaced.
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
-    
+
     Returns
     -------
     ArrayLike
@@ -421,7 +452,7 @@ def translate(
     """
     if vector is not None:
         vector = np.ravel(vector)
-        
+
         if vector.size != 3:
             if vector.size == 2:
                 vector = np.append(vector, 0.0)

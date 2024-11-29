@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from typing import Optional
-from typing_extensions import Self
 
 import pyvista as pv
+from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
 
@@ -19,6 +20,7 @@ class MeshFactory(MeshBase):
         List of groups to ignore.
 
     """
+
     __name__: str = "MeshFactory"
     __qualname__: str = "pvgridder.MeshFactory"
 
@@ -62,7 +64,7 @@ class MeshFactory(MeshBase):
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.UnstructuredGrid:
         """
         Generate mesh by merging all items.
-        
+
         Parameters
         ----------
         tolerance : scalar, default 1.0e-8
@@ -81,7 +83,9 @@ class MeshFactory(MeshBase):
 
         for i, item in enumerate(self.items):
             mesh_b = item.mesh
-            mesh_b.cell_data["Group"] = self._initialize_group_array(mesh_b, groups, item.group)
+            mesh_b.cell_data["Group"] = self._initialize_group_array(
+                mesh_b, groups, item.group
+            )
 
             if i > 0:
                 mesh += mesh_b

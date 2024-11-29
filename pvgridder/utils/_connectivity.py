@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Literal, Optional
 
 import pyvista as pv
@@ -25,7 +26,7 @@ def get_neighborhood(
 
     """
     neighbors = []
-    
+
     for i in range(mesh.n_cells):
         cell_neighbors = mesh.cell_neighbors(i, connections=connections)
         neighbors.append(cell_neighbors)

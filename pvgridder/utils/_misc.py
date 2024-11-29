@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 from typing import Optional
-from numpy.typing import ArrayLike
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 
 
 def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
@@ -23,6 +24,7 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
         Decimated polydata.
 
     """
+
     def decimate(points: ArrayLike) -> ArrayLike:
         """Ramer-Douglas-Packer algorithm."""
         u = points[-1] - points[0]
@@ -35,7 +37,7 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
         imax = dist.argmax()
 
         if dist[imax] > tolerance:
-            res1 = decimate(points[:imax + 1])
+            res1 = decimate(points[: imax + 1])
             res2 = decimate(points[imax:])
 
             return np.row_stack((res1[:-1], res2))
@@ -160,7 +162,9 @@ def merge(
                 and np.allclose(mesh_a.y[-1], mesh_b.y[0])
                 and np.allclose(mesh_a.z[-1], mesh_b.z[0])
             ):
-                raise ValueError("could not merge structured grids with non-matching east and west interfaces")
+                raise ValueError(
+                    "could not merge structured grids with non-matching east and west interfaces"
+                )
 
             slice_ = (slice(1, None),)
 
@@ -170,7 +174,9 @@ def merge(
                 and np.allclose(mesh_a.y[:, -1], mesh_b.y[:, 0])
                 and np.allclose(mesh_a.z[:, -1], mesh_b.z[:, 0])
             ):
-                raise ValueError("could not merge structured grids with non-matching north and south interfaces")
+                raise ValueError(
+                    "could not merge structured grids with non-matching north and south interfaces"
+                )
 
             slice_ = (slice(None), slice(1, None))
 
@@ -180,7 +186,9 @@ def merge(
                 and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
                 and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
             ):
-                raise ValueError("could not merge structured grids with non-matching top and bottom interfaces")
+                raise ValueError(
+                    "could not merge structured grids with non-matching top and bottom interfaces"
+                )
 
             slice_ = (slice(None), slice(None), slice(1, None))
 
@@ -241,14 +249,16 @@ def reconstruct_line(
     points = mesh.points
 
     if not (points.ndim == 2 and points.shape[1] in {2, 3}):
-        raise ValueError(f"could not reconstruct polyline from {points.shape[1]}D points")
+        raise ValueError(
+            f"could not reconstruct polyline from {points.shape[1]}D points"
+        )
 
     def path_length(path):
         if close:
             path = np.append(path, path[0])
 
         return np.linalg.norm(np.diff(points[path], axis=0), axis=1).sum()
-    
+
     n = len(points)
     shortest_path = np.roll(np.arange(n), -start)
     shortest_length = path_length(shortest_path)
@@ -259,7 +269,7 @@ def reconstruct_line(
 
         for first in range(1, n - 2):
             for last in range(first + 2, n + 1):
-                path[first : last] = np.flip(path[first : last])
+                path[first:last] = np.flip(path[first:last])
                 length = path_length(path)
 
                 if length < shortest_length:
@@ -267,13 +277,19 @@ def reconstruct_line(
                     shortest_length = length
 
                 else:
-                    path[first : last] = np.flip(path[first : last])  # reset path to current shortest path
+                    path[first:last] = np.flip(
+                        path[first:last]
+                    )  # reset path to current shortest path
 
         if shortest_length > (1.0 - tolerance) * best_length:
             break
 
     points = points[shortest_path]
-    points = points if points.shape[1] == 3 else np.column_stack((points, np.zeros(len(points))))
+    points = (
+        points
+        if points.shape[1] == 3
+        else np.column_stack((points, np.zeros(len(points))))
+    )
 
     return pv.lines_from_points(points, close=close)
 
@@ -311,7 +327,7 @@ def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
             )
         ).ravel()
         out.append(pv.PolyData(points, lines=cells))
-        
+
         offset += n_points + 1
 
     return out
@@ -325,7 +341,7 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
     ----------
     mesh : :class:`pyvista.UnstructuredGrid`
         Mesh with linear cells.
-    
+
     Returns
     -------
     :class:`pyvista.UnstructuredGrid`
