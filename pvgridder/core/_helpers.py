@@ -150,6 +150,19 @@ def generate_volume_from_two_surfaces(
         Z = (za + perc * (zb - za))
         mesh = pv.StructuredGrid(X, Y, Z)
 
+        # Repeat data
+        shape = [n for n in surface_a.dimensions if n != 1]
+        for k, v in surface_a.point_data.items():
+            mesh.point_data[k] = np.repeat(
+                v.reshape(shape, order="F"), perc.size, axis,
+            ).ravel(order="F")
+
+        shape = [n - 1 for n in surface_a.dimensions if n != 1]
+        for k, v in surface_a.cell_data.items():
+            mesh.cell_data[k] = np.repeat(
+                v.reshape(shape, order="F"), perc.size - 1, axis,
+            ).ravel(order="F")
+
     elif isinstance(surface_a, pv.UnstructuredGrid):
         if not is2d(surface_a):
             raise ValueError("could not generate volume from surfaces with unsupported cell types")
@@ -196,16 +209,17 @@ def generate_volume_from_two_surfaces(
         points = points.reshape((n_points * (n + 1), 3))
         mesh = pv.UnstructuredGrid(cells, celltypes, points)
 
+        # Repeat data
+        reps = (perc.size, 1)
+        for k, v in surface_a.point_data.items():
+            mesh.point_data[k] = np.tile(v, reps[:v.ndim])
+
+        reps = (perc.size - 1, 1)
+        for k, v in surface_a.cell_data.items():
+            mesh.cell_data[k] = np.tile(v, reps[:v.ndim])
+
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")
-
-    reps = (perc.size, 1)
-    for k, v in surface_a.point_data.items():
-        mesh.point_data[k] = np.tile(v, reps[:v.ndim])
-
-    reps = (perc.size - 1, 1)
-    for k, v in surface_a.cell_data.items():
-        mesh.cell_data[k] = np.tile(v, reps[:v.ndim])
 
     return mesh
 
