@@ -7,7 +7,23 @@ import pyvista as pv
 def get_neighborhood(
     mesh: pv.UnstructuredGrid,
     connections: Optional[Literal["points", "edges", "faces"]] = None,
-) -> list:
+) -> list[ArrayLike]:
+    """
+    Get mesh neighborhood.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.UnstructuredGrid`
+        Input mesh.
+    connections : {'points', 'edges', 'faces'}, optional
+        Type of connections between cells.
+
+    Returns
+    -------
+    sequence of ArrayLike
+        List of neighbor cell IDs for all cells.
+
+    """
     neighbors = []
     
     for i in range(mesh.n_cells):
@@ -21,7 +37,25 @@ def get_connectivity(
     mesh: pv.UnstructuredGrid,
     connections: Optional[Literal["points", "edges", "faces"]] = None,
     return_polydata: bool = False,
-) -> list | pv.PolyData:
+) -> ArrayLike | pv.PolyData:
+    """
+    Get mesh connectivity.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.UnstructuredGrid`
+        Input mesh.
+    connections : {'points', 'edges', 'faces'}, optional
+        Type of connections between cells.
+    return_polydata : bool, default False
+        If True, return connectivity as polydata.
+
+    Returns
+    -------
+    ArrayLike | :class:`pyvista.PolyData`
+        Mesh connectivity.
+
+    """
     neighborhood = get_neighborhood(mesh, connections)
     connectivity = set()
 

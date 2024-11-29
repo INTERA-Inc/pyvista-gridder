@@ -7,8 +7,24 @@ import pyvista as pv
 
 
 def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
+    """
+    Decimate polylines and/or polygons in a polydata.
 
-    def decimate(points):
+    Parameters
+    ----------
+    mesh : :class:`pyvista.PolyData`
+        Polydata to decimate.
+    tolerance : scalar, default 1.0e-8
+        Tolerance for the Ramer-Douglas-Peucker algorithm.
+
+    Returns
+    -------
+    :class:`pyvista.PolyData`
+        Decimated polydata.
+
+    """
+    def decimate(points: ArrayLike) -> ArrayLike:
+        """Ramer-Douglas-Packer algorithm."""
         u = points[-1] - points[0]
         un = np.linalg.norm(u)
         dist = (
@@ -47,6 +63,22 @@ def extract_boundary_polygons(
     mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
     fill: bool = False,
 ) -> list[pv.PolyData]:
+    """
+    Extract boundary edges of a mesh as continuous polylines or polygons.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.PolyData` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Mesh to extract boundary edges from.
+    fill : bool, default False
+        If False, only return boundary edges as polylines.
+
+    Returns
+    -------
+    :class:`pyvista.PolyData`
+        Extracted boundary polylines or polygons.
+
+    """
     poly = mesh.extract_feature_edges(
         boundary_edges=True,
         non_manifold_edges=False,
@@ -101,6 +133,23 @@ def merge(
     mesh_b: pv.StructuredGrid | pv.UnstructuredGrid,
     axis: Optional[int] = None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    """
+    Merge two meshes.
+
+    Parameters
+    ----------
+    mesh_a, mesh_b : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        The meshes to merge together.
+    axis : int, optional
+        The axis along which two structured grids are merged (if *mesh_a* and *mesh_b*
+        are structured grids).
+
+    Returns
+    -------
+    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Merged mesh.
+
+    """
     if isinstance(mesh_a, pv.StructuredGrid) and isinstance(mesh_b, pv.StructuredGrid):
         if axis is None:
             raise ValueError("could not merge structured grids with None axis")
@@ -164,12 +213,32 @@ def merge(
 
 
 def reconstruct_line(
-    points: ArrayLike,
+    mesh: pv.DataSet,
     start: int = 0,
     close: bool = False,
     tolerance: float = 1.0e-8,
 ) -> pv.PolyData:
-    points = np.asarray(points)
+    """
+    Reconstruct a line from the points in this dataset.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.DataSet`
+        Mesh from which points to reconstruct a line.
+    start : int, default 0
+        Index of point to use as starting point for 2-opt algorithm.
+    close : bool, default False
+        If True, the ending point is the starting point.
+    tolerance : scalar, default 1.0e-8
+        Tolerance for the 2-opt algorithm.
+
+    Returns
+    -------
+    :class:`pyvista.PolyData`
+        Reconstructed line.
+
+    """
+    points = mesh.points
 
     if not (points.ndim == 2 and points.shape[1] in {2, 3}):
         raise ValueError(f"could not reconstruct polyline from {points.shape[1]}D points")
@@ -210,6 +279,20 @@ def reconstruct_line(
 
 
 def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
+    """
+    Split polyline(s) into multiple lines.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.PolyData`
+        Mesh with polyline(s) to split.
+
+    Returns
+    -------
+    sequence of :class:`pyvista.PolyData`
+        Split polyline(s).
+
+    """
     if mesh.n_lines == 0:
         return []
 
@@ -235,6 +318,20 @@ def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
 
 
 def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
+    """
+    Convert linear mesh to quadratic mesh.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.UnstructuredGrid`
+        Mesh with linear cells.
+    
+    Returns
+    -------
+    :class:`pyvista.UnstructuredGrid`
+        Mesh with quadratic cells.
+
+    """
     n_points = mesh.n_points
 
     cells = []

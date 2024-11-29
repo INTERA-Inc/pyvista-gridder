@@ -1,3 +1,5 @@
+"""Core classes."""
+
 from .extrude import MeshExtrude
 from .factory import MeshFactory
 from .geometric_objects import *

@@ -14,6 +14,21 @@ from .._common import require_package
 
 @require_package("shapely", (2, 0))
 class VoronoiMesh2D(MeshBase):
+    """
+    2D Voronoi mesh class.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.PolyData` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Background mesh.
+    axis : int, default 2
+        Background mesh axis to discard.
+    default_group : str, optional
+        Default group name.
+    ignore_groups : sequence of str, optional
+        List of groups to ignore.
+
+    """
     __name__: str = "VoronoiMesh2D"
     __qualname__: str = "pvgridder.VoronoiMesh2D"
 
@@ -24,6 +39,7 @@ class VoronoiMesh2D(MeshBase):
         default_group: Optional[str] = None,
         ignore_groups: Optional[list[str]] = None,
     ) -> None:
+        """Initialize a 2D Voronoi mesh."""
         super().__init__(default_group, ignore_groups)
         self._mesh = mesh.copy()
         self._axis = axis
@@ -31,18 +47,37 @@ class VoronoiMesh2D(MeshBase):
 
     def add(
         self,
-        mesh_or_points: ArrayLike | pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
-        priority: Optional[int] = None,
+        mesh_or_points: pv.DataSet | ArrayLike,
+        priority: int = 0,
         group: Optional[str] = None,
     ) -> Self:
-        if not isinstance(mesh_or_points, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
+        """
+        Add points to Voronoi diagram.
+
+        Parameters
+        ----------
+        mesh_or_points : :class:`pyvista.DataSet` | ArrayLike
+            Dataset or coordinates of points.
+        priority : int, default 0
+            Priority of item. Points enclosed in a cell with (strictly) higher
+            priority are discarded.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        if not isinstance(mesh_or_points, pv.DataSet):
             mesh_or_points = self._check_point_array(mesh_or_points)
             mesh = pv.PolyData(mesh_or_points)
 
         else:
             mesh = mesh_or_points.copy()
         
-        item = MeshItem(mesh, group=group, priority=priority if priority else 0)
+        item = MeshItem(mesh, group=group, priority=priority)
         self.items.append(item)
 
         return self
@@ -59,6 +94,44 @@ class VoronoiMesh2D(MeshBase):
         priority: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
+        """
+        Add points from a polyline to Voronoi diagram.
+
+        Parameters
+        ----------
+        mesh_or_points : ArrayLike | :class:`pyvista.PolyData`
+            Dataset or coordinates of points.
+        width : scalar
+            Width of polyline.
+        preference : {'cell', 'point'}, default 'cell'
+            Determine which coordinates to add:
+            
+             - if 'cell', add cell centers of polyline.
+             - if 'point', add polyline point coordinates.
+
+        padding : scalar, optional
+            Distance between cell centers of first and last points (if
+            *preference* = 'cell') and start and end of the polyline, respectively.
+            Default is half of *width*.
+        constrain_start : bool, default True
+            If True, add a constraint point at the start of the polyline.
+        constrain_end : bool, default True
+            If True, add a constraint point at the end of the polyline.
+        resolution : int | ArrayLike, optional
+            Number of subdivisions along the line or relative position of subdivisions
+            (in percentage) with respect to the starting point.
+        priority : int, default 0
+            Priority of item. Points enclosed in a cell with (strictly) higher
+            priority are discarded.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
         from .. import split_lines
 
         if not isinstance(mesh_or_points, pv.PolyData):
@@ -77,7 +150,7 @@ class VoronoiMesh2D(MeshBase):
 
             # Calculate new point coordinates if cell centers
             if preference == "cell":
-                padding = padding if padding else 0.5 * width
+                padding = padding if padding is not None else 0.5 * width
                 points = np.row_stack(
                     (
                         points[0] + padding * (points[0] - points[1]) / np.linalg.norm(points[0] - points[1]),
@@ -141,6 +214,22 @@ class VoronoiMesh2D(MeshBase):
         infinity: Optional[float] = None,
         tolerance: float = 1.0e-4,
     ) -> pv.UnstructuredGrid:
+        """
+        Generate 2D Voronoi mesh.
+
+        Parameters
+        ----------
+        infinity : scalar, optional
+            Value used for points at infinity.
+        tolerance : scalar, default 1.0e-8
+            Set merging tolerance of duplicate points.
+
+        Returns
+        -------
+        :class:`pyvista.UnstructuredGrid`
+            2D Voronoi mesh.
+
+        """
         from shapely import Polygon
         from .. import decimate_rdp, extract_boundary_polygons
 
@@ -232,6 +321,8 @@ class VoronoiMesh2D(MeshBase):
         infinity: Optional[float] = None,
     ) -> tuple[list[ArrayLike], ArrayLike, ArrayLike]:
         """
+        Generate Voronoi tessalation.
+
         Note
         ----
         See <https://stackoverflow.com/a/43023639>.
@@ -290,8 +381,10 @@ class VoronoiMesh2D(MeshBase):
 
     @property
     def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
+        """Return background mesh."""
         return self._mesh
 
     @property
     def axis(self) -> int:
+        """Return discarded axis."""
         return self._axis

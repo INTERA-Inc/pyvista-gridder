@@ -14,6 +14,23 @@ from ._helpers import (
 
 
 class MeshExtrude(MeshBase):
+    """
+    Mesh extrusion class.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Base mesh.
+    scale : scalar, optional
+        Default scaling factor.
+    angle : scalar, optional
+        Default rotation angle (in degree).
+    default_group : str, optional
+        Default group name.
+    ignore_groups : sequence of str, optional
+        List of groups to ignore.
+
+    """
     __name__: str = "MeshExtrude"
     __qualname__: str = "pvgridder.MeshExtrude"
 
@@ -25,6 +42,7 @@ class MeshExtrude(MeshBase):
         default_group: Optional[str] = None,
         ignore_groups: Optional[list[str]] = None,
     ) -> None:
+        """Initialize a new mesh extrusion."""
         if not is2d(mesh):
             raise ValueError("invalid mesh, input mesh should be a 2D structured grid or an unstructured grid")
 
@@ -42,6 +60,36 @@ class MeshExtrude(MeshBase):
         angle: Optional[float] = None,
         group: Optional[str | dict] = None,
     ) -> Self:
+        """
+        Add a new item to extrusion.
+
+        Parameters
+        ----------
+        vector : ArrayLike
+            Translation vector.
+        resolution : int | ArrayLike, optional
+            Number of subdivisions along the extrusion axis or relative position of
+            subdivisions (in percentage) with respect to the previous item.
+        method : {'constant', 'log', 'log_r'}, optional
+            Subdivision method if *resolution* is an integer:
+
+             - if 'constant', subdivisions are equally spaced.
+             - if 'log', subdivisions are logarithmically spaced (from small to large).
+             - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+        scale : scalar, optional
+            Scaling factor applied to the previous item before extrusion.
+        angle : scalar, optional
+            Rotation angle (in degree) applied to the previous item before extrusion.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
         vector = np.asarray(vector)
 
         if vector.shape != (3,):
@@ -65,6 +113,20 @@ class MeshExtrude(MeshBase):
         return self
 
     def generate_mesh(self, tolerance: float = 1.0e-8) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        """
+        Generate mesh by extruding all items.
+
+        Parameters
+        ----------
+        tolerance : scalar, default 1.0e-8
+            Set merging tolerance of duplicate points (for unstructured grids).
+
+        Returns
+        -------
+        :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+            Extruded mesh.
+
+        """
         from .. import merge
         
         if len(self.items) <= 1:
@@ -103,12 +165,15 @@ class MeshExtrude(MeshBase):
 
     @property
     def mesh(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        """Return base mesh."""
         return self._mesh
 
     @property
     def scale(self) -> float | None:
+        """Return default scaling factor."""
         return self._scale
 
     @property
     def angle(self) -> float | None:
+        """Return default rotation angle."""
         return self._angle

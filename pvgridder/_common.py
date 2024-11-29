@@ -6,7 +6,9 @@ from functools import wraps
 
 
 def require_package(name: str, version: Optional[tuple[int]] = None) -> Callable:
+    """Decorator to check if required package is installed."""
     def decorator(func: Callable):
+        """Decorate function."""
         try:
             importlib.import_module(name)
 
@@ -28,6 +30,7 @@ def require_package(name: str, version: Optional[tuple[int]] = None) -> Callable
 
         @wraps(func)
         def wrapper(*args, **kwargs):
+            """Wrap function."""
             return func(*args, **kwargs)
             
         return wrapper

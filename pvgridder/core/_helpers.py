@@ -13,6 +13,33 @@ def generate_arc(
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.PolyData:
+    """
+    Generate an arc polyline.
+
+    Parameters
+    ----------
+    radius : scalar
+        Arc radius.
+    theta_min : scalar, default 0.0
+        Starting angle (in degree).
+    theta_max : scalar, default 90.0
+        Ending angle (in degree).
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) with respect to the starting angle.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    Returns
+    -------
+    :class:`pyvista.PolyData`
+        Arc polyline mesh.
+    
+    """
     perc = resolution_to_perc(resolution, method)
     angles = theta_min + perc * (theta_max - theta_min)
     angles = np.deg2rad(angles)
@@ -27,6 +54,31 @@ def generate_line_from_two_points(
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.PolyData:
+    """
+    Generate a polyline from two points.
+
+    Parameters
+    ----------
+    point_a : ArrayLike
+        Starting point coordinates.
+    point_b : ArrayLike
+        Ending point coordinates.
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the line or relative position of subdivisions
+        (in percentage) with respect to the starting point.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    Returns
+    -------
+    :class:`pyvista.PolyData`
+        Polyline mesh.
+
+    """
     point_a = np.asarray(point_a)
     point_b = np.asarray(point_b)
 
@@ -47,6 +99,33 @@ def generate_surface_from_two_lines(
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid:
+    """
+    Generate a surface from two polylines.
+
+    Parameters
+    ----------
+    line_a : :class:`pyvista.PolyData` | ArrayLike
+        Starting polyline mesh or coordinates.
+    line_b : :class:`pyvista.PolyData` | ArrayLike
+        Ending polyline mesh or coordinates.
+    plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
+        Surface plane.
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the plane or relative position of subdivisions
+        (in percentage) with respect to the starting line.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    Returns
+    -------
+    :class:`pyvista.StructuredGrid`
+        Surface mesh.
+    
+    """
     line_points_a = line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
     line_points_b = line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
     
@@ -109,6 +188,31 @@ def generate_volume_from_two_surfaces(
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
+    """
+    Generate a volume from two surface meshes.
+
+    Parameters
+    ----------
+    surface_a : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Starting surface mesh.
+    surface_b : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Ending surface mesh.
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the extrusion axis or relative position of
+        subdivisions (in percentage) with respect to the starting surface.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    Returns
+    -------
+    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Volume mesh.
+
+    """
     if surface_a.points.shape != surface_b.points.shape or not isinstance(surface_a, type(surface_b)):
         raise ValueError("could not generate volume from two inhomogeneous surfaces")
 
@@ -228,6 +332,26 @@ def resolution_to_perc(
     resolution: int | ArrayLike,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> ArrayLike:
+    """
+    Convert resolution to relative position.
+
+    Parameters
+    ----------
+    resolution : int | ArrayLike
+        Number of subdivisions or relative position of subdivisions (in percentage).
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+    
+    Returns
+    -------
+    ArrayLike
+        Relative position of subdivisions (in percentage).
+
+    """
     if np.ndim(resolution) == 0:
         resolution = resolution if resolution else 1
         method = method if method else "constant"
@@ -254,6 +378,20 @@ def resolution_to_perc(
 
 
 def is2d(mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> bool:
+    """
+    Return True if mesh is 2D.
+
+    Parameter
+    ---------
+    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Mesh to evaluate.
+
+    Returns
+    -------
+    bool
+        Return True is mesh is 2D.
+
+    """
     if isinstance(mesh, pv.StructuredGrid):
         return sum(n == 1 for n in mesh.dimensions) == 1
 
@@ -263,19 +401,35 @@ def is2d(mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> bool:
 
 def translate(
     mesh: pv.StructuredGrid | pv.UnstructuredGrid,
-    center: ArrayLike | None,
+    vector: ArrayLike | None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
-    if center is not None:
-        center = np.ravel(center)
+    """
+    Translate a mesh.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Mesh to translate.
+    vector : ArrayLike | None
+        Translation vector. If None, no translation is performed.
+
+    Returns
+    -------
+    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Translated mesh.
+
+    """
+    if vector is not None:
+        vector = np.ravel(vector)
         
-        if center.size != 3:
-            if center.size == 2:
-                center = np.append(center, 0.0)
+        if vector.size != 3:
+            if vector.size == 2:
+                vector = np.append(vector, 0.0)
 
             else:
                 raise ValueError("invalid translation vector")
 
-        mesh = mesh.translate(center)
+        mesh = mesh.translate(vector)
 
     return mesh
 
