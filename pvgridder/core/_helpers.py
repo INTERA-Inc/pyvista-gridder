@@ -365,7 +365,7 @@ def resolution_to_perc(
         else:
             raise ValueError(f"invalid subdivision method '{method}'")
 
-        if method.endswith("_r"):
+        if not (method == "constant" or method.endswith("_r")):
             perc = 1.0 - perc
 
     elif np.ndim(resolution) == 1:
