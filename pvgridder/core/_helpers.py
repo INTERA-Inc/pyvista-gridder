@@ -228,6 +228,8 @@ def generate_volume_from_two_surfaces(
         Volume mesh.
 
     """
+    from .. import get_dimension
+
     if surface_a.points.shape != surface_b.points.shape or not isinstance(
         surface_a, type(surface_b)
     ):
@@ -239,7 +241,7 @@ def generate_volume_from_two_surfaces(
                 "could not generate volume from two inhomogeneous structured surfaces"
             )
 
-        if not is2d(surface_a):
+        if get_dimension(surface_a) != 2:
             raise ValueError("could not generate volume from non 2D structured grid")
 
         nx, ny, nz = surface_a.dimensions
@@ -291,7 +293,7 @@ def generate_volume_from_two_surfaces(
             ).ravel(order="F")
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
-        if not is2d(surface_a):
+        if not (_celltype_map[surface_a.celltypes] != -1).all():
             raise ValueError(
                 "could not generate volume from surfaces with unsupported cell types"
             )
@@ -408,28 +410,6 @@ def resolution_to_perc(
     return perc
 
 
-def is2d(mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> bool:
-    """
-    Return True if mesh is 2D.
-
-    Parameter
-    ---------
-    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
-        Mesh to evaluate.
-
-    Returns
-    -------
-    bool
-        Return True is mesh is 2D.
-
-    """
-    if isinstance(mesh, pv.StructuredGrid):
-        return sum(n == 1 for n in mesh.dimensions) == 1
-
-    else:
-        return (_celltype_map[mesh.celltypes] != -1).all()
-
-
 def translate(
     mesh: pv.StructuredGrid | pv.UnstructuredGrid,
     vector: ArrayLike | None,
@@ -465,7 +445,7 @@ def translate(
     return mesh
 
 
-_celltype_map = np.full(int(max(pv.CellType)), -1)
-_celltype_map[int(pv.CellType.TRIANGLE)] = int(pv.CellType.WEDGE)
-_celltype_map[int(pv.CellType.QUAD)] = int(pv.CellType.HEXAHEDRON)
-_celltype_map[int(pv.CellType.POLYGON)] = int(pv.CellType.POLYHEDRON)
+_celltype_map = -np.ones(int(max(pv.CellType)) + 1, dtype=int)
+_celltype_map[pv.CellType.TRIANGLE] = int(pv.CellType.WEDGE)
+_celltype_map[pv.CellType.QUAD] = int(pv.CellType.HEXAHEDRON)
+_celltype_map[pv.CellType.POLYGON] = int(pv.CellType.POLYHEDRON)

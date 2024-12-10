@@ -10,7 +10,6 @@ from typing_extensions import Self
 from ._base import MeshBase, MeshItem
 from ._helpers import (
     generate_volume_from_two_surfaces,
-    is2d,
 )
 
 
@@ -45,7 +44,9 @@ class MeshExtrude(MeshBase):
         ignore_groups: Optional[list[str]] = None,
     ) -> None:
         """Initialize a new mesh extrusion."""
-        if not is2d(mesh):
+        from .. import get_dimension
+
+        if get_dimension(mesh) != 2:
             raise ValueError(
                 "invalid mesh, input mesh should be a 2D structured grid or an unstructured grid"
             )

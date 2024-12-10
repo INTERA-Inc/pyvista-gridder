@@ -9,7 +9,6 @@ from ._base import MeshStackBase
 from ._helpers import (
     generate_surface_from_two_lines,
     generate_volume_from_two_surfaces,
-    is2d,
 )
 
 
@@ -93,8 +92,10 @@ class MeshStack3D(MeshStackBase):
         default_group: Optional[str] = None,
         ignore_groups: Optional[list[str]] = None,
     ) -> None:
+        from .. import get_dimension
+
         if isinstance(mesh, (pv.StructuredGrid, pv.UnstructuredGrid)):
-            if not is2d(mesh):
+            if get_dimension(mesh) != 2:
                 raise ValueError("invalid mesh, input mesh should be 2D")
 
         else:
