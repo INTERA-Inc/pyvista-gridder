@@ -276,7 +276,7 @@ def generate_volume_from_two_surfaces(
         mesh = pv.StructuredGrid(X, Y, Z)
 
         # Repeat data
-        shape = [n for n in surface_a.dimensions if n != 1]
+        shape = surface_a.dimensions
         for k, v in surface_a.point_data.items():
             mesh.point_data[k] = np.repeat(
                 v.reshape(shape, order="F"),
@@ -284,7 +284,7 @@ def generate_volume_from_two_surfaces(
                 axis,
             ).ravel(order="F")
 
-        shape = [n - 1 for n in surface_a.dimensions if n != 1]
+        shape = [max(1, n - 1) for n in surface_a.dimensions]
         for k, v in surface_a.cell_data.items():
             mesh.cell_data[k] = np.repeat(
                 v.reshape(shape, order="F"),
