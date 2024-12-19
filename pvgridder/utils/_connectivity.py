@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Optional
 
+import numpy as np
 import pyvista as pv
 
 
@@ -35,7 +36,10 @@ def get_neighborhood(mesh: pv.UnstructuredGrid) -> list[ArrayLike]:
     return neighbors
 
 
-def get_connectivity(mesh: pv.UnstructuredGrid) -> pv.PolyData:
+def get_connectivity(
+    mesh: pv.UnstructuredGrid,
+    cell_centers: Optional[ArrayLike] = None,
+) -> pv.PolyData:
     """
     Get mesh connectivity.
 
@@ -43,6 +47,8 @@ def get_connectivity(mesh: pv.UnstructuredGrid) -> pv.PolyData:
     ----------
     mesh : :class:`pyvista.UnstructuredGrid`
         Input mesh.
+    cell_centers : ArrayLike, optional
+        Cell centers used for connectivity lines.
 
     Returns
     -------
@@ -52,13 +58,10 @@ def get_connectivity(mesh: pv.UnstructuredGrid) -> pv.PolyData:
     """
     from .. import cast_to_polydata
 
-    centers = mesh.cell_centers().points
+    cell_centers = cell_centers if cell_centers is not None else mesh.cell_centers().points
+
     mesh = cast_to_polydata(mesh)
-    connectivity = [x for x in mesh["vtkOriginalCellIds"] if x[1] != -1]
+    lines = [(i1, i2) for i1, i2 in mesh["vtkOriginalCellIds"] if i1 != -1 and i2 != -1]
+    lines = np.column_stack((np.full(len(lines), 2), lines)).ravel()
 
-    poly = pv.PolyData()
-
-    for i, j in connectivity:
-        poly += pv.Line(centers[i], centers[j])
-
-    return poly
+    return pv.PolyData(cell_centers, lines=lines)
