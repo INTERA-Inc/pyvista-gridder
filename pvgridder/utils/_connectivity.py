@@ -5,10 +5,7 @@ from typing import Literal, Optional
 import pyvista as pv
 
 
-def get_neighborhood(
-    mesh: pv.UnstructuredGrid,
-    connections: Optional[Literal["points", "edges", "faces"]] = None,
-) -> list[ArrayLike]:
+def get_neighborhood(mesh: pv.UnstructuredGrid) -> list[ArrayLike]:
     """
     Get mesh neighborhood.
 
@@ -16,8 +13,6 @@ def get_neighborhood(
     ----------
     mesh : :class:`pyvista.UnstructuredGrid`
         Input mesh.
-    connections : {'points', 'edges', 'faces'}, optional
-        Type of connections between cells.
 
     Returns
     -------
@@ -25,20 +20,22 @@ def get_neighborhood(
         List of neighbor cell IDs for all cells.
 
     """
-    neighbors = []
+    from .. import cast_to_polydata
 
-    for i in range(mesh.n_cells):
-        cell_neighbors = mesh.cell_neighbors(i, connections=connections)
-        neighbors.append(cell_neighbors)
+    mesh = cast_to_polydata(mesh)
+    neighbors = [[] for _ in range(mesh.n_cells)]
+
+    for i1, i2 in mesh["vtkOriginalCellIds"]:
+        if i1 == -1 or i2 == -1:
+            continue
+
+        neighbors[i1].append(i2)
+        neighbors[i2].append(i1)
 
     return neighbors
 
 
-def get_connectivity(
-    mesh: pv.UnstructuredGrid,
-    connections: Optional[Literal["points", "edges", "faces"]] = None,
-    return_polydata: bool = False,
-) -> ArrayLike | pv.PolyData:
+def get_connectivity(mesh: pv.UnstructuredGrid) -> pv.PolyData:
     """
     Get mesh connectivity.
 
@@ -46,34 +43,22 @@ def get_connectivity(
     ----------
     mesh : :class:`pyvista.UnstructuredGrid`
         Input mesh.
-    connections : {'points', 'edges', 'faces'}, optional
-        Type of connections between cells.
-    return_polydata : bool, default False
-        If True, return connectivity as polydata.
 
     Returns
     -------
-    ArrayLike | :class:`pyvista.PolyData`
+    :class:`pyvista.PolyData`
         Mesh connectivity.
 
     """
-    neighborhood = get_neighborhood(mesh, connections)
-    connectivity = set()
+    from .. import cast_to_polydata
 
-    for i, cell_neighbors in enumerate(neighborhood):
-        for j in cell_neighbors:
-            connectivity.add((min(i, j), max(i, j)))
+    centers = mesh.cell_centers().points
+    mesh = cast_to_polydata(mesh)
+    connectivity = [x for x in mesh["vtkOriginalCellIds"] if x[1] != -1]
 
-    connectivity = sorted(connectivity)
+    poly = pv.PolyData()
 
-    if return_polydata:
-        poly = pv.PolyData()
-        centers = mesh.cell_centers().points
+    for i, j in connectivity:
+        poly += pv.Line(centers[i], centers[j])
 
-        for i, j in connectivity:
-            poly += pv.Line(centers[i], centers[j])
-
-        return poly
-
-    else:
-        return connectivity
+    return poly
