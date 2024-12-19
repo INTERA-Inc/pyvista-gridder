@@ -6,6 +6,7 @@ from ._properties import *
 
 
 __all__ = [
+    "cast_to_polydata",
     "get_dimension",
     "get_connectivity",
     "get_neighborhood",

@@ -18,6 +18,7 @@ __all__ = [
     "MeshStack2D",
     "MeshStack3D",
     "VoronoiMesh2D",
+    "cast_to_polydata",
     "get_dimension",
     "get_connectivity",
     "get_neighborhood",
