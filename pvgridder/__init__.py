@@ -6,27 +6,7 @@ from .core import *
 from .utils import *
 
 
-__all__ = [
-    "AnnularSector",
-    "PlaneSurface",
-    "Quadrilateral",
-    "Rectangle",
-    "Sector",
-    "SectorRectangle",
-    "Volume",
-    "MeshExtrude",
-    "MeshMerge",
-    "MeshStack2D",
-    "MeshStack3D",
-    "VoronoiMesh2D",
-    "get_dimension",
-    "get_connectivity",
-    "get_neighborhood",
-    "extract_boundary_polygons",
-    "extract_cell_geometry",
-    "merge",
-    "reconstruct_line",
-    "split_lines",
-    "quadraticize",
+__all__ = [x for x in dir() if not x.startswith("_")]
+__all__ += [
     "__version__",
 ]
