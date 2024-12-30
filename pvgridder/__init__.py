@@ -15,7 +15,7 @@ __all__ = [
     "SectorRectangle",
     "Volume",
     "MeshExtrude",
-    "MeshFactory",
+    "MeshMerge",
     "MeshStack2D",
     "MeshStack3D",
     "VoronoiMesh2D",

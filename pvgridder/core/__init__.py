@@ -1,7 +1,7 @@
 """Core classes."""
 
 from .extrude import MeshExtrude
-from .factory import MeshFactory
+from .merge import MeshMerge
 from .geometric_objects import *
 from .stack import MeshStack2D, MeshStack3D
 from .voronoi import VoronoiMesh2D
@@ -16,7 +16,7 @@ __all__ = [
     "SectorRectangle",
     "Volume",
     "MeshExtrude",
-    "MeshFactory",
+    "MeshMerge",
     "MeshStack2D",
     "MeshStack3D",
     "VoronoiMesh2D",

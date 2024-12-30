@@ -83,14 +83,14 @@ def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
         Unstructured grid.
 
     """
-    from .. import MeshFactory, AnnularSector, Rectangle, Sector, SectorRectangle, VoronoiMesh2D
+    from .. import MeshMerge, AnnularSector, Rectangle, Sector, SectorRectangle, VoronoiMesh2D
 
     inner = 0.34
     outer = 0.445
     thickness = outer - inner
     
     mesh14 = (
-        MeshFactory()
+        MeshMerge()
         .add(Sector(inner - thickness, 0.0, 90.0, 8), group="Core")
         .add(AnnularSector(inner - thickness, inner, 0.0, 90.0, 1, 8), group="Core")
         .add(AnnularSector(inner, outer, 0.0, 90.0, 1, 8), group="Casing")
@@ -105,7 +105,7 @@ def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
         .generate_mesh()
     )
     mesh = (
-        MeshFactory()
+        MeshMerge()
         .add(mesh14)
         .add(mesh14.rotate_z(90.0))
         .add(mesh14.rotate_z(180.0))

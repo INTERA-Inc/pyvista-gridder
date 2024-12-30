@@ -8,9 +8,9 @@ from typing_extensions import Self
 from ._base import MeshBase, MeshItem
 
 
-class MeshFactory(MeshBase):
+class MeshMerge(MeshBase):
     """
-    Mesh factory class.
+    Mesh merging class.
 
     Parameters
     ----------
@@ -21,8 +21,8 @@ class MeshFactory(MeshBase):
 
     """
 
-    __name__: str = "MeshFactory"
-    __qualname__: str = "pvgridder.MeshFactory"
+    __name__: str = "MeshMerge"
+    __qualname__: str = "pvgridder.MeshMerge"
 
     def __init__(
         self,
