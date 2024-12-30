@@ -1,5 +1,6 @@
 """Mesh generation using PyVista."""
 
+from . import examples
 from .__about__ import __version__
 from .core import *
 from .utils import *
