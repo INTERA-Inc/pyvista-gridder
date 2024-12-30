@@ -6,12 +6,12 @@ from ._properties import *
 
 
 __all__ = [
-    "cast_to_polydata",
     "get_dimension",
     "get_connectivity",
     "get_neighborhood",
     "decimate_rdp",
     "extract_boundary_polygons",
+    "extract_cell_geometry",
     "merge",
     "reconstruct_line",
     "split_lines",

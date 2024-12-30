@@ -21,9 +21,9 @@ def get_neighborhood(mesh: pv.UnstructuredGrid) -> list[ArrayLike]:
         List of neighbor cell IDs for all cells.
 
     """
-    from .. import cast_to_polydata
+    from .. import extract_cell_geometry
 
-    mesh = cast_to_polydata(mesh)
+    mesh = extract_cell_geometry(mesh)
     neighbors = [[] for _ in range(mesh.n_cells)]
 
     for i1, i2 in mesh["vtkOriginalCellIds"]:
@@ -56,11 +56,11 @@ def get_connectivity(
         Mesh connectivity.
 
     """
-    from .. import cast_to_polydata
+    from .. import extract_cell_geometry
 
     cell_centers = cell_centers if cell_centers is not None else mesh.cell_centers().points
 
-    mesh = cast_to_polydata(mesh)
+    mesh = extract_cell_geometry(mesh)
     lines = [(i1, i2) for i1, i2 in mesh["vtkOriginalCellIds"] if i1 != -1 and i2 != -1]
     lines = np.column_stack((np.full(len(lines), 2), lines)).ravel()
 

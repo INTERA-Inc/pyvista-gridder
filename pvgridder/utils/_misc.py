@@ -7,128 +7,6 @@ import pyvista as pv
 from numpy.typing import ArrayLike
 
 
-def cast_to_polydata(
-    mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
-) -> pv.PolyData:
-    def get_polydata_from_points_cells(points: ArrayLike, cells: ArrayLike, key: str) -> pv.PolyData:
-        cell_ids, cells_, lines_or_faces = [], [], []
-        cell_map = {}
-
-        for i, cell in enumerate(cells):
-            for c in cell:
-                cell_set = tuple(sorted(set(c)))
-
-                try:
-                    idx = cell_map[cell_set]
-                    cell_ids[idx].append(i)
-
-                except KeyError:
-                    idx = len(cell_map)
-                    cell_map[cell_set] = idx
-                    cell_ids.append([i])
-
-                    cells_.append(c)
-                    lines_or_faces += [len(c), *cells_[idx]]
-
-        tmp = -np.ones((len(cell_ids), 2), dtype=int)
-        for i, ids in enumerate(cell_ids):
-            tmp[i, :len(ids)] = ids
-
-        poly = pv.PolyData(points, **{key: lines_or_faces})
-        poly.cell_data["vtkOriginalCellIds"] = tmp
-
-        return poly
-
-    from .. import get_dimension
-
-    ndim = get_dimension(mesh)
-    mesh = mesh.cast_to_unstructured_grid()
-
-    offset = mesh.offset
-    celltypes = mesh.celltypes
-    connectivity = mesh.cell_connectivity
-
-    if ndim == 2:
-        # Generate edge data
-        cell_edges = [
-            np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
-            for i, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes))
-            if pv.CellType(celltype).name in {"POLYGON", "QUAD", "TRIANGLE"}
-        ]
-        poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
-
-    elif ndim == 3:
-        # Generate polyhedral cell faces if any
-        polyhedral_cells = pv.convert_array(mesh.GetFaces())
-
-        if polyhedral_cells is not None:
-            locations = pv.convert_array(mesh.GetFaceLocations())
-            polyhedral_cell_faces = []
-
-            for location in locations:
-                if location == -1:
-                    continue
-
-                n_faces = polyhedral_cells[location]
-                i, cell = location + 1, []
-
-                while len(cell) < n_faces:
-                    n_vertices = polyhedral_cells[i]
-                    cell.append(polyhedral_cells[i + 1 : i + 1 + n_vertices])
-                    i += n_vertices + 1
-
-                polyhedral_cell_faces.append(cell)
-
-        # Generate face data
-        if celltypes.min() == celltypes.max():
-            celltype = pv.CellType(celltypes[0]).name
-
-            if celltype == "POLYHEDRON":
-                cell_faces = polyhedral_cell_faces
-
-            else:
-                n_vertices = _celltype_to_n_vertices[celltype]
-                cells = connectivity.reshape((connectivity.size // n_vertices, n_vertices))
-                cell_faces = [
-                    [
-                        face
-                        for v in _celltype_to_faces[celltype].values()
-                        for face in cell[v]
-                    ]
-                    for cell in cells
-                ]
-
-        else:
-            polyhedron_count, cell_faces = 0, []
-
-            for i, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes)):
-                celltype = pv.CellType(celltype).name
-
-                if celltype == "POLYHEDRON":
-                    cell_face = polyhedral_cell_faces[polyhedron_count]
-                    polyhedron_count += 1
-
-                elif celltype in _celltype_to_faces:
-                    cell = connectivity[i1:i2]
-                    cell_face = [
-                        face
-                        for v in _celltype_to_faces[celltype].values()
-                        for face in cell[v]
-                    ]
-
-                else:
-                    raise NotImplementedError(f"cells of type '{celltype}' are not supported yet")
-
-                cell_faces.append(cell_face)
-
-        poly = get_polydata_from_points_cells(mesh.points, cell_faces, "faces")
-
-    else:
-        raise ValueError(f"could not cast a mesh of dimension '{ndim}' to polydata")
-
-    return poly
-
-
 def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
     """
     Decimate polylines and/or polygons in a polydata.
@@ -250,6 +128,142 @@ def extract_boundary_polygons(
         )
         for polygon in polygons
     ]
+
+
+def extract_cell_geometry(
+    mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+) -> pv.PolyData:
+    """
+    Extract the geometry of individual cells.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.ExplicitStructuredGrid` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        Mesh to extract cell geometry from.
+    
+    Returns
+    -------
+    :class:`pyvista.PolyData`
+        Extracted cell geometry.
+
+    """
+    def get_polydata_from_points_cells(points: ArrayLike, cells: ArrayLike, key: str) -> pv.PolyData:
+        cell_ids, cells_, lines_or_faces = [], [], []
+        cell_map = {}
+
+        for i, cell in enumerate(cells):
+            for c in cell:
+                cell_set = tuple(sorted(set(c)))
+
+                try:
+                    idx = cell_map[cell_set]
+                    cell_ids[idx].append(i)
+
+                except KeyError:
+                    idx = len(cell_map)
+                    cell_map[cell_set] = idx
+                    cell_ids.append([i])
+
+                    cells_.append(c)
+                    lines_or_faces += [len(c), *cells_[idx]]
+
+        tmp = -np.ones((len(cell_ids), 2), dtype=int)
+        for i, ids in enumerate(cell_ids):
+            tmp[i, :len(ids)] = ids
+
+        poly = pv.PolyData(points, **{key: lines_or_faces})
+        poly.cell_data["vtkOriginalCellIds"] = tmp
+
+        return poly
+
+    from .. import get_dimension
+
+    ndim = get_dimension(mesh)
+    mesh = mesh.cast_to_unstructured_grid()
+
+    offset = mesh.offset
+    celltypes = mesh.celltypes
+    connectivity = mesh.cell_connectivity
+
+    if ndim == 2:
+        # Generate edge data
+        cell_edges = [
+            np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
+            for i, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes))
+            if pv.CellType(celltype).name in {"POLYGON", "QUAD", "TRIANGLE"}
+        ]
+        poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
+
+    elif ndim == 3:
+        # Generate polyhedral cell faces if any
+        polyhedral_cells = pv.convert_array(mesh.GetFaces())
+
+        if polyhedral_cells is not None:
+            locations = pv.convert_array(mesh.GetFaceLocations())
+            polyhedral_cell_faces = []
+
+            for location in locations:
+                if location == -1:
+                    continue
+
+                n_faces = polyhedral_cells[location]
+                i, cell = location + 1, []
+
+                while len(cell) < n_faces:
+                    n_vertices = polyhedral_cells[i]
+                    cell.append(polyhedral_cells[i + 1 : i + 1 + n_vertices])
+                    i += n_vertices + 1
+
+                polyhedral_cell_faces.append(cell)
+
+        # Generate face data
+        if celltypes.min() == celltypes.max():
+            celltype = pv.CellType(celltypes[0]).name
+
+            if celltype == "POLYHEDRON":
+                cell_faces = polyhedral_cell_faces
+
+            else:
+                n_vertices = _celltype_to_n_vertices[celltype]
+                cells = connectivity.reshape((connectivity.size // n_vertices, n_vertices))
+                cell_faces = [
+                    [
+                        face
+                        for v in _celltype_to_faces[celltype].values()
+                        for face in cell[v]
+                    ]
+                    for cell in cells
+                ]
+
+        else:
+            polyhedron_count, cell_faces = 0, []
+
+            for i, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes)):
+                celltype = pv.CellType(celltype).name
+
+                if celltype == "POLYHEDRON":
+                    cell_face = polyhedral_cell_faces[polyhedron_count]
+                    polyhedron_count += 1
+
+                elif celltype in _celltype_to_faces:
+                    cell = connectivity[i1:i2]
+                    cell_face = [
+                        face
+                        for v in _celltype_to_faces[celltype].values()
+                        for face in cell[v]
+                    ]
+
+                else:
+                    raise NotImplementedError(f"cells of type '{celltype}' are not supported yet")
+
+                cell_faces.append(cell_face)
+
+        poly = get_polydata_from_points_cells(mesh.points, cell_faces, "faces")
+
+    else:
+        raise ValueError(f"could not extract cell geometry of a mesh of dimension '{ndim}'")
+
+    return poly
 
 
 def merge(
