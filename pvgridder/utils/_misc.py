@@ -181,6 +181,9 @@ def extract_cell_geometry(
     ndim = get_dimension(mesh)
     mesh = mesh.cast_to_unstructured_grid()
 
+    if "vtkGhostType" in mesh.cell_data:
+        mesh = mesh.extract_cells(mesh["vtkGhostType"] == 0)
+
     offset = mesh.offset
     celltypes = mesh.celltypes
     connectivity = mesh.cell_connectivity
@@ -535,4 +538,11 @@ _celltype_to_faces = {
             ]
         ),
     },
+}
+
+_celltype_to_n_vertices = {
+    "TETRA": 4,
+    "PYRAMID": 5,
+    "WEDGE": 6,
+    "HEXAHEDRON": 8,
 }
