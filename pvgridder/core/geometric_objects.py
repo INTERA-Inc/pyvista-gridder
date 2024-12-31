@@ -322,7 +322,7 @@ def SectorRectangle(
         subdivisions (in percentage) with respect to the annulus inner radius.
     theta_resolution : int | ArrayLike, optional
         Number of subdivisions along the azimuthal axis or relative position of
-        subdivisions (in percentage) with respect to the starting angle.
+        subdivisions (in percentage) between 0 and 45 degrees (and 45 and 90 degrees).
     r_method : {'constant', 'log', 'log_r'}, optional
         Subdivision method if *r_resolution* is an integer:
 
