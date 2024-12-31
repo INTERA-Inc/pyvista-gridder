@@ -40,11 +40,7 @@ def load_anticline_3d() -> pv.StructuredGrid:
     """
     from .. import MeshExtrude
 
-    mesh = (
-        MeshExtrude(load_anticline_2d())
-        .add([0.0, 6.28, 0.0], 10)
-        .generate_mesh()
-    )
+    mesh = MeshExtrude(load_anticline_2d()).add([0.0, 6.28, 0.0], 10).generate_mesh()
     mesh = mesh.hide_cells(mesh["Active"] == 0)
 
     return mesh
@@ -62,7 +58,9 @@ def load_topographic_terrain() -> pv.StructuredGrid:
     """
     from .. import MeshStack3D
 
-    terrain = pv.examples.download_crater_topo().extract_subset((500, 900, 400, 800, 0, 0), (10, 10, 1))
+    terrain = pv.examples.download_crater_topo().extract_subset(
+        (500, 900, 400, 800, 0, 0), (10, 10, 1)
+    )
     terrain = terrain.cast_to_structured_grid()
 
     return (
@@ -83,12 +81,19 @@ def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
         Unstructured grid.
 
     """
-    from .. import MeshMerge, AnnularSector, Rectangle, Sector, SectorRectangle, VoronoiMesh2D
+    from .. import (
+        AnnularSector,
+        MeshMerge,
+        Rectangle,
+        Sector,
+        SectorRectangle,
+        VoronoiMesh2D,
+    )
 
     inner = 0.34
     outer = 0.445
     thickness = outer - inner
-    
+
     mesh14 = (
         MeshMerge()
         .add(Sector(inner - thickness, 0.0, 90.0, 8), group="Core")
@@ -134,7 +139,9 @@ def load_well_3d(voronoi: bool = False) -> pv.UnstructuredGrid:
     mesh2d = load_well_2d(voronoi)
     mesh2d.points[:, 2] = -30.0
     groups = mesh2d.user_dict["Group"]
-    inactive = lambda x: [group in {groups["Cement"], groups["Matrix"]} for group in x["Group"]]
+    inactive = lambda x: [
+        group in {groups["Cement"], groups["Matrix"]} for group in x["Group"]
+    ]
 
     mesh = (
         MeshExtrude(mesh2d)
@@ -143,4 +150,6 @@ def load_well_3d(voronoi: bool = False) -> pv.UnstructuredGrid:
         .generate_mesh()
     )
 
-    return mesh.extract_cells(mesh["Group"] == mesh.user_dict["Group"]["Inactive"], invert=True)
+    return mesh.extract_cells(
+        mesh["Group"] == mesh.user_dict["Group"]["Inactive"], invert=True
+    )

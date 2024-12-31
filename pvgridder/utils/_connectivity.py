@@ -58,7 +58,9 @@ def get_connectivity(
     """
     from .. import extract_cell_geometry
 
-    cell_centers = cell_centers if cell_centers is not None else mesh.cell_centers().points
+    cell_centers = (
+        cell_centers if cell_centers is not None else mesh.cell_centers().points
+    )
 
     mesh = extract_cell_geometry(mesh)
     lines = [(i1, i2) for i1, i2 in mesh["vtkOriginalCellIds"] if i1 != -1 and i2 != -1]

@@ -6,8 +6,8 @@ from ._misc import (
     extract_boundary_polygons,
     extract_cell_geometry,
     merge,
+    quadraticize,
     reconstruct_line,
     split_lines,
-    quadraticize,
 )
 from ._properties import get_dimension
