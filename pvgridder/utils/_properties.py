@@ -5,6 +5,20 @@ import pyvista as pv
 
 
 def get_dimension(mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid) -> int:
+    """
+    Get the dimension of a mesh.
+
+    Parameters
+    ----------
+    mesh : pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid
+        Input mesh.
+
+    Returns
+    -------
+    int
+        Dimension of the mesh.
+
+    """
     if isinstance(mesh, (pv.ExplicitStructuredGrid, pv.StructuredGrid)):
         return 3 - sum(n == 1 for n in mesh.dimensions)
 
