@@ -23,8 +23,8 @@ def get_neighborhood(mesh: pv.UnstructuredGrid) -> list[ArrayLike]:
     """
     from .. import extract_cell_geometry
 
-    mesh = extract_cell_geometry(mesh)
     neighbors = [[] for _ in range(mesh.n_cells)]
+    mesh = extract_cell_geometry(mesh)
 
     for i1, i2 in mesh["vtkOriginalCellIds"]:
         if i1 == -1 or i2 == -1:
