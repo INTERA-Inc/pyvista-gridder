@@ -62,7 +62,7 @@ def load_topographic_terrain() -> pv.StructuredGrid:
     """
     from .. import MeshStack3D
 
-    terrain = pv.examples.download_crater_topo().extract_subset((500, 900, 400, 800, 0, 0), (5, 5, 1))
+    terrain = pv.examples.download_crater_topo().extract_subset((500, 900, 400, 800, 0, 0), (10, 10, 1))
     terrain = terrain.cast_to_structured_grid()
 
     return (
