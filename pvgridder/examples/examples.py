@@ -149,7 +149,10 @@ def load_well_3d(voronoi: bool = False) -> pv.UnstructuredGrid:
         .add([0.0, 0.0, 3.0], 3, group={"Inactive": inactive})
         .generate_mesh()
     )
-
-    return mesh.extract_cells(
+    mesh = mesh.extract_cells(
         mesh["Group"] == mesh.user_dict["Group"]["Inactive"], invert=True
     )
+    mesh.point_data.pop("vtkOriginalPointIds", None)
+    mesh.cell_data.pop("vtkOriginalCellIds", None)
+
+    return mesh
