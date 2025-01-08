@@ -5,6 +5,7 @@ from ._misc import (
     decimate_rdp,
     extract_boundary_polygons,
     extract_cell_geometry,
+    extract_cells_by_dimension,
     merge,
     quadraticize,
     reconstruct_line,

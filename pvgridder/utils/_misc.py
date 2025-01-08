@@ -282,6 +282,49 @@ def extract_cell_geometry(
     return poly
 
 
+def extract_cells_by_dimension(
+    mesh: pv.UnstructuredGrid,
+    ndim: Optional[int] = None,
+    method: Literal["lower", "upper"] = "upper",
+) -> pv.UnstructuredGrid:
+    """
+    Extract cells by a specified dimension.
+
+    Parameters
+    ----------
+    mesh : :class:`pyvista.UnstructuredGrid`
+        Mesh to extract cells from.
+    ndim : int, optional
+        Dimension to be used for extraction. If None, the dimension of *mesh* is used.
+    method : {'lower', 'upper'}, default 'upper'
+        Set the extraction method. 'lower' will extract cells of dimension lower than
+        *ndim*. 'upper' will extract cells of dimension larger than *ndim*.
+
+    Returns
+    -------
+    :class:`pyvista.UnstructuredGrid`
+        Mesh with extracted cells.
+
+    """
+    from ._properties import _dimension_map, get_dimension
+
+    ndim = ndim if ndim is not None else get_dimension(mesh)
+
+    if method == "upper":
+        mask = _dimension_map[mesh.celltypes] < ndim
+
+    elif method == "lower":
+        mask = _dimension_map[mesh.celltypes] > ndim
+
+    else:
+        raise ValueError(f"invalid method '{method}' (expected 'lower' or 'upper')")
+
+    if mask.any():
+        mesh = mesh.extract_cells(mask, invert=True)
+
+    return mesh
+
+
 def merge(
     mesh_a: pv.StructuredGrid | pv.UnstructuredGrid,
     mesh_b: pv.StructuredGrid | pv.UnstructuredGrid,
