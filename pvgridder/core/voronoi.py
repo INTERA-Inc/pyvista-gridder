@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Literal, Optional
 
 import numpy as np
@@ -20,13 +21,13 @@ class VoronoiMesh2D(MeshBase):
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Background mesh.
     axis : int, default 2
         Background mesh axis to discard.
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
 
     """
@@ -39,7 +40,7 @@ class VoronoiMesh2D(MeshBase):
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a 2D Voronoi mesh."""
         super().__init__(default_group, ignore_groups)
@@ -58,7 +59,7 @@ class VoronoiMesh2D(MeshBase):
 
         Parameters
         ----------
-        mesh_or_points : :class:`pyvista.DataSet` | ArrayLike
+        mesh_or_points : pyvista.DataSet | ArrayLike
             Dataset or coordinates of points.
         priority : int, default 0
             Priority of item. Points enclosed in a cell with (strictly) higher
@@ -101,7 +102,7 @@ class VoronoiMesh2D(MeshBase):
 
         Parameters
         ----------
-        mesh_or_points : ArrayLike | :class:`pyvista.PolyData`
+        mesh_or_points : ArrayLike | pyvista.PolyData
             Dataset or coordinates of points.
         width : scalar
             Width of polyline.
@@ -240,7 +241,7 @@ class VoronoiMesh2D(MeshBase):
 
         Returns
         -------
-        :class:`pyvista.UnstructuredGrid`
+        pyvista.UnstructuredGrid
             2D Voronoi mesh.
 
         """

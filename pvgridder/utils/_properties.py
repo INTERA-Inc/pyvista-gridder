@@ -12,7 +12,7 @@ def get_dimension(
 
     Parameters
     ----------
-    mesh : pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid
+    mesh : pyvista.ExplicitStructuredGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Input mesh.
 
     Returns

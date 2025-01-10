@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional
 
 import pyvista as pv
@@ -16,7 +17,7 @@ class MeshMerge(MeshBase):
     ----------
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
 
     """
@@ -27,7 +28,7 @@ class MeshMerge(MeshBase):
     def __init__(
         self,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new mesh factory."""
         super().__init__(default_group, ignore_groups)
@@ -72,7 +73,7 @@ class MeshMerge(MeshBase):
 
         Returns
         -------
-        :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        pyvista.StructuredGrid | pyvista.UnstructuredGrid
             Merged mesh.
 
         """

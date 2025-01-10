@@ -64,7 +64,7 @@ def AnnularSector(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Annular sector mesh.
 
     """
@@ -95,9 +95,9 @@ def Surface(
 
     Parameters
     ----------
-    line_a : :class:`pyvista.PolyData` | ArrayLike, optional
+    line_a : pyvista.PolyData | ArrayLike, optional
         Starting polyline mesh or coordinates.
-    line_b : :class:`pyvista.PolyData` | ArrayLike, optional
+    line_b : pyvista.PolyData | ArrayLike, optional
         Ending polyline mesh or coordinates.
     plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
         Surface plane.
@@ -113,7 +113,7 @@ def Surface(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Surface mesh.
 
     """
@@ -163,7 +163,7 @@ def Quadrilateral(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Quadrilateral mesh.
 
     """
@@ -225,7 +225,7 @@ def Rectangle(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Rectangle mesh.
 
     """
@@ -273,7 +273,7 @@ def Sector(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Sector mesh.
 
     """
@@ -342,7 +342,7 @@ def SectorRectangle(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Rectangle mesh with removed sector.
 
     """
@@ -376,9 +376,9 @@ def Volume(
 
     Parameters
     ----------
-    surface_a : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    surface_a : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Starting surface mesh.
-    surface_b : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    surface_b : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Ending surface mesh.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the extrusion axis or relative position of
@@ -392,7 +392,7 @@ def Volume(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Volume mesh.
 
     """

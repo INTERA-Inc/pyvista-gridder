@@ -37,7 +37,7 @@ def generate_arc(
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Arc polyline mesh.
 
     """
@@ -78,7 +78,7 @@ def generate_line_from_two_points(
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Polyline mesh.
 
     """
@@ -111,9 +111,9 @@ def generate_surface_from_two_lines(
 
     Parameters
     ----------
-    line_a : :class:`pyvista.PolyData` | ArrayLike
+    line_a : pyvista.PolyData | ArrayLike
         Starting polyline mesh or coordinates.
-    line_b : :class:`pyvista.PolyData` | ArrayLike
+    line_b : pyvista.PolyData | ArrayLike
         Ending polyline mesh or coordinates.
     plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
         Surface plane.
@@ -129,7 +129,7 @@ def generate_surface_from_two_lines(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid`
+    pyvista.StructuredGrid
         Surface mesh.
 
     """
@@ -208,9 +208,9 @@ def generate_volume_from_two_surfaces(
 
     Parameters
     ----------
-    surface_a : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    surface_a : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Starting surface mesh.
-    surface_b : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    surface_b : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Ending surface mesh.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the extrusion axis or relative position of
@@ -224,7 +224,7 @@ def generate_volume_from_two_surfaces(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Volume mesh.
 
     """
@@ -419,14 +419,14 @@ def translate(
 
     Parameters
     ----------
-    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to translate.
     vector : ArrayLike | None
         Translation vector. If None, no translation is performed.
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Translated mesh.
 
     """

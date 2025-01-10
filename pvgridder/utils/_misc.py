@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional
 
 import numpy as np
@@ -13,14 +14,14 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData`
+    mesh : pyvista.PolyData
         Polydata to decimate.
     tolerance : scalar, default 1.0e-8
         Tolerance for the Ramer-Douglas-Peucker algorithm.
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Decimated polydata.
 
     """
@@ -70,14 +71,14 @@ def extract_boundary_polygons(
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to extract boundary edges from.
     fill : bool, default False
         If False, only return boundary edges as polylines.
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Extracted boundary polylines or polygons.
 
     """
@@ -138,12 +139,12 @@ def extract_cell_geometry(
 
     Parameters
     ----------
-    mesh : :class:`pyvista.ExplicitStructuredGrid` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.ExplicitStructuredGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to extract cell geometry from.
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Extracted cell geometry.
 
     """
@@ -292,7 +293,7 @@ def extract_cells_by_dimension(
 
     Parameters
     ----------
-    mesh : :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.UnstructuredGrid
         Mesh to extract cells from.
     ndim : int, optional
         Dimension to be used for extraction. If None, the dimension of *mesh* is used.
@@ -302,7 +303,7 @@ def extract_cells_by_dimension(
 
     Returns
     -------
-    :class:`pyvista.UnstructuredGrid`
+    pyvista.UnstructuredGrid
         Mesh with extracted cells.
 
     """
@@ -335,7 +336,7 @@ def merge(
 
     Parameters
     ----------
-    mesh_a, mesh_b : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh_a, mesh_b : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         The meshes to merge together.
     axis : int, optional
         The axis along which two structured grids are merged (if *mesh_a* and *mesh_b*
@@ -343,7 +344,7 @@ def merge(
 
     Returns
     -------
-    :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Merged mesh.
 
     """
@@ -426,7 +427,7 @@ def reconstruct_line(
 
     Parameters
     ----------
-    mesh : :class:`pyvista.DataSet`
+    mesh : pyvista.DataSet
         Mesh from which points to reconstruct a line.
     start : int, default 0
         Index of point to use as starting point for 2-opt algorithm.
@@ -437,7 +438,7 @@ def reconstruct_line(
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Reconstructed line.
 
     """
@@ -489,18 +490,18 @@ def reconstruct_line(
     return pv.lines_from_points(points, close=close)
 
 
-def split_lines(mesh: pv.PolyData) -> list[pv.PolyData]:
+def split_lines(mesh: pv.PolyData) -> Sequence[pv.PolyData]:
     """
     Split polyline(s) into multiple lines.
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData`
+    mesh : pyvista.PolyData
         Mesh with polyline(s) to split.
 
     Returns
     -------
-    sequence of :class:`pyvista.PolyData`
+    Sequence[pyvista.PolyData]
         Split polyline(s).
 
     """
@@ -534,12 +535,12 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
 
     Parameters
     ----------
-    mesh : :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.UnstructuredGrid
         Mesh with linear cells.
 
     Returns
     -------
-    :class:`pyvista.UnstructuredGrid`
+    pyvista.UnstructuredGrid
         Mesh with quadratic cells.
 
     """

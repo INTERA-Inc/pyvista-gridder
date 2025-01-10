@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import Callable, Literal, Optional
 
 import numpy as np
@@ -16,7 +17,7 @@ class MeshItem:
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Input mesh.
 
     """
@@ -47,9 +48,9 @@ class MeshBase(ABC):
     ----------
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
-    items : sequence of :class:`MeshItem`, optional
+    items : Sequence[MeshItem], optional
         Initial list of mesh items.
 
     """
@@ -60,8 +61,8 @@ class MeshBase(ABC):
     def __init__(
         self,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
-        items: Optional[list[MeshItem]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
+        items: Optional[Sequence[MeshItem]] = None,
     ) -> None:
         """Initialize a new mesh."""
         self._default_group = default_group if default_group else "default"
@@ -156,13 +157,13 @@ class MeshStackBase(MeshBase):
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData` | :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Base mesh.
     axis : int, default 2
         Stacking axis.
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
 
     """
@@ -175,7 +176,7 @@ class MeshStackBase(MeshBase):
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new mesh stack."""
         if axis not in {0, 1, 2}:
@@ -203,7 +204,7 @@ class MeshStackBase(MeshBase):
 
         Parameters
         ----------
-        arg : scalar | Callable | :class:`pyvista.DataSet`
+        arg : scalar | Callable | pyvista.DataSet
             New item to add to stack:
 
              - if scalar, all points of the previous items are translated by *arg* along
@@ -300,7 +301,7 @@ class MeshStackBase(MeshBase):
 
         Returns
         -------
-        :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        pyvista.StructuredGrid | pyvista.UnstructuredGrid
             Stacked mesh.
 
         """

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional
 
 import numpy as np
@@ -18,13 +19,13 @@ class MeshStack2D(MeshStackBase):
 
     Parameters
     ----------
-    mesh : :class:`pyvista.PolyData`
+    mesh : pyvista.PolyData
         Base mesh.
     axis : int, default 2
         Stacking axis.
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
 
     """
@@ -37,7 +38,7 @@ class MeshStack2D(MeshStackBase):
         mesh: pv.PolyData,
         axis: int = 2,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new 2D mesh stack."""
         from .. import split_lines
@@ -71,13 +72,13 @@ class MeshStack3D(MeshStackBase):
 
     Parameters
     ----------
-    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Base mesh.
     axis : int, default 2
         Stacking axis.
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
 
     """
@@ -90,7 +91,7 @@ class MeshStack3D(MeshStackBase):
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         from .. import get_dimension
 

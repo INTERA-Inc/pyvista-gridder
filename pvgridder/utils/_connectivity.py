@@ -1,23 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional
 
 import numpy as np
 import pyvista as pv
 
 
-def get_neighborhood(mesh: pv.UnstructuredGrid) -> list[ArrayLike]:
+def get_neighborhood(mesh: pv.UnstructuredGrid) -> Sequence[ArrayLike]:
     """
     Get mesh neighborhood.
 
     Parameters
     ----------
-    mesh : :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.UnstructuredGrid
         Input mesh.
 
     Returns
     -------
-    sequence of ArrayLike
+    Sequence[ArrayLike]
         List of neighbor cell IDs for all cells.
 
     """
@@ -45,14 +46,14 @@ def get_connectivity(
 
     Parameters
     ----------
-    mesh : :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.UnstructuredGrid
         Input mesh.
     cell_centers : ArrayLike, optional
         Cell centers used for connectivity lines.
 
     Returns
     -------
-    :class:`pyvista.PolyData`
+    pyvista.PolyData
         Mesh connectivity.
 
     """

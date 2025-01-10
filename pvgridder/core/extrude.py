@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Literal, Optional
 
 import numpy as np
@@ -19,7 +20,7 @@ class MeshExtrude(MeshBase):
 
     Parameters
     ----------
-    mesh : :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+    mesh : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Base mesh.
     scale : scalar, optional
         Default scaling factor.
@@ -27,7 +28,7 @@ class MeshExtrude(MeshBase):
         Default rotation angle (in degree).
     default_group : str, optional
         Default group name.
-    ignore_groups : sequence of str, optional
+    ignore_groups : Sequence[str], optional
         List of groups to ignore.
 
     """
@@ -41,7 +42,7 @@ class MeshExtrude(MeshBase):
         scale: Optional[float] = None,
         angle: Optional[float] = None,
         default_group: Optional[str] = None,
-        ignore_groups: Optional[list[str]] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a new mesh extrusion."""
         from .. import get_dimension
@@ -130,7 +131,7 @@ class MeshExtrude(MeshBase):
 
         Returns
         -------
-        :class:`pyvista.StructuredGrid` | :class:`pyvista.UnstructuredGrid`
+        pyvista.StructuredGrid | pyvista.UnstructuredGrid
             Extruded mesh.
 
         """
