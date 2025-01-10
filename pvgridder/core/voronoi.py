@@ -355,7 +355,7 @@ class VoronoiMesh2D(MeshBase):
 
         # Reconstruct infinite regions
         center = voronoi.points.mean(axis=0)
-        radius = infinity if infinity else self.mesh.points.ptp().max() * 1.0e3
+        radius = infinity if infinity else np.ptp(self.mesh.points).max() * 1.0e3
         new_vertices = voronoi.vertices.tolist()
         new_regions = []
 
