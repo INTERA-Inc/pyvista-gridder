@@ -68,3 +68,18 @@ def tar(c):
     with tarfile.open("pvgridder.tar.gz", "w:gz") as tf:
         tf.add("pvgridder", arcname="pvgridder/pvgridder", filter=filter)
         tf.add("pyproject.toml", arcname="pvgridder/pyproject.toml")
+
+
+@task
+def test(c, cov=False, html=False):
+    command = ["python -m pytest"]
+
+    if cov:
+        command += ["--cov", "pvgridder", "--cov-report", "term"]
+
+        if html:
+            command += ["--cov-report", "html"]
+
+    command += ["tests"]
+
+    c.run(" ".join(command))
