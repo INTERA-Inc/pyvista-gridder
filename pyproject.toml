@@ -104,3 +104,14 @@ combine-as-imports = true
 from-first = false
 lines-after-imports = 2
 relative-imports-order = "closest-to-furthest"
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "except ModuleNotFoundError",
+    "raise ModuleNotFoundError",
+    "raise NotImplementedError",
+    "raise TypeError",
+    "raise ValueError",
+    "@(abc\\.)?abstractmethod",
+]
