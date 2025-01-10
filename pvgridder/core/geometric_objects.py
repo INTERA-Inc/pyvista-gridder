@@ -282,14 +282,14 @@ def Sector(
 
     points = generate_arc(radius, theta_min, theta_max, resolution, method).points
     n_cells = len(points) - 1
-    cells = np.column_stack(
+    cells = np.hstack(
         (
             np.zeros(n_cells),
             np.arange(1, n_cells + 1),
             np.arange(2, n_cells + 2),
         )
     ).astype(int)
-    points = np.row_stack((np.zeros(3), points))
+    points = np.vstack((np.zeros(3), points))
     mesh = pv.UnstructuredGrid({pv.CellType.TRIANGLE: cells}, points)
     mesh = translate(mesh, center)
 

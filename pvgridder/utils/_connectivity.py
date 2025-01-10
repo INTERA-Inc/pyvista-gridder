@@ -65,6 +65,6 @@ def get_connectivity(
 
     mesh = extract_cell_geometry(mesh)
     lines = [(i1, i2) for i1, i2 in mesh["vtkOriginalCellIds"] if i1 != -1 and i2 != -1]
-    lines = np.column_stack((np.full(len(lines), 2), lines)).ravel()
+    lines = np.hstack((np.full(len(lines), 2), lines)).ravel()
 
     return pv.PolyData(cell_centers, lines=lines)

@@ -41,10 +41,10 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
             res1 = decimate(points[: imax + 1])
             res2 = decimate(points[imax:])
 
-            return np.row_stack((res1[:-1], res2))
+            return np.vstack((res1[:-1], res2))
 
         else:
-            return np.row_stack((points[0], points[-1]))
+            return np.vstack((points[0], points[-1]))
 
     lines = []
     points = []
@@ -195,7 +195,7 @@ def extract_cell_geometry(
     if ndim == 2:
         # Generate edge data
         cell_edges = [
-            np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
+            np.hstack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
             for i, (i1, i2, celltype) in enumerate(
                 zip(offset[:-1], offset[1:], celltypes)
             )
@@ -484,7 +484,7 @@ def reconstruct_line(
     points = (
         points
         if points.shape[1] == 3
-        else np.column_stack((points, np.zeros(len(points))))
+        else np.hstack((points, np.zeros(len(points))))
     )
 
     return pv.lines_from_points(points, close=close)
@@ -515,7 +515,7 @@ def split_lines(mesh: pv.PolyData) -> Sequence[pv.PolyData]:
     for _ in range(mesh.n_lines):
         n_points = lines[offset]
         points = mesh.points[lines[offset + 1 : offset + n_points + 1]]
-        cells = np.column_stack(
+        cells = np.hstack(
             (
                 np.full(n_points - 1, 2),
                 np.arange(n_points - 1),
@@ -566,7 +566,7 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
         n_points += n_new_points
 
     quad_points = np.concatenate(quad_points)
-    points = np.row_stack((mesh.points, quad_points))
+    points = np.vstack((mesh.points, quad_points))
 
     return pv.UnstructuredGrid(cells, celltypes, points)
 

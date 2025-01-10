@@ -44,7 +44,7 @@ def generate_arc(
     perc = resolution_to_perc(resolution, method)
     angles = theta_min + perc * (theta_max - theta_min)
     angles = np.deg2rad(angles)
-    points = radius * np.column_stack(
+    points = radius * np.hstack(
         (np.cos(angles), np.sin(angles), np.zeros(len(angles)))
     )
 
@@ -93,7 +93,7 @@ def generate_line_from_two_points(
     points = (
         points
         if points.shape[1] == 3
-        else np.column_stack((points, np.zeros(len(points))))
+        else np.hstack((points, np.zeros(len(points))))
     )
 
     return pv.MultipleLines(points)
