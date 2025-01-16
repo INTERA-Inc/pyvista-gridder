@@ -10,7 +10,7 @@ def load_anticline_2d() -> pv.StructuredGrid:
 
     Returns
     -------
-    pv.StructuredGrid
+    pyvista.StructuredGrid
         Structured grid.
 
     """
@@ -34,7 +34,7 @@ def load_anticline_3d() -> pv.StructuredGrid:
 
     Returns
     -------
-    pv.StructuredGrid
+    pyvista.StructuredGrid
         Structured grid.
 
     """
@@ -52,7 +52,7 @@ def load_topographic_terrain() -> pv.StructuredGrid:
 
     Returns
     -------
-    pv.StructuredGrid
+    pyvista.StructuredGrid
         Structured grid.
 
     """
@@ -77,7 +77,7 @@ def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
 
     Returns
     -------
-    pv.UnstructuredGrid
+    pyvista.UnstructuredGrid
         Unstructured grid.
 
     """
@@ -130,7 +130,7 @@ def load_well_3d(voronoi: bool = False) -> pv.UnstructuredGrid:
 
     Returns
     -------
-    pv.UnstructuredGrid
+    pyvista.UnstructuredGrid
         Unstructured grid.
 
     """
