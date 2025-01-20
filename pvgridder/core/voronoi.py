@@ -261,12 +261,15 @@ class VoronoiMesh2D(MeshBase):
             mesh_a = item.mesh
             group = item.group if item.group else self.default_group
             points_ = mesh_a.cell_centers().points
-            item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
-            item_priority_array = np.full(mesh_a.n_cells, abs(item.priority))
 
             # Remove out of bound points from item mesh
-            mask = self.mesh.find_containing_cell(points_) != -1
+            mask = self.mesh.find_containing_cell(mesh_a.cell_centers().points) != -1
+            mesh_a = mesh_a.extract_cells(mask)
             points_ = points_[mask]
+
+            # Initialize item arrays
+            item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
+            item_priority_array = np.full(mesh_a.n_cells, abs(item.priority))
 
             # Disable existing points contained by item mesh and with lower (or equal) priority
             idx = mesh_a.find_containing_cell(points)
