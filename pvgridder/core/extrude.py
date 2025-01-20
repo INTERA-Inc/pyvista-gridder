@@ -144,17 +144,9 @@ class MeshExtrude(MeshBase):
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
-            tmp = self._initialize_group_array(mesh_a, groups)
-
-            group = item2.group if item2.group else {}
-
-            if isinstance(group, str):
-                group = {group: lambda x: np.ones(x.n_cells, dtype=bool)}
-
-            for k, v in group.items():
-                tmp[v(mesh_a)] = self._get_group_number(k, groups)
-
-            mesh_a.cell_data["Group"] = tmp
+            mesh_a.cell_data["Group"] = self._initialize_group_array(
+                mesh_a, groups, item2.group
+            )
             mesh_b = generate_volume_from_two_surfaces(
                 mesh_a, item2.mesh, item2.resolution, item2.method
             )

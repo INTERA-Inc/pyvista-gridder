@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from typing import Callable, Literal, Optional
+from collections.abc import Callable, Sequence
+from typing import Literal, Optional
 
 import numpy as np
 import pyvista as pv
@@ -107,23 +107,31 @@ class MeshBase(ABC):
         self,
         mesh: pv.StructuredGrid | pv.UnstructuredGrid,
         groups: dict,
+        group: Optional[str | dict[str, Callable]] = None,
         default_group: Optional[str] = None,
     ) -> ArrayLike:
         """Initialize group array."""
-        group = np.full(mesh.n_cells, -1, dtype=int)
+        arr = np.full(mesh.n_cells, -1, dtype=int)
 
         if "Group" in mesh.cell_data and "Group" in mesh.user_dict:
             for k, v in mesh.user_dict["Group"].items():
                 if k in self.ignore_groups:
                     continue
 
-                group[mesh.cell_data["Group"] == v] = self._get_group_number(k, groups)
+                arr[mesh.cell_data["Group"] == v] = self._get_group_number(k, groups)
 
-        if (group == -1).any():
+        if group:
+            if isinstance(group, str):
+                group = {group: lambda x: np.ones(x.n_cells, dtype=bool)}
+
+            for k, v in group.items():
+                arr[v(mesh)] = self._get_group_number(k, groups)
+
+        if (arr == -1).any():
             default_group = default_group if default_group else self.default_group
-            group[group == -1] = self._get_group_number(default_group, groups)
+            arr[arr == -1] = self._get_group_number(default_group, groups)
 
-        return group
+        return arr
 
     @staticmethod
     def _get_group_number(group: str, groups: dict) -> int:

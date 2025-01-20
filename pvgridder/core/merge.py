@@ -85,7 +85,7 @@ class MeshMerge(MeshBase):
         for i, item in enumerate(self.items):
             mesh_b = item.mesh
             mesh_b.cell_data["Group"] = self._initialize_group_array(
-                mesh_b, groups, item.group
+                mesh_b, groups, default_group=item.group
             )
 
             if i > 0:
