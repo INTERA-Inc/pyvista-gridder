@@ -84,7 +84,7 @@ class MeshMerge(MeshBase):
 
         for i, item in enumerate(self.items):
             mesh_b = item.mesh
-            mesh_b.cell_data["Group"] = self._initialize_group_array(
+            mesh_b.cell_data["CellGroup"] = self._initialize_group_array(
                 mesh_b, groups, default_group=item.group
             )
 
@@ -94,6 +94,6 @@ class MeshMerge(MeshBase):
             else:
                 mesh = mesh_b.cast_to_unstructured_grid()
 
-        mesh.user_dict["Group"] = groups
+        mesh.user_dict["CellGroup"] = groups
 
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)

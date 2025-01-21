@@ -144,7 +144,7 @@ class MeshExtrude(MeshBase):
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
-            mesh_a.cell_data["Group"] = self._initialize_group_array(
+            mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
                 mesh_a, groups, item2.group
             )
             mesh_b = generate_volume_from_two_surfaces(
@@ -162,7 +162,7 @@ class MeshExtrude(MeshBase):
             else:
                 mesh = mesh_b
 
-        mesh.user_dict["Group"] = groups
+        mesh.user_dict["CellGroup"] = groups
 
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)

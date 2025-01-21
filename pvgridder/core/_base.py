@@ -113,12 +113,12 @@ class MeshBase(ABC):
         """Initialize group array."""
         arr = np.full(mesh.n_cells, -1, dtype=int)
 
-        if "Group" in mesh.cell_data and "Group" in mesh.user_dict:
-            for k, v in mesh.user_dict["Group"].items():
+        if "CellGroup" in mesh.cell_data and "CellGroup" in mesh.user_dict:
+            for k, v in mesh.user_dict["CellGroup"].items():
                 if k in self.ignore_groups:
                     continue
 
-                arr[mesh.cell_data["Group"] == v] = self._get_group_number(k, groups)
+                arr[mesh.cell_data["CellGroup"] == v] = self._get_group_number(k, groups)
 
         if group:
             if isinstance(group, str):
@@ -340,7 +340,7 @@ class MeshStackBase(MeshBase):
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
-            mesh_a.cell_data["Group"] = self._initialize_group_array(
+            mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
                 mesh_a, groups, item2.group
             )
             mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
@@ -351,7 +351,7 @@ class MeshStackBase(MeshBase):
             else:
                 mesh = mesh_b
 
-        mesh.user_dict["Group"] = groups
+        mesh.user_dict["CellGroup"] = groups
 
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
