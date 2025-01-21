@@ -321,7 +321,7 @@ def extract_cells_by_dimension(
         raise ValueError(f"invalid method '{method}' (expected 'lower' or 'upper')")
 
     if mask.any():
-        mesh = mesh.extract_cells(mask, invert=True)
+        mesh = mesh.extract_cells(~mask)
 
     return mesh
 
