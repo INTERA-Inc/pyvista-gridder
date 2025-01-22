@@ -118,7 +118,9 @@ class MeshBase(ABC):
                 if k in self.ignore_groups:
                     continue
 
-                arr[mesh.cell_data["CellGroup"] == v] = self._get_group_number(k, groups)
+                arr[mesh.cell_data["CellGroup"] == v] = self._get_group_number(
+                    k, groups
+                )
 
         if group:
             if isinstance(group, str):
