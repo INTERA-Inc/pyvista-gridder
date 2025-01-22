@@ -490,6 +490,84 @@ def reconstruct_line(
     return pv.lines_from_points(points, close=close)
 
 
+def remap_categorical_data(
+    mesh: pv.DataSet,
+    key: str,
+    mapping: dict[int, int],
+    preference: Literal["cell", "point"] = "cell",
+    inplace: bool = False,
+) -> pv.DataSet | None:
+    """
+    Remap categorical cell or point data.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        Mesh with categorical data to remap.
+    key : str
+        Name of the categorical data to remap.
+    mapping : dict
+        Mapping of old to new values.
+    preference : {'cell', 'point'}, default 'cell'
+        Determine whether to remap cell or point data.
+    inplace : bool, default False
+        If True, overwrite the original mesh.
+
+    Returns
+    -------
+    pyvista.DataSet | None
+        Mesh with remapped categorical data.
+
+    """
+    if not inplace:
+        mesh = mesh.copy()
+
+    if preference == "cell":
+        data = mesh.cell_data[key]
+
+    elif preference == "point":
+        data = mesh.point_data[key]
+
+    else:
+        raise ValueError(f"invalid preference '{preference}'")
+
+    if data.dtype.kind != "i":
+        raise ValueError(f"could not remap non-categorical '{preference}' data '{key}'")
+
+    try:
+        data_labels = mesh.user_dict[key]
+
+    except KeyError:
+        data_labels = {}
+
+    remapped_data = data.copy()
+    data_labels_map = {v: k for k, v in data_labels.items()}
+
+    for k, v in mapping.items():
+        mask = data == k
+
+        if mask.any():
+            remapped_data[mask] = v
+
+            try:
+                data_labels[data_labels_map[k]] = v
+
+            except KeyError:
+                pass
+
+    if preference == "cell":
+        mesh.cell_data[key] = remapped_data
+
+    else:
+        mesh.point_data[key] = remapped_data
+
+    if data_labels:
+        mesh.user_dict[key] = data_labels
+
+    if not inplace:
+        return mesh
+
+
 def split_lines(mesh: pv.PolyData) -> Sequence[pv.PolyData]:
     """
     Split polyline(s) into multiple lines.

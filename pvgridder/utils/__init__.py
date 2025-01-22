@@ -9,6 +9,7 @@ from ._misc import (
     merge,
     quadraticize,
     reconstruct_line,
+    remap_categorical_data,
     split_lines,
 )
 from ._properties import get_dimension
