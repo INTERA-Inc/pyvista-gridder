@@ -89,7 +89,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         mesh_or_points: ArrayLike | pv.PolyData,
         width: float,
-        preference: Optional[Literal["cell", "point"]] = "cell",
+        preference: Literal["cell", "point"] = "cell",
         padding: Optional[float] = None,
         constrain_start: bool = True,
         constrain_end: bool = True,
