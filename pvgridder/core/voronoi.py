@@ -264,25 +264,28 @@ class VoronoiMesh2D(MeshBase):
 
             # Remove out of bound points from item mesh
             mask = self.mesh.find_containing_cell(mesh_a.cell_centers().points) != -1
-            mesh_a = mesh_a.extract_cells(mask)
-            points_ = points_[mask]
+
+            if mask.any():
+                mesh_a = mesh_a.extract_cells(mask)
+                points_ = points_[mask]
 
             # Initialize item arrays
             item_group_array = self._initialize_group_array(mesh_a, groups, item.group)
             item_priority_array = np.full(mesh_a.n_cells, abs(item.priority))
 
             # Disable existing points contained by item mesh and with lower (or equal) priority
-            idx = mesh_a.find_containing_cell(points)
-            mask = np.logical_and(
-                idx != -1,
-                (
-                    priority_array <= item_priority_array[idx]
-                    if item.priority >= 0
-                    else priority_array < item_priority_array[idx]
-                ),
-            )
-            active[mask] = False
-            group_array[mask] = False
+            if not isinstance(mesh_a, pv.PolyData):
+                idx = mesh_a.find_containing_cell(points)
+                mask = np.logical_and(
+                    idx != -1,
+                    (
+                        priority_array <= item_priority_array[idx]
+                        if item.priority >= 0
+                        else priority_array < item_priority_array[idx]
+                    ),
+                )
+                active[mask] = False
+                group_array[mask] = False
 
             # Append points to point list
             points += points_.tolist()
