@@ -60,10 +60,12 @@ class MeshStack2D(MeshStackBase):
 
     def _set_active(self, mesh: pv.StructuredGrid) -> None:
         """Set active cell data."""
+        super()._set_active(mesh)
+
         areas = mesh.compute_cell_sizes(
             length=False, area=True, volume=False
         ).cell_data["Area"]
-        mesh.cell_data["Active"] = (np.abs(areas) > 0.0).astype(int)
+        mesh.cell_data["vtkGhostType"][np.abs(areas) == 0.0] = 32
 
 
 class MeshStack3D(MeshStackBase):
@@ -112,7 +114,9 @@ class MeshStack3D(MeshStackBase):
 
     def _set_active(self, mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> None:
         """Set active cell data."""
+        super()._set_active(mesh)
+
         volumes = mesh.compute_cell_sizes(
             length=False, area=False, volume=True
         ).cell_data["Volume"]
-        mesh.cell_data["Active"] = (np.abs(volumes) > 0.0).astype(int)
+        mesh.cell_data["vtkGhostType"][np.abs(volumes) == 0.0] = 32

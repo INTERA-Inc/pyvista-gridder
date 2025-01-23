@@ -369,9 +369,10 @@ class MeshStackBase(MeshBase):
         pass
 
     @abstractmethod
-    def _set_active(self, *args) -> None:
+    def _set_active(self, mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> None:
         """Set active cell data."""
-        pass
+        if "vtkGhostType" not in mesh.cell_data:
+            mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
 
     def _interpolate(
         self, points: ArrayLike

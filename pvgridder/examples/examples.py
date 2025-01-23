@@ -41,7 +41,6 @@ def load_anticline_3d() -> pv.StructuredGrid:
     from .. import MeshExtrude
 
     mesh = MeshExtrude(load_anticline_2d()).add([0.0, 6.28, 0.0], 10).generate_mesh()
-    mesh = mesh.hide_cells(mesh["Active"] == 0)
 
     return mesh
 
