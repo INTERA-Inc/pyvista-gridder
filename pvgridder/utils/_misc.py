@@ -133,7 +133,7 @@ def extract_boundary_polygons(
 
 def extract_cell_geometry(
     mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
-    remove_ghost_cells: bool = True,
+    remove_empty_cells: bool = True,
 ) -> pv.PolyData:
     """
     Extract the geometry of individual cells.
@@ -142,8 +142,8 @@ def extract_cell_geometry(
     ----------
     mesh : pyvista.ExplicitStructuredGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to extract cell geometry from.
-    remove_ghost_cells : bool, default True
-        If True, remove ghost cells.
+    remove_empty_cells : bool, default True
+        If True, remove empty cells.
 
     Returns
     -------
@@ -188,7 +188,7 @@ def extract_cell_geometry(
 
     from .. import get_dimension
 
-    if not remove_ghost_cells and "vtkGhostType" in mesh.cell_data:
+    if not remove_empty_cells and "vtkGhostType" in mesh.cell_data:
         mesh = mesh.copy(deep=False)
         mesh.clear_data()
 
@@ -211,7 +211,7 @@ def extract_cell_geometry(
         # Generate edge data
         cell_edges = [
             np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
-            if not remove_ghost_cells or celltype != pv.CellType.EMPTY_CELL
+            if not remove_empty_cells or celltype != pv.CellType.EMPTY_CELL
             else []
             for i, (i1, i2, celltype) in enumerate(
                 zip(offset[:-1], offset[1:], celltypes)
