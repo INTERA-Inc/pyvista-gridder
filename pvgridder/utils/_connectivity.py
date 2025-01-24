@@ -75,7 +75,9 @@ def get_connectivity(
         cell_centers = mesh_copy.cell_centers(vertex=False).points
 
     if np.shape(cell_centers) != (mesh.n_cells, 3):
-        raise ValueError(f"invalid cell centers (expected 2D array of shape ({mesh.n_cells}, 3)")
+        raise ValueError(
+            f"invalid cell centers (expected 2D array of shape ({mesh.n_cells}, 3)"
+        )
 
     mesh = extract_cell_geometry(mesh, remove_empty_cells)
     lines = [(i1, i2) for i1, i2 in mesh["vtkOriginalCellIds"] if i1 != -1 and i2 != -1]

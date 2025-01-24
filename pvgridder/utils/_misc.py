@@ -153,7 +153,9 @@ def extract_cell_geometry(
     """
 
     def get_polydata_from_points_cells(
-        points: ArrayLike, cells: ArrayLike, key: str,
+        points: ArrayLike,
+        cells: ArrayLike,
+        key: str,
     ) -> pv.PolyData:
         cell_ids, cells_, lines_or_faces = [], [], []
         cell_map = {}
@@ -200,14 +202,19 @@ def extract_cell_geometry(
     connectivity = mesh.cell_connectivity
 
     if ndim == 2:
-        supported_celltypes = {pv.CellType.EMPTY_CELL, pv.CellType.POLYGON, pv.CellType.QUAD, pv.CellType.TRIANGLE}
+        supported_celltypes = {
+            pv.CellType.EMPTY_CELL,
+            pv.CellType.POLYGON,
+            pv.CellType.QUAD,
+            pv.CellType.TRIANGLE,
+        }
         unsupported_celltypes = set(celltypes).difference(supported_celltypes)
 
         if unsupported_celltypes:
             raise NotImplementedError(
                 f"cells of type '{pv.CellType(list(unsupported_celltypes)[0]).name}' are not supported yet"
             )
-        
+
         # Generate edge data
         cell_edges = [
             np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
@@ -222,9 +229,11 @@ def extract_cell_geometry(
 
         # Handle collapsed cells
         if remove_empty_cells:
-            lengths = poly.compute_cell_sizes(length=True, area=False, volume=False)["Length"]
+            lengths = poly.compute_cell_sizes(length=True, area=False, volume=False)[
+                "Length"
+            ]
             mask = np.abs(lengths) > 0.0
-            
+
             if not mask.all():
                 lines = poly.lines.reshape((poly.n_lines, 3))[mask]
                 tmp = poly.cell_data["vtkOriginalCellIds"][mask]
@@ -309,11 +318,15 @@ def extract_cell_geometry(
 
         # Handle collapsed cells
         if remove_empty_cells:
-            areas = poly.compute_cell_sizes(length=False, area=True, volume=False)["Area"]
+            areas = poly.compute_cell_sizes(length=False, area=True, volume=False)[
+                "Area"
+            ]
             mask = np.abs(areas) > 0.0
-            
+
             if not mask.all():
-                faces = [face for face, mask_ in zip(poly.irregular_faces, mask) if mask_]
+                faces = [
+                    face for face, mask_ in zip(poly.irregular_faces, mask) if mask_
+                ]
                 tmp = poly.cell_data["vtkOriginalCellIds"][mask]
 
                 poly = pv.PolyData().from_irregular_faces(poly.points, faces)
