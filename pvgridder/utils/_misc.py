@@ -133,6 +133,7 @@ def extract_boundary_polygons(
 
 def extract_cell_geometry(
     mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+    remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
     """
     Extract the geometry of individual cells.
@@ -141,6 +142,8 @@ def extract_cell_geometry(
     ----------
     mesh : pyvista.ExplicitStructuredGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to extract cell geometry from.
+    remove_ghost_cells : bool, default True
+        If True, remove ghost cells.
 
     Returns
     -------
@@ -150,12 +153,15 @@ def extract_cell_geometry(
     """
 
     def get_polydata_from_points_cells(
-        points: ArrayLike, cells: ArrayLike, key: str
+        points: ArrayLike, cells: ArrayLike, key: str,
     ) -> pv.PolyData:
         cell_ids, cells_, lines_or_faces = [], [], []
         cell_map = {}
 
         for i, cell in enumerate(cells):
+            if len(cell) == 0:
+                continue
+
             for c in cell:
                 cell_set = tuple(sorted(set(c)))
 
@@ -182,25 +188,36 @@ def extract_cell_geometry(
 
     from .. import get_dimension
 
+    if not remove_ghost_cells and "vtkGhostType" in mesh.cell_data:
+        mesh = mesh.copy(deep=False)
+        mesh.clear_data()
+
     ndim = get_dimension(mesh)
     mesh = mesh.cast_to_unstructured_grid()
-
-    if "vtkGhostType" in mesh.cell_data:
-        mesh = mesh.extract_cells(mesh["vtkGhostType"] == 0)
 
     offset = mesh.offset
     celltypes = mesh.celltypes
     connectivity = mesh.cell_connectivity
 
     if ndim == 2:
+        supported_celltypes = {pv.CellType.EMPTY_CELL, pv.CellType.POLYGON, pv.CellType.QUAD, pv.CellType.TRIANGLE}
+        unsupported_celltypes = set(celltypes).difference(supported_celltypes)
+
+        if unsupported_celltypes:
+            raise NotImplementedError(
+                f"cells of type '{pv.CellType(list(unsupported_celltypes)[0]).name}' are not supported yet"
+            )
+        
         # Generate edge data
         cell_edges = [
             np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
+            if not remove_ghost_cells or celltype != pv.CellType.EMPTY_CELL
+            else []
             for i, (i1, i2, celltype) in enumerate(
                 zip(offset[:-1], offset[1:], celltypes)
             )
-            if pv.CellType(celltype).name in {"POLYGON", "QUAD", "TRIANGLE"}
         ]
+
         poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
 
     elif ndim == 3:
@@ -265,6 +282,9 @@ def extract_cell_geometry(
                         for v in _celltype_to_faces[celltype].values()
                         for face in cell[v]
                     ]
+
+                elif celltype == "EMPTY_CELL":
+                    cell_face = []
 
                 else:
                     raise NotImplementedError(
