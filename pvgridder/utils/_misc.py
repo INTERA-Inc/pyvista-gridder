@@ -220,6 +220,18 @@ def extract_cell_geometry(
 
         poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
 
+        # Handle collapsed cells
+        if remove_empty_cells:
+            lengths = poly.compute_cell_sizes(length=True, area=False, volume=False)["Length"]
+            mask = np.abs(lengths) > 0.0
+            
+            if not mask.all():
+                lines = poly.lines.reshape((poly.n_lines, 3))[mask]
+                tmp = poly.cell_data["vtkOriginalCellIds"][mask]
+
+                poly = pv.PolyData(poly.points, lines=lines)
+                poly.cell_data["vtkOriginalCellIds"] = tmp
+
     elif ndim == 3:
         # Generate polyhedral cell faces if any
         polyhedral_cells = pv.convert_array(mesh.GetFaces())
@@ -294,6 +306,18 @@ def extract_cell_geometry(
                 cell_faces.append(cell_face)
 
         poly = get_polydata_from_points_cells(mesh.points, cell_faces, "faces")
+
+        # Handle collapsed cells
+        if remove_empty_cells:
+            areas = poly.compute_cell_sizes(length=False, area=True, volume=False)["Area"]
+            mask = np.abs(areas) > 0.0
+            
+            if not mask.all():
+                faces = [face for face, mask_ in zip(poly.irregular_faces, mask) if mask_]
+                tmp = poly.cell_data["vtkOriginalCellIds"][mask]
+
+                poly = pv.PolyData().from_irregular_faces(poly.points, faces)
+                poly.cell_data["vtkOriginalCellIds"] = tmp
 
     else:
         raise ValueError(
