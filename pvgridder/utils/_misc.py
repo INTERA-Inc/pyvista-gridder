@@ -387,6 +387,7 @@ def merge(
     mesh_a: pv.StructuredGrid | pv.UnstructuredGrid,
     mesh_b: pv.StructuredGrid | pv.UnstructuredGrid,
     axis: Optional[int] = None,
+    merge_points: bool = True,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
     """
     Merge two meshes.
@@ -398,6 +399,8 @@ def merge(
     axis : int, optional
         The axis along which two structured grids are merged (if *mesh_a* and *mesh_b*
         are structured grids).
+    merge_points : bool, default True
+        If True, merge equivalent points for two unstructured grids.
 
     Returns
     -------
@@ -468,7 +471,7 @@ def merge(
             )
 
     else:
-        mesh = mesh_a + mesh_b
+        mesh = pv.merge((mesh_a, mesh_b), merge_points=merge_points, main_has_priority=True)
 
     return mesh
 

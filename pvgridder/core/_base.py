@@ -348,7 +348,7 @@ class MeshStackBase(MeshBase):
             mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
 
             if i > 0:
-                mesh = merge(mesh, mesh_b, self.axis)
+                mesh = merge(mesh, mesh_b, self.axis, merge_points=False)
 
             else:
                 mesh = mesh_b

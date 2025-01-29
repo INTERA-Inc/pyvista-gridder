@@ -157,7 +157,7 @@ class MeshExtrude(MeshBase):
                     if isinstance(mesh, pv.StructuredGrid)
                     else None
                 )
-                mesh = merge(mesh, mesh_b, axis)
+                mesh = merge(mesh, mesh_b, axis, merge_points=False)
 
             else:
                 mesh = mesh_b
