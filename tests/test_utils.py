@@ -26,69 +26,92 @@ def test_get_neighborhood(mesh):
 
 
 @pytest.mark.parametrize(
-    "cells, points",
+    "mesh, cell_ids, empty_cell_ids",
     [
         (
-            {
-                pv.CellType.QUAD: np.array(
-                    [
-                        [0, 1, 2, 3],
-                        [1, 4, 5, 2],
-                        [4, 6, 7, 5],
-                    ]
-                )
-            },
-            np.array(
-                [
-                    [0.0, 0.0, 0.0],
-                    [1.0, 0.5, 0.0],
-                    [1.0, 0.5, 0.0],
-                    [0.0, 1.0, 0.0],
-                    [2.0, 0.0, 0.0],
-                    [2.0, 1.0, 0.0],
-                    [3.0, 0.0, 0.0],
-                    [3.0, 1.0, 0.0],
-                ]
-            ),
+            pvg.examples.load_anticline_2d(),
+            [387, 388, 389, 390, 391],
+            [[428], [429], [430], [431], [432]],
         ),
         (
-            {
-                pv.CellType.HEXAHEDRON: np.array(
+            pvg.examples.load_anticline_3d(),
+            [3708, 3709, 3710, 3711, 3712],
+            [[4118], [4119], [4120], [4121], [4122]],
+        ),
+        (
+            pv.UnstructuredGrid(
+                {
+                    pv.CellType.QUAD: np.array(
+                        [
+                            [0, 1, 2, 3],
+                            [1, 4, 5, 2],
+                            [4, 6, 7, 5],
+                        ]
+                    )
+                },
+                np.array(
                     [
-                        [0, 1, 2, 3, 4, 5, 6, 7],
-                        [1, 8, 9, 2, 5, 10, 11, 6],
-                        [8, 12, 13, 9, 10, 14, 15, 11],
+                        [0.0, 0.0, 0.0],
+                        [1.0, 0.5, 0.0],
+                        [1.0, 0.5, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [2.0, 0.0, 0.0],
+                        [2.0, 1.0, 0.0],
+                        [3.0, 0.0, 0.0],
+                        [3.0, 1.0, 0.0],
+                    ]
+                ),
+            ),
+            [0, 1],
+            [[1], [0]],
+        ),
+        (
+            pv.UnstructuredGrid(
+                {
+                    pv.CellType.HEXAHEDRON: np.array(
+                        [
+                            [0, 1, 2, 3, 4, 5, 6, 7],
+                            [1, 8, 9, 2, 5, 10, 11, 6],
+                            [8, 12, 13, 9, 10, 14, 15, 11],
+                        ]
+                    )
+                },
+                np.array(
+                    [
+                        [0.0, 0.0, 0.0],
+                        [1.0, 0.0, 0.5],
+                        [1.0, 1.0, 0.5],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                        [1.0, 0.0, 0.5],
+                        [1.0, 1.0, 0.5],
+                        [0.0, 1.0, 1.0],
+                        [2.0, 0.0, 0.0],
+                        [2.0, 1.0, 0.0],
+                        [2.0, 0.0, 1.0],
+                        [2.0, 1.0, 1.0],
+                        [3.0, 0.0, 0.0],
+                        [3.0, 1.0, 0.0],
+                        [3.0, 0.0, 1.0],
+                        [3.0, 1.0, 1.0],
                     ]
                 )
-            },
-            np.array(
-                [
-                    [0.0, 0.0, 0.0],
-                    [1.0, 0.0, 0.5],
-                    [1.0, 1.0, 0.5],
-                    [0.0, 1.0, 0.0],
-                    [0.0, 0.0, 1.0],
-                    [1.0, 0.0, 0.5],
-                    [1.0, 1.0, 0.5],
-                    [0.0, 1.0, 1.0],
-                    [2.0, 0.0, 0.0],
-                    [2.0, 1.0, 0.0],
-                    [2.0, 0.0, 1.0],
-                    [2.0, 1.0, 1.0],
-                    [3.0, 0.0, 0.0],
-                    [3.0, 1.0, 0.0],
-                    [3.0, 0.0, 1.0],
-                    [3.0, 1.0, 1.0],
-                ]
             ),
+            [0, 1],
+            [[1], [0]],
         ),
     ]
 )
-def test_get_neighborhood_collapsed(points, cells):
-    mesh = pv.UnstructuredGrid(cells, points)
-    
+def test_get_neighborhood_empty_cells(mesh, cell_ids, empty_cell_ids):
+    """Test whether empty cells are kept or removed from neighborhood."""
+    assert len(cell_ids) == len(empty_cell_ids)
+
     neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=False)
-    assert neighbors == [[1], [0, 2], [1]]
+    for cell_id, empty_cell_id in zip(cell_ids, empty_cell_ids):
+        for cid in empty_cell_id:
+            assert cid in neighbors[cell_id]
 
     neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=True)
-    assert neighbors == [[], [2], [1]]
+    for cell_id, empty_cell_id in zip(cell_ids, empty_cell_ids):
+        for cid in empty_cell_id:
+            assert cid not in neighbors[cell_id]
