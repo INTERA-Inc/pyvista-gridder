@@ -7,7 +7,7 @@ from typing import Literal, Optional
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
-from scipy.interpolate import LinearNDInterpolator
+from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 from typing_extensions import Self
 
 
@@ -207,6 +207,7 @@ class MeshStackBase(MeshBase):
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         priority: int = 0,
+        extrapolation: Optional[Literal["nearest"]] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -245,6 +246,8 @@ class MeshStackBase(MeshBase):
         priority : int, default 0
             Priority of item. If two consecutive items have the same priority, the last
             one takes priority. Ignored if first item of stack.
+        extrapolation : {'nearest'}, optional
+            Extrapolation method for points outside of the convex hull.
         group : str, optional
             Group name. Ignored if first item of stack.
 
@@ -255,7 +258,7 @@ class MeshStackBase(MeshBase):
 
         """
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
-            mesh = self._interpolate(arg.points)
+            mesh = self._interpolate(arg.points, extrapolation)
 
         elif hasattr(arg, "__call__"):
             mesh = self.mesh.copy()
@@ -278,7 +281,7 @@ class MeshStackBase(MeshBase):
                     if arg.shape[1] != 3:
                         raise ValueError("invalid 2D array")
 
-                    mesh = self._interpolate(arg)
+                    mesh = self._interpolate(arg, extrapolation)
 
                 else:
                     raise ValueError(f"could not add {arg.ndim}D array to stack")
@@ -375,7 +378,7 @@ class MeshStackBase(MeshBase):
             mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
 
     def _interpolate(
-        self, points: ArrayLike
+        self, points: ArrayLike, extrapolation: Optional[Literal["nearest"]] = None,
     ) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
         """Interpolate new point coordinates."""
         mesh = self.mesh.copy()
@@ -386,25 +389,34 @@ class MeshStackBase(MeshBase):
         if len(idx) > 1:
             interp = LinearNDInterpolator(points[:, idx], points[:, self.axis])
             tmp = interp(mesh.points[:, idx])
+            mask = np.isnan(tmp)
 
-            if np.isnan(tmp).any():
-                raise ValueError(
-                    "could not interpolate from points not fully enclosing base mesh"
-                )
+            if mask.any():
+                if not extrapolation:
+                    raise ValueError(
+                        "could not interpolate from points not fully enclosing base mesh"
+                    )
 
-            mesh.points[:, self.axis] = tmp
+                elif extrapolation == "nearest":
+                    interp = NearestNDInterpolator(points[:, idx], points[:, self.axis])
+                    tmp[mask] = interp(mesh.points[mask][:, idx])
+
+                else:
+                    raise ValueError(f"invalid extrapolation method '{extrapolation}'")
 
         else:
             idx = idx[0]
             x = mesh.points[:, idx]
             xp = points[:, idx]
 
-            if not (xp[0] <= x[0] <= xp[-1] and xp[0] <= x[-1] <= xp[-1]):
+            if not (xp[0] <= x[0] <= xp[-1] and xp[0] <= x[-1] <= xp[-1]) and not extrapolation:
                 raise ValueError(
                     "could not interpolate from points not fully enclosing base mesh"
                 )
 
-            mesh.points[:, self.axis] = np.interp(x, xp, points[:, self.axis])
+            tmp = np.interp(x, xp, points[:, self.axis])
+
+        mesh.points[:, self.axis] = tmp
 
         return mesh
 
