@@ -227,7 +227,8 @@ class VoronoiMesh2D(MeshBase):
     def generate_mesh(
         self,
         infinity: Optional[float] = None,
-        tolerance: float = 1.0e-4,
+        distance: float = 1.0e-4,
+        tolerance: float = 1.0e-8,
     ) -> pv.UnstructuredGrid:
         """
         Generate 2D Voronoi mesh.
@@ -236,6 +237,8 @@ class VoronoiMesh2D(MeshBase):
         ----------
         infinity : scalar, optional
             Value used for points at infinity.
+        distance : scalar, optional
+            Set minumum distance between two consecutive points of a Voronoi region.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
 
@@ -314,7 +317,7 @@ class VoronoiMesh2D(MeshBase):
 
             polygon = boundary.intersection(polygon)
             points_ = np.array(polygon.exterior.coords)
-            mask = np.linalg.norm(np.diff(points_, axis=0), axis=1) > tolerance
+            mask = np.linalg.norm(np.diff(points_, axis=0), axis=1) > distance
             points_ = points_[:-1][mask].tolist()
             cells += [len(points_), *(np.arange(len(points_)) + n_points)]
 
