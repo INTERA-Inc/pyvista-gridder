@@ -361,21 +361,12 @@ class MeshStackBase(MeshBase):
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
-        # Flag zero area/volume cells as inactive
-        self._set_active(mesh)
-
         return mesh
 
     @abstractmethod
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """Extrude a line or surface mesh."""
         pass
-
-    @abstractmethod
-    def _set_active(self, mesh: pv.StructuredGrid | pv.UnstructuredGrid) -> None:
-        """Set active cell data."""
-        if "vtkGhostType" not in mesh.cell_data:
-            mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
 
     def _interpolate(
         self, points: ArrayLike, extrapolation: Optional[Literal["nearest"]] = None,

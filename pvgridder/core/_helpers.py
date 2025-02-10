@@ -194,6 +194,15 @@ def generate_surface_from_two_lines(
         for k, v in line_a.cell_data.items():
             mesh.cell_data[k] = np.tile(v, reps[: v.ndim])
 
+    # Handle collapsed cells
+    if "vtkGhostType" not in mesh.cell_data:
+        mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
+        
+    areas = mesh.compute_cell_sizes(
+        length=False, area=True, volume=False
+    ).cell_data["Area"]
+    mesh.cell_data["vtkGhostType"][np.abs(areas) == 0.0] = 32
+
     return mesh
 
 
@@ -275,6 +284,12 @@ def generate_volume_from_two_surfaces(
         Z = za + perc * (zb - za)
         mesh = pv.StructuredGrid(X, Y, Z)
 
+        # Handle collapsed cells
+        volumes = mesh.compute_cell_sizes(
+            length=False, area=False, volume=True
+        ).cell_data["Volume"]
+        inactive = np.abs(volumes) == 0.0
+
         # Repeat data
         shape = surface_a.dimensions
         for k, v in surface_a.point_data.items():
@@ -305,22 +320,27 @@ def generate_volume_from_two_surfaces(
 
         points_a = surface_a.points
         points_b = surface_b.points
+        n_points = surface_a.n_points
 
         perc = resolution_to_perc(resolution, method)[:, np.newaxis, np.newaxis]
         points = points_a + perc * (points_b - points_a)
+        points = points.reshape((n_points * perc.size, 3))
 
         n = perc.size - 1
-        n_points = surface_a.n_points
         offset = surface_a.offset
         celltypes = _celltype_map[surface_a.celltypes]
         cell_connectivity = surface_a.cell_connectivity
         cells = [[] for _ in range(n)]
+        inactive = [[] for _ in range(n)]
 
         for i1, i2, celltype in zip(offset[:-1], offset[1:], celltypes):
             cell = cell_connectivity[i1:i2]
+            faces = [cell, cell + n_points]
+
+            # Handle collapsed cells
+            is_collapsed = np.allclose(*points[faces])
 
             if celltype == 42:
-                faces = [cell, cell + n_points]
                 faces += [
                     np.array([p0, p1, p2, p3])
                     for p0, p1, p2, p3 in zip(
@@ -334,16 +354,18 @@ def generate_volume_from_two_surfaces(
                         [[face.size, *(face + (i * n_points))] for face in faces]
                     )
                     cells_ += [cell.size + 1, n_faces, *cell]
+                    inactive[i].append(is_collapsed)
 
             else:
-                cell = np.concatenate((cell, cell + n_points))
+                cell = np.concatenate(faces)
 
                 for i, cells_ in enumerate(cells):
                     cells_ += [cell.size, *(cell + (i * n_points))]
+                    inactive[i].append(is_collapsed)
 
         cells = np.concatenate(cells)
+        inactive = np.concatenate(inactive)
         celltypes = np.tile(celltypes, n)
-        points = points.reshape((n_points * (n + 1), 3))
         mesh = pv.UnstructuredGrid(cells, celltypes, points)
 
         # Repeat data
@@ -357,6 +379,12 @@ def generate_volume_from_two_surfaces(
 
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")
+
+    # Handle collapsed cells
+    if "vtkGhostType" not in mesh.cell_data:
+        mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
+
+    mesh.cell_data["vtkGhostType"][inactive] = 32
 
     return mesh
 
