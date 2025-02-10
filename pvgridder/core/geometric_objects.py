@@ -239,6 +239,36 @@ def Rectangle(
     return Quadrilateral(points, x_resolution, y_resolution, x_method, y_method, center)
 
 
+def RegularLine(points: ArrayLike, resolution: Optional[int] = None) -> pv.PolyData:
+    """
+    Generate a polyline with regularly spaced points.
+
+    Parameters
+    ----------
+    points : ArrayLike
+        List of points defining a polyline.
+    resolution : int, optional
+        Number of points to interpolate along the points array. Defaults to `len(points)`.
+    
+    Returns
+    -------
+    pyvista.PolyData
+        Line mesh with regularly spaced points.
+
+    """
+    resolution = resolution if resolution else len(points)
+
+    xp = np.insert(
+        np.sqrt(np.square(np.diff(points, axis=0)).sum(axis=1)),
+        0,
+        0.0,
+    ).cumsum()
+    x = np.linspace(0.0, xp.max(), resolution + 1)
+    points = np.column_stack([np.interp(x, xp, fp) for fp in points.T])
+
+    return pv.MultipleLines(points)
+
+
 def Sector(
     radius: float = 1.0,
     theta_min: float = 0.0,

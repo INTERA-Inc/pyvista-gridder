@@ -5,6 +5,7 @@ from .geometric_objects import (
     AnnularSector,
     Quadrilateral,
     Rectangle,
+    RegularLine,
     Sector,
     SectorRectangle,
     Surface,
