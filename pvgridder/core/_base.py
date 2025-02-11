@@ -207,6 +207,7 @@ class MeshStackBase(MeshBase):
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         priority: int = 0,
+        thickness: float = 0.0,
         extrapolation: Optional[Literal["nearest"]] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -246,6 +247,8 @@ class MeshStackBase(MeshBase):
         priority : int, default 0
             Priority of item. If two consecutive items have the same priority, the last
             one takes priority. Ignored if first item of stack.
+        thickness : scalar, default 0.0
+            Minimum thickness of item. Ignored if first item of stack.
         extrapolation : {'nearest'}, optional
             Extrapolation method for points outside of the convex hull.
         group : str, optional
@@ -292,6 +295,7 @@ class MeshStackBase(MeshBase):
                 resolution=resolution,
                 method=method,
                 priority=priority,
+                thickness=thickness,
                 group=group,
             )
             if self.items
@@ -327,7 +331,7 @@ class MeshStackBase(MeshBase):
 
         # Cut intersecting meshes w.r.t. priority
         for item1, item2 in zip(self.items[:-1], self.items[1:]):
-            shift = item2.mesh.points[:, self.axis] - item1.mesh.points[:, self.axis]
+            shift = item2.mesh.points[:, self.axis] - item1.mesh.points[:, self.axis] - item2.thickness
 
             if item2.priority < item1.priority:
                 item2.mesh.points[:, self.axis] = np.where(
