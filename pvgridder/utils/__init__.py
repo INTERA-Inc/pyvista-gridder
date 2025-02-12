@@ -2,6 +2,7 @@
 
 from ._connectivity import get_connectivity, get_neighborhood
 from ._misc import (
+    average_points,
     decimate_rdp,
     extract_boundary_polygons,
     extract_cell_geometry,

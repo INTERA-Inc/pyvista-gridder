@@ -7,6 +7,81 @@ import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
 
+from scipy.spatial import KDTree
+
+
+def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
+    """
+    Average duplicate points in this mesh.
+
+    Parameters
+    ----------
+    mesh : pyvista.PolyData
+        Mesh to average points from.
+    tolerance : float, default 0.0
+        Specify a tolerance to use when comparing points. Points within this tolerance
+        will be averaged.
+
+    Returns
+    -------
+    pyvista.PolyData
+        Mesh with averaged points.
+
+    """
+    def decimate(cell: ArrayLike, close: bool) -> ArrayLike:
+        cell = cell[np.insert(np.diff(cell), 0, 1) != 0]
+
+        return cell[:-1] if close and cell[0] == cell[-1] else cell
+
+    points = mesh.points
+    groups, group_map = [], {}
+
+    for i, j in KDTree(points).query_pairs(tolerance):
+        igrp = group_map[i] if i in group_map else -1
+        jgrp = group_map[j] if j in group_map else -1
+
+        if igrp >= 0 and jgrp < 0:
+            groups[igrp].append(j)
+            group_map[j] = igrp
+
+        elif igrp < 0 and jgrp >= 0:
+            groups[jgrp].append(i)
+            group_map[i] = jgrp
+
+        elif igrp >= 0 and jgrp >= 0:
+            if igrp != jgrp:
+                group_map.update({k: igrp for k in groups[jgrp]})
+                groups[igrp] += groups[jgrp]
+                groups[jgrp] = []
+
+        else:
+            gid = len(groups)
+            groups.append([i, j])
+            group_map[i] = gid
+            group_map[j] = gid
+    
+    point_map = np.arange(mesh.n_points)
+    new_points = points.copy()
+
+    for group in groups:
+        if not group:
+            continue
+
+        point_map[group] = group[0]
+        new_points[group[0]] = points[group].mean(axis=0)
+
+    if mesh.n_faces_strict:
+        faces = [decimate(face, close=True) for face in mesh.irregular_faces]
+        new_mesh = pv.PolyData().from_irregular_faces(new_points, faces)
+
+    else:
+        new_mesh = pv.PolyData(new_points)
+
+    if mesh.n_lines:
+        raise NotImplementedError()
+
+    return new_mesh.clean()
+
 
 def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
     """
