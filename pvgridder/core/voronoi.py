@@ -250,7 +250,7 @@ class VoronoiMesh2D(MeshBase):
         """
         from shapely import Polygon
 
-        from .. import decimate_rdp, extract_boundary_polygons
+        from .. import average_points, decimate_rdp, extract_boundary_polygons
 
         points = self.mesh.cell_centers().points.tolist()
         active = np.ones(len(points), dtype=bool)
@@ -299,6 +299,15 @@ class VoronoiMesh2D(MeshBase):
         points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
         regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity)
+
+        # Average points within minimum distance
+        if distance > 0.0:
+            poly = average_points(
+                pv.PolyData().from_irregular_faces(np.insert(vertices, 2, 0.0, -1), regions),
+                tolerance=distance,
+            )
+            regions = poly.irregular_faces
+            vertices = poly.points
 
         # Generate boundary polygon
         boundary = extract_boundary_polygons(self.mesh)[0]
