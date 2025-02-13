@@ -227,7 +227,7 @@ class VoronoiMesh2D(MeshBase):
     def generate_mesh(
         self,
         infinity: Optional[float] = None,
-        distance: float = 1.0e-4,
+        min_length: float = 1.0e-4,
         tolerance: float = 1.0e-8,
     ) -> pv.UnstructuredGrid:
         """
@@ -237,8 +237,8 @@ class VoronoiMesh2D(MeshBase):
         ----------
         infinity : scalar, optional
             Value used for points at infinity.
-        distance : scalar, optional
-            Set minumum distance between two consecutive points of a Voronoi region.
+        min_length : scalar, default 1.0e-4
+            Set the minumum length of polygons' edges.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
 
@@ -301,14 +301,25 @@ class VoronoiMesh2D(MeshBase):
         regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity)
 
         # Average points within minimum distance
-        if distance > 0.0:
+        if min_length > 0.0:
             poly = average_points(
-                pv.PolyData().from_irregular_faces(np.insert(vertices, 2, 0.0, -1), regions),
-                tolerance=distance,
+                pv.PolyData().from_irregular_faces(np.insert(vertices, 2, 0.0, axis=-1), regions),
+                tolerance=min_length,
             )
             regions = poly.irregular_faces
             vertices = poly.points
+            mask = np.isin(
+                np.arange(len(voronoi_points)),
+                poly.cell_data["vtkOriginalCellIds"],
+                assume_unique=True,
+                invert=True,
+            )
 
+            if mask.any():
+                idx = np.arange(len(active))[active]
+                active[idx[mask]] = False
+                voronoi_points = voronoi_points[~mask]
+            
         # Generate boundary polygon
         boundary = extract_boundary_polygons(self.mesh)[0]
         boundary = decimate_rdp(boundary)
@@ -325,9 +336,7 @@ class VoronoiMesh2D(MeshBase):
                 raise ValueError(f"region {i} is not a valid polygon")
 
             polygon = boundary.intersection(polygon)
-            points_ = np.array(polygon.exterior.coords)
-            mask = np.linalg.norm(np.diff(points_, axis=0), axis=1) > distance
-            points_ = points_[:-1][mask].tolist()
+            points_ = list(polygon.exterior.coords[:-1])
             cells += [len(points_), *(np.arange(len(points_)) + n_points)]
 
             points += points_
