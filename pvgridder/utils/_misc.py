@@ -71,8 +71,10 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
         new_points[group[0]] = points[group].mean(axis=0)
 
     if mesh.n_faces_strict:
-        faces = [decimate(face, close=True) for face in mesh.irregular_faces]
+        irregular_faces = [decimate(point_map[face], close=True) for face in mesh.irregular_faces]
+        faces = [face for face in irregular_faces if face.size > 2]
         new_mesh = pv.PolyData().from_irregular_faces(new_points, faces)
+        new_mesh.cell_data["vtkOriginalCellIds"] = [i for i, face in enumerate(irregular_faces) if face.size > 2]
 
     else:
         new_mesh = pv.PolyData(new_points)
