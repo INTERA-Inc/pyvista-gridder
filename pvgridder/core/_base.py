@@ -353,6 +353,7 @@ class MeshStackBase(MeshBase):
                 mesh_a, groups, item2.group
             )
             mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
+            mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
 
             if i > 0:
                 mesh = merge(mesh, mesh_b, self.axis, merge_points=False)
