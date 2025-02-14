@@ -91,8 +91,7 @@ class VoronoiMesh2D(MeshBase):
         width: float,
         preference: Literal["cell", "point"] = "cell",
         padding: Optional[float] = None,
-        constrain_start: bool = True,
-        constrain_end: bool = True,
+        constraint: int | tuple[int, int] = 1,
         resolution: Optional[int | ArrayLike] = None,
         priority: Optional[int] = None,
         group: Optional[str] = None,
@@ -116,10 +115,8 @@ class VoronoiMesh2D(MeshBase):
             Distance between cell centers of first and last points (if
             *preference* = 'cell') and start and end of the polyline, respectively.
             Default is half of *width*.
-        constrain_start : bool, default True
-            If True, add a constraint point at the start of the polyline.
-        constrain_end : bool, default True
-            If True, add a constraint point at the end of the polyline.
+        constraint : int | tuple[int, int], default 1
+            Number of constraint points added at the start and the end of the polyline.
         resolution : int | ArrayLike, optional
             Number of subdivisions along the line or relative position of subdivisions
             (in percentage) with respect to the starting point.
@@ -142,6 +139,13 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
+
+        if isinstance(constraint, int):
+            constraint_start = constraint
+            constraint_end = constraint
+
+        else:
+            constraint_start, constraint_end = constraint
 
         perc = resolution_to_perc(resolution)
         perc = [2.0 * perc[0] - perc[1], *perc.tolist(), 2.0 * perc[-1] - perc[-2]]
@@ -177,12 +181,12 @@ class VoronoiMesh2D(MeshBase):
             bdvec = np.row_stack((bdvec[0], bdvec))
 
             # Append constraint points at the start and at the end of the polyline
-            if constrain_start:
+            for _ in range(constraint_start):
                 points = np.row_stack((points[0] - fdvec[0], points))
                 fdvec = np.row_stack((fdvec[0], fdvec))
                 bdvec = np.row_stack((bdvec[0], bdvec))
 
-            if constrain_end:
+            for _ in range(constraint_end):
                 points = np.row_stack((points, points[-1] - bdvec[-1]))
                 fdvec = np.row_stack((fdvec, fdvec[-1]))
                 bdvec = np.row_stack((bdvec, bdvec[-1]))
@@ -206,9 +210,7 @@ class VoronoiMesh2D(MeshBase):
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
             constraint = np.ones(shape, dtype=bool)
-            constraint[int(constrain_start) : shape[0] - int(constrain_end), 1:-1] = (
-                False
-            )
+            constraint[constraint_start : shape[0] - constraint_end, 1:-1] = False
             constraint = constraint.ravel(order="F")
 
             # Add to items
