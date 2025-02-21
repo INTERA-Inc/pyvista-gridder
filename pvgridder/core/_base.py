@@ -124,10 +124,44 @@ class MeshBase(ABC):
 
         if group:
             if isinstance(group, str):
-                group = {group: lambda x: np.ones(x.n_cells, dtype=bool)}
+                group = {group: np.ones(mesh.n_cells, dtype=bool)}
 
             for k, v in group.items():
-                arr[v(mesh)] = self._get_group_number(k, groups)
+                if hasattr(v, "__call__"):
+                    mask = v(mesh)
+
+                elif isinstance(v, str):
+                    mask = (
+                        mesh.cell_data["CellGroup"] != groups[v[1:]]
+                        if v.startswith("~")
+                        else mesh.cell_data["CellGroup"] == groups[v]
+                    )
+
+                elif isinstance(v, (list, tuple, np.ndarray)) and all(isinstance(x, str) for x in v):
+                    mask = np.zeros(mesh.n_cells, dtype=bool)
+
+                    for cid in v:
+                        mask |= (
+                            mesh.cell_data["CellGroup"] != groups[cid[1:]]
+                            if cid.startswith("~")
+                            else mesh.cell_data["CellGroup"] == groups[cid]
+                        )
+
+                else:
+                    mask = np.asanyarray(v)
+
+                    if mask.dtype.kind.startswith("i"):
+                        mask_ = np.zeros(mesh.n_cells, dtype=bool)
+                        mask_[mask] = True
+
+                    elif not mask.dtype.kind.startswith("b"):
+                        raise ValueError("invalid mask array")
+
+                if k.startswith("~"):
+                    k = k[1:]
+                    mask = ~mask
+
+                arr[mask] = self._get_group_number(k, groups)
 
         if (arr == -1).any():
             default_group = default_group if default_group else self.default_group
@@ -209,7 +243,7 @@ class MeshStackBase(MeshBase):
         priority: int = 0,
         thickness: float = 0.0,
         extrapolation: Optional[Literal["nearest"]] = None,
-        group: Optional[str] = None,
+        group: Optional[str | dict] = None,
     ) -> Self:
         """
         Add a new item to stack.
@@ -251,8 +285,21 @@ class MeshStackBase(MeshBase):
             Minimum thickness of item. Ignored if first item of stack.
         extrapolation : {'nearest'}, optional
             Extrapolation method for points outside of the convex hull.
-        group : str, optional
-            Group name. Ignored if first item of stack.
+        group : str | dict, optional
+            Group name or group mapping as a dictionary where key is the group name and:
+
+             - if value is a string or a sequence of strings, group or list of groups
+               in the base mesh to replace by the group. The selection is inverted if
+               the string starts with a tilde (~).
+            
+             - if value is a Callable, must be in the form ``f(mesh) -> ind_or_mask``
+               where ``mesh`` is the base mesh, and ``ind_or_mask`` are the indices of
+               cells or a boolean array of the same size.
+
+             - if value is an ArrayLike, indices of cells or mask array to assign to the
+               group.
+            
+            Ignored if first item of stack.
 
         Returns
         -------

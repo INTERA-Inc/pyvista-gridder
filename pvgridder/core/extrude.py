@@ -87,8 +87,19 @@ class MeshExtrude(MeshBase):
             Scaling factor applied to the previous item before extrusion.
         angle : scalar, optional
             Rotation angle (in degree) applied to the previous item before extrusion.
-        group : str, optional
-            Group name.
+        group : str | dict, optional
+            Group name or group mapping as a dictionary where key is the group name and:
+
+             - if value is a string or a sequence of strings, group or list of groups
+               in the base mesh to replace by the group. The selection is inverted if
+               the string starts with a tilde (~).
+            
+             - if value is a Callable, must be in the form ``f(mesh) -> ind_or_mask``
+               where ``mesh`` is the base mesh, and ``ind_or_mask`` are the indices of
+               cells or a boolean array of the same size.
+
+             - if value is an ArrayLike, indices of cells or mask array to assign to the
+               group.
 
         Returns
         -------
