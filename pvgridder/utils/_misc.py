@@ -672,22 +672,35 @@ def remap_categorical_data(
         raise ValueError(f"could not remap non-categorical '{preference}' data '{key}'")
 
     try:
-        data_labels = mesh.user_dict[key]
+        data_labels = dict(mesh.user_dict[key])
 
     except KeyError:
         data_labels = {}
 
     remapped_data = data.copy()
     data_labels_map = {v: k for k, v in data_labels.items()}
+    unused_labels = set(list(data_labels))
 
     for k, v in mapping.items():
-        mask = data == k
+        if isinstance(k, str):
+            try:
+                vid = data_labels[k]
+
+            except KeyError:
+                raise ValueError(f"could not map unknown key '{k}'")
+
+        else:
+            vid = k
+
+        mask = data == vid
 
         if mask.any():
             remapped_data[mask] = v
 
             try:
-                data_labels[data_labels_map[k]] = v
+                key_ = k if isinstance(k, str) else data_labels_map[vid]
+                data_labels[key_] = v
+                unused_labels.remove(key_)
 
             except KeyError:
                 pass
@@ -699,7 +712,10 @@ def remap_categorical_data(
         mesh.point_data[key] = remapped_data
 
     if data_labels:
-        mesh.user_dict[key] = data_labels
+        for k in unused_labels:
+            data_labels.pop(k, None)
+
+        mesh.user_dict[key] = dict(sorted(data_labels.items(), key=lambda x: x[1]))
 
     if not inplace:
         return mesh
