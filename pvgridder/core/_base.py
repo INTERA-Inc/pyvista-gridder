@@ -153,6 +153,7 @@ class MeshBase(ABC):
                     if mask.dtype.kind.startswith("i"):
                         mask_ = np.zeros(mesh.n_cells, dtype=bool)
                         mask_[mask] = True
+                        mask = mask_
 
                     elif not mask.dtype.kind.startswith("b"):
                         raise ValueError("invalid mask array")
