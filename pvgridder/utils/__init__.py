@@ -8,6 +8,7 @@ from ._misc import (
     extract_cell_geometry,
     extract_cells_by_dimension,
     merge,
+    merge_lines,
     quadraticize,
     reconstruct_line,
     remap_categorical_data,

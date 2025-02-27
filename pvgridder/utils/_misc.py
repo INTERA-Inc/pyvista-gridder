@@ -553,6 +553,46 @@ def merge(
     return mesh
 
 
+def merge_lines(
+    lines: Sequence[pv.PolyData],
+    as_lines: bool = True,
+) -> pv.PolyData:
+    """
+    Merge line(s) or polyline(s) into a polydata.
+
+    Parameters
+    ----------
+    lines : Sequence[pyvista.PolyData]
+        List of line(s) or polyline(s) to merge.
+    as_lines : bool, default True
+        If True, return merged line(s) or polyline(s) as line(s).
+
+    Returns
+    -------
+    pyvista.PolyData
+        Polydata with merged line(s) or polyline(s).
+
+    Note
+    ----
+    Preserve ordering compared to pyvista.merge().
+
+    """
+    points, cells, offset = [], [], 0
+
+    for lines_ in lines:
+        for line in split_lines(lines_, as_lines=False):
+            points.append(line.points)
+            ids = np.arange(line.n_points) + offset
+            cells += (
+                np.insert(np.column_stack((ids[:-1], ids[1:])), 0, 2, axis=-1).ravel().tolist()
+                if as_lines
+                else [line.n_points, *ids]
+            )
+            offset += line.n_points
+
+    return pv.PolyData(np.concatenate(points), lines=cells).merge_points()
+
+
 def reconstruct_line(
     mesh: pv.DataSet,
     start: int = 0,
@@ -721,43 +761,39 @@ def remap_categorical_data(
         return mesh
 
 
-def split_lines(mesh: pv.PolyData) -> Sequence[pv.PolyData]:
+def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyData]:
     """
-    Split polyline(s) into multiple lines.
+    Split line(s) or polyline(s) into multiple line(s) or polyline(s).
 
     Parameters
     ----------
     mesh : pyvista.PolyData
-        Mesh with polyline(s) to split.
+        Mesh with line(s) or polyline(s) to split.
+    as_lines : bool, default True
+        If True, return split line(s) or polyline(s) as line(s).
 
     Returns
     -------
     Sequence[pyvista.PolyData]
-        Split polyline(s).
+        Split line(s) or polyline(s).
 
     """
-    if mesh.n_lines == 0:
-        return []
+    from pyvista.core.cell import _get_irregular_cells
 
-    lines = mesh.lines
-    offset = 0
-    out = []
-
-    for _ in range(mesh.n_lines):
-        n_points = lines[offset]
-        points = mesh.points[lines[offset + 1 : offset + n_points + 1]]
-        cells = np.column_stack(
-            (
-                np.full(n_points - 1, 2),
-                np.arange(n_points - 1),
-                np.arange(1, n_points),
+    return [
+        pv.PolyData(
+            mesh.points[line],
+            lines=(
+                np.insert(
+                    np.column_stack((np.arange(line.size - 1), np.arange(1, line.size))), 0, 2,
+                    axis=-1
+                ).ravel()
+                if as_lines
+                else [line.size, *np.arange(line.size)]
             )
-        ).ravel()
-        out.append(pv.PolyData(points, lines=cells))
-
-        offset += n_points + 1
-
-    return out
+        )
+        for line in _get_irregular_cells(mesh.GetLines())
+    ]
 
 
 def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
