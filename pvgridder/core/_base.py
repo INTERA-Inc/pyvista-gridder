@@ -235,6 +235,7 @@ class MeshStackBase(MeshBase):
         super().__init__(default_group, ignore_groups)
         self._mesh = mesh.copy()
         self._axis = axis
+        self._transition_flag = False
 
     def add(
         self,
@@ -269,7 +270,7 @@ class MeshStackBase(MeshBase):
         resolution : int | ArrayLike, optional
             Number of subdivisions along the stacking axis or relative position of
             subdivisions (in percentage) with respect to the previous item. Ignored if
-            first item of stack.
+            first item of stack or transition item.
         method : {'constant', 'log', 'log_r'}, optional
             Subdivision method if *resolution* is an integer:
 
@@ -277,13 +278,14 @@ class MeshStackBase(MeshBase):
              - if 'log', subdivisions are logarithmically spaced (from small to large).
              - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-            Ignored if first item of stack.
+            Ignored if first item of stack or transition item.
 
         priority : int, default 0
             Priority of item. If two consecutive items have the same priority, the last
-            one takes priority. Ignored if first item of stack.
+            one takes priority. Ignored if first item of stack or transition item.
         thickness : scalar, default 0.0
-            Minimum thickness of item. Ignored if first item of stack.
+            Minimum thickness of item. Ignored if first item of stack or transition
+            item.
         extrapolation : {'nearest'}, optional
             Extrapolation method for points outside of the convex hull.
         group : str | dict, optional
@@ -345,11 +347,13 @@ class MeshStackBase(MeshBase):
                 priority=priority,
                 thickness=thickness,
                 group=group,
+                transition=self._transition_flag,
             )
             if self.items
             else MeshItem(mesh, priority=priority)
         )
         self.items.append(item)
+        self._transition_flag = False
 
         return self
 
@@ -379,6 +383,9 @@ class MeshStackBase(MeshBase):
 
         # Cut intersecting meshes w.r.t. priority
         for item1, item2 in zip(self.items[:-1], self.items[1:]):
+            if item2.transition:
+                continue
+
             shift = item2.mesh.points[:, self.axis] - item1.mesh.points[:, self.axis] - item2.thickness
 
             if item2.priority < item1.priority:
@@ -397,10 +404,16 @@ class MeshStackBase(MeshBase):
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
-            mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
-                mesh_a, groups, item2.group
+
+            if item2.transition:
+                mesh_b = self._transition(mesh_a, item2.mesh)
+
+            else:
+                mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
+
+            mesh_b.cell_data["CellGroup"] = self._initialize_group_array(
+                mesh_b, groups, item2.group
             )
-            mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
             mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
 
             if i > 0:
@@ -419,6 +432,11 @@ class MeshStackBase(MeshBase):
     @abstractmethod
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """Extrude a line or surface mesh."""
+        pass
+
+    @abstractmethod
+    def _transition(self, *args, **kwargs) -> pv.UnstructuredGrid:
+        """Generate a transition mesh."""
         pass
 
     def _interpolate(

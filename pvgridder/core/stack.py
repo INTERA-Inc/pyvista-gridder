@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Optional
+from typing_extensions import Self
 
 import numpy as np
 import pyvista as pv
@@ -58,6 +59,40 @@ class MeshStack2D(MeshStackBase):
             line_a, line_b, plane, resolution, method
         )
 
+    def _transition(self, mesh_a: pv.PolyData, mesh_b: pv.PolyData) -> pv.UnstructuredGrid:
+        """Generate a transition mesh."""
+        from .. import Polygon
+
+        points = np.row_stack((mesh_a.points, mesh_b.points[::-1]))
+        mesh = Polygon(points, celltype="triangle")
+
+        return mesh
+
+    def set_transition(self, mesh_or_resolution: pv.PolyData | int) -> Self:
+        """
+        Set next item as a transition item.
+
+        Parameters
+        ----------
+        mesh_or_resolution : pyvista.PolyData | int
+            New base mesh for subsequent items.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        from .. import RegularLine, split_lines
+
+        if isinstance(mesh_or_resolution, int):
+            mesh_or_resolution = RegularLine(self.mesh.points, resolution=mesh_or_resolution)
+
+        self._mesh = split_lines(mesh_or_resolution)[0]
+        self._transition_flag = True
+
+        return self
+
 
 class MeshStack3D(MeshStackBase):
     """
@@ -102,3 +137,7 @@ class MeshStack3D(MeshStackBase):
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """Extrude a line."""
         return generate_volume_from_two_surfaces(*args, **kwargs)
+
+    def _transition(self, *args) -> pv.UnstructuredGrid:
+        """Generate a transition mesh."""
+        raise NotImplementedError()
