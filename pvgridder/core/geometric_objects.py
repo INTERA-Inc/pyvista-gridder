@@ -130,7 +130,7 @@ def Surface(
 def Polygon(
     shell: Optional[pv.DataSet | ArrayLike] = None,
     holes: Optional[Sequence[pv.DataSet | ArrayLike]] = None,
-    celltype: Literal["polygon", "quad", "triangle"] = "polygon",
+    celltype: Optional[Literal["polygon", "quad", "triangle"]] = None,
     algorithm: Optional[int] = None,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
 ) -> pv.UnstructuredGrid:
@@ -145,7 +145,7 @@ def Polygon(
     holes : Sequence[pyvista.DataSet | ArrayLike], optional
         A sequence of objects which satisfy the same requirements as the shell
         parameters above.
-    celltype : {'polygon', 'quad', 'triangle'}, default 'polygon'
+    celltype : {'polygon', 'quad', 'triangle'}, optional
         Preferred cell type. If `quad` or `triangle`, use Gmsh to perform 2D Delaunay
         triangulation.
     algorithm : int, optional
@@ -192,6 +192,7 @@ def Polygon(
     shell = shell if shell is not None else pv.Polygon()
     shell = to_points(shell)
     holes = [to_points(hole) for hole in holes] if holes is not None else []
+    celltype = celltype if celltype else "triangle" if holes else "polygon"
     algorithm = algorithm if algorithm else 8 if celltype == "quad" else 6
 
     if celltype == "polygon":
