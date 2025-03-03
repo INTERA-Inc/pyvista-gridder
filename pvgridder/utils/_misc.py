@@ -140,22 +140,22 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
 
 
 def extract_boundary_polygons(
-    mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     fill: bool = False,
-) -> list[pv.PolyData]:
+) -> Sequence[pv.PolyData]:
     """
     Extract boundary edges of a mesh as continuous polylines or polygons.
 
     Parameters
     ----------
-    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Mesh to extract boundary edges from.
     fill : bool, default False
         If False, only return boundary edges as polylines.
 
     Returns
     -------
-    pyvista.PolyData
+    Sequence[pyvista.PolyData]
         Extracted boundary polylines or polygons.
 
     """
