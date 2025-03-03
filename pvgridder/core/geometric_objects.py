@@ -131,7 +131,7 @@ def Polygon(
     shell: Optional[pv.DataSet | ArrayLike] = None,
     holes: Optional[Sequence[pv.DataSet | ArrayLike]] = None,
     celltype: Optional[Literal["polygon", "quad", "triangle"]] = None,
-    algorithm: Optional[int] = None,
+    algorithm: int=6,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
 ) -> pv.UnstructuredGrid:
     """
@@ -148,7 +148,7 @@ def Polygon(
     celltype : {'polygon', 'quad', 'triangle'}, optional
         Preferred cell type. If `quad` or `triangle`, use Gmsh to perform 2D Delaunay
         triangulation.
-    algorithm : int, optional
+    algorithm : int, default 6
         Gmsh algorithm.
     optimization : {'Netgen', 'Laplace2D', 'Relocate2D'}, optional
         Gmsh 2D optimization method.
@@ -193,7 +193,6 @@ def Polygon(
     shell = to_points(shell)
     holes = [to_points(hole) for hole in holes] if holes is not None else []
     celltype = celltype if celltype else "triangle" if holes else "polygon"
-    algorithm = algorithm if algorithm else 8 if celltype == "quad" else 6
 
     if celltype == "polygon":
         if holes:
@@ -214,6 +213,7 @@ def Polygon(
                 lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
                 lengths = np.insert(lengths, 0, lengths[-1])
                 sizes = np.maximum(lengths[:-1], lengths[1:])
+                sizes *= 1.0 if celltype == "triangle" else 2.0
 
                 # Add points
                 node_tags = []
@@ -233,10 +233,10 @@ def Polygon(
                 tag = gmsh.model.geo.add_line(node_tags[-1], node_tags[0])
                 line_tags.append(tag)
 
-                # Add plane surface
                 tag = gmsh.model.geo.add_curve_loop(line_tags)
                 curve_tags.append(tag)
 
+            # Add plane surface
             tag = gmsh.model.geo.add_plane_surface(curve_tags)
 
             # Generate mesh
