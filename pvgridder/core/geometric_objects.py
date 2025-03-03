@@ -128,8 +128,8 @@ def Surface(
 
 @require_package("gmsh")
 def Polygon(
-    shell: Optional[pv.PolyData | ArrayLike] = None,
-    holes: Optional[Sequence[pv.PolyData | ArrayLike]] = None,
+    shell: Optional[pv.DataSet | ArrayLike] = None,
+    holes: Optional[Sequence[pv.DataSet | ArrayLike]] = None,
     celltype: Literal["polygon", "quad", "triangle"] = "polygon",
     algorithm: Optional[int] = None,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
@@ -139,10 +139,10 @@ def Polygon(
 
     Parameters
     ----------
-    shell : pyvista.PolyData | ArrayLike, optional
+    shell : pyvista.DataSet | ArrayLike, optional
         Polyline or a sequence of (x, y [,z]) numeric coordinate pairs or triples, or
         an array-like with shape (N, 2) or (N, 3).
-    holes : Sequence[pyvista.PolyData | ArrayLike], optional
+    holes : Sequence[pyvista.DataSet | ArrayLike], optional
         A sequence of objects which satisfy the same requirements as the shell
         parameters above.
     celltype : {'polygon', 'quad', 'triangle'}, default 'polygon'
@@ -163,12 +163,20 @@ def Polygon(
 
     def to_points(points: pv.PolyData) -> ArrayLike:
         """Convert to points array."""
-        from .. import split_lines
+        from .. import extract_boundary_polygons, split_lines
 
-        if isinstance(points, pv.PolyData):
-            lines = split_lines(points, as_lines=False)
-            lines_ = lines[0].lines
-            points = lines[0].points[lines_[1 : lines_[0] + 1]]
+        if isinstance(points, pv.DataSet):
+            edges = (
+                split_lines(points, as_lines=False)
+                if isinstance(points, pv.PolyData)
+                else extract_boundary_polygons(points, fill=False)
+            )
+
+            if not edges:
+                raise ValueError("could not extract boundary edges from input dataset")
+
+            lines = edges[0].lines
+            points = edges[0].points[lines[1 : lines[0] + 1]]
 
         else:
             points = np.asanyarray(points)
