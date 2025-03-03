@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal, Optional
+from collections.abc import Sequence
 
 import numpy as np
 import pyvista as pv
@@ -13,6 +14,7 @@ from ._helpers import (
     generate_volume_from_two_surfaces,
     translate,
 )
+from .._common import require_package
 
 
 def AnnularSector(
@@ -120,6 +122,148 @@ def Surface(
     line_a = line_a if line_a is not None else [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
     line_b = line_b if line_b is not None else [(0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
     mesh = generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
+
+    return mesh
+
+
+@require_package("gmsh")
+def Polygon(
+    shell: Optional[pv.PolyData | ArrayLike] = None,
+    holes: Optional[Sequence[pv.PolyData | ArrayLike]] = None,
+    celltype: Literal["polygon", "quad", "triangle"] = "polygon",
+    algorithm: Optional[int] = None,
+    optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
+) -> pv.UnstructuredGrid:
+    """
+    Generate a triangulated polygon with holes.
+
+    Parameters
+    ----------
+    shell : pyvista.PolyData | ArrayLike, optional
+        Polyline or a sequence of (x, y [,z]) numeric coordinate pairs or triples, or
+        an array-like with shape (N, 2) or (N, 3).
+    holes : Sequence[pyvista.PolyData | ArrayLike], optional
+        A sequence of objects which satisfy the same requirements as the shell
+        parameters above.
+    celltype : {'polygon', 'quad', 'triangle'}, default 'polygon'
+        Preferred cell type. If `quad` or `triangle`, use Gmsh to perform 2D Delaunay
+        triangulation.
+    algorithm : int, optional
+        Gmsh algorithm.
+    optimization : {'Netgen', 'Laplace2D', 'Relocate2D'}, optional
+        Gmsh 2D optimization method.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Polygon mesh.
+
+    """
+    import gmsh
+
+    def to_points(points: pv.PolyData) -> ArrayLike:
+        """Convert to points array."""
+        from .. import split_lines
+
+        if isinstance(points, pv.PolyData):
+            lines = split_lines(points, as_lines=False)
+            lines_ = lines[0].lines
+            points = lines[0].points[lines_[1 : lines_[0] + 1]]
+
+        else:
+            points = np.asanyarray(points)
+
+        if not (points[0] == points[-1]).all():
+            points = np.row_stack((points, points[0]))
+
+        if points.shape[1] == 2:
+            points = np.insert(points, 2, 0.0, axis=-1)
+
+        return points
+
+    shell = shell if shell is not None else pv.Polygon()
+    shell = to_points(shell)
+    holes = [to_points(hole) for hole in holes] if holes is not None else []
+    algorithm = algorithm if algorithm else 8 if celltype == "quad" else 6
+
+    if celltype == "polygon":
+        if holes:
+            raise ValueError("could not generate a polygon of cell type 'polygon' with holes")
+
+        points = shell[:-1]
+        cells = np.insert(np.arange(len(points)), 0, len(points))
+        celltypes = [pv.CellType.POLYGON]
+        mesh = pv.UnstructuredGrid(cells, celltypes, points)
+
+    elif celltype in {"quad", "triangle"}:
+        try:
+            gmsh.initialize()
+            curve_tags = []
+
+            for points in [shell, *holes]:
+                # Compute mesh size
+                lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
+                lengths = np.insert(lengths, 0, lengths[-1])
+                sizes = np.maximum(lengths[:-1], lengths[1:])
+
+                # Add points
+                node_tags = []
+
+                for (x, y, z), size in zip(points[:-1], sizes):
+                    tag = gmsh.model.geo.add_point(x, y, z, size)
+                    node_tags.append(tag)
+
+                # Add lines
+                line_tags = []
+
+                for tag1, tag2 in zip(node_tags[:-1], node_tags[1:]):
+                    tag = gmsh.model.geo.add_line(tag1, tag2)
+                    line_tags.append(tag)
+
+                # Close loop
+                tag = gmsh.model.geo.add_line(node_tags[-1], node_tags[0])
+                line_tags.append(tag)
+
+                # Add plane surface
+                tag = gmsh.model.geo.add_curve_loop(line_tags)
+                curve_tags.append(tag)
+
+            tag = gmsh.model.geo.add_plane_surface(curve_tags)
+
+            # Generate mesh
+            gmsh.option.set_number("Mesh.Algorithm", algorithm)
+            gmsh.model.geo.synchronize()
+
+            if celltype == "quad":
+                gmsh.model.mesh.setRecombine(2, tag)
+
+            gmsh.model.mesh.generate(2)
+
+            if optimization:
+                gmsh.model.mesh.optimize(optimization, force=True)
+
+            # Convert to PyVista
+            node_tags, coord, _ = gmsh.model.mesh.getNodes()
+            element_types, _, element_node_tags = gmsh.model.mesh.getElements()
+            gmsh_to_pyvista_type = {2: pv.CellType.TRIANGLE, 3: pv.CellType.QUAD}
+
+            points = np.reshape(coord, (-1, 3))
+            cells = {
+                gmsh_to_pyvista_type[type_]: np.reshape(
+                    node_tags,
+                    (-1, gmsh.model.mesh.getElementProperties(type_)[3]),
+                ) - 1
+                for type_, node_tags in zip(element_types, element_node_tags)
+                if type_ not in {1, 15}  # ignore line and vertex
+            }
+            mesh = pv.UnstructuredGrid(cells, points)
+
+        finally:
+            gmsh.clear()
+            gmsh.finalize()
+
+    else:
+        raise ValueError(f"invalid cell type '{celltype}'")
 
     return mesh
 
