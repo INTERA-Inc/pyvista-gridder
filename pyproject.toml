@@ -38,6 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 full = [
+    "gmsh",
     "shapely >= 2.0",
 ]
 
