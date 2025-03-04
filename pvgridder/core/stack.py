@@ -59,12 +59,16 @@ class MeshStack2D(MeshStackBase):
             line_a, line_b, plane, resolution, method
         )
 
-    def _transition(self, mesh_a: pv.PolyData, mesh_b: pv.PolyData) -> pv.UnstructuredGrid:
+    def _transition(self, *args) -> pv.UnstructuredGrid:
         """Generate a transition mesh."""
         from .. import Polygon
 
+        mesh_a, mesh_b, groups, group = args
         points = np.row_stack((mesh_a.points, mesh_b.points[::-1]))
         mesh = Polygon(points, celltype="triangle")
+        mesh.cell_data["CellGroup"] = self._initialize_group_array(
+            mesh, groups, group
+        )
 
         return mesh
 

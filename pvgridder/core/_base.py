@@ -404,17 +404,20 @@ class MeshStackBase(MeshBase):
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
+            mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
+                mesh_a, groups, item2.group
+            )
 
             if item2.transition:
-                mesh_b = self._transition(mesh_a, item2.mesh)
+                mesh_b = self._transition(mesh_a, item2.mesh, groups, item2.group)
+                nsub, repeats = 1, mesh_b.n_cells
 
             else:
                 mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
+                nsub, repeats = mesh_b.n_cells // mesh_a.n_cells, mesh_a.n_cells
 
-            mesh_b.cell_data["CellGroup"] = self._initialize_group_array(
-                mesh_b, groups, item2.group
-            )
             mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
+            mesh_b.cell_data["StackSubItem"] = np.repeat(np.arange(nsub), repeats)
 
             if i > 0:
                 mesh = merge(mesh, mesh_b, self.axis, merge_points=False)
