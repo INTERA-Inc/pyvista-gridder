@@ -696,9 +696,6 @@ def remap_categorical_data(
         Mesh with remapped categorical data.
 
     """
-    if not inplace:
-        mesh = mesh.copy()
-
     if preference == "cell":
         data = mesh.cell_data[key]
 
@@ -716,6 +713,9 @@ def remap_categorical_data(
 
     except KeyError:
         data_labels = {}
+
+    if not inplace:
+        mesh = mesh.copy()
 
     remapped_data = data.copy()
     data_labels_map = {v: k for k, v in data_labels.items()}
