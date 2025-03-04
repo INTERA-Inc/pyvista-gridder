@@ -350,7 +350,7 @@ class VoronoiMesh2D(MeshBase):
 
         mesh.cell_data["CellGroup"] = group_array[active]
         mesh.user_dict["CellGroup"] = groups
-        mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
+        _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
         # Add coordinates of Voronoi points
         voronoi_points = np.insert(voronoi_points, self.axis, 0.0, axis=1)
@@ -358,7 +358,7 @@ class VoronoiMesh2D(MeshBase):
         mesh.cell_data["Y"] = voronoi_points[:, 1]
         mesh.cell_data["Z"] = voronoi_points[:, 2]
 
-        return mesh
+        return mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
     def _generate_voronoi_tesselation(
         self,
