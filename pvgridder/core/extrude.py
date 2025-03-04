@@ -158,8 +158,14 @@ class MeshExtrude(MeshBase):
             mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
                 mesh_a, groups, item2.group
             )
+            
             mesh_b = generate_volume_from_two_surfaces(
                 mesh_a, item2.mesh, item2.resolution, item2.method
+            )
+            mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
+            mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(
+                np.arange(mesh_b.n_cells // mesh_a.n_cells),
+                mesh_a.n_cells,
             )
 
             if i > 0:
