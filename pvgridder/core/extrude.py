@@ -162,11 +162,11 @@ class MeshExtrude(MeshBase):
             mesh_b = generate_volume_from_two_surfaces(
                 mesh_a, item2.mesh, item2.resolution, item2.method
             )
+
+            nsub = mesh_b.n_cells // mesh_a.n_cells
+            mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(np.arange(mesh_a.n_cells), nsub)
             mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
-            mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(
-                np.arange(mesh_b.n_cells // mesh_a.n_cells),
-                mesh_a.n_cells,
-            )
+            mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(np.arange(nsub), mesh_a.n_cells)
 
             if i > 0:
                 axis = (
