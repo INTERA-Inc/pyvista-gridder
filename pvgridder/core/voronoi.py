@@ -79,7 +79,8 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
-
+        
+        mesh.points[:, self.axis] = 0.0
         item = MeshItem(mesh, group=group, priority=priority)
         self.items.append(item)
 
