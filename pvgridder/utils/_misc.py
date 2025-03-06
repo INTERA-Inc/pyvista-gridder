@@ -278,10 +278,12 @@ def extract_cell_geometry(
     celltypes = mesh.celltypes
     connectivity = mesh.cell_connectivity
 
-    if ndim == 2:
+    if ndim in {1, 2}:
         supported_celltypes = {
             pv.CellType.EMPTY_CELL,
+            pv.CellType.LINE,
             pv.CellType.POLYGON,
+            pv.CellType.POLY_LINE,
             pv.CellType.QUAD,
             pv.CellType.TRIANGLE,
         }
@@ -294,7 +296,9 @@ def extract_cell_geometry(
 
         # Generate edge data
         cell_edges = [
-            np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
+            np.column_stack((connectivity[i1:i2 - 1], connectivity[i1 + 1:i2]))
+            if celltype in {pv.CellType.LINE, pv.CellType.POLY_LINE}
+            else np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
             if not remove_empty_cells or celltype != pv.CellType.EMPTY_CELL
             else []
             for i, (i1, i2, celltype) in enumerate(
@@ -318,7 +322,7 @@ def extract_cell_geometry(
                 poly = pv.PolyData(poly.points, lines=lines)
                 poly.cell_data["vtkOriginalCellIds"] = tmp
 
-    elif ndim == 3:
+    else:
         # Generate polyhedral cell faces if any
         polyhedral_cells = pv.convert_array(mesh.GetFaces())
 
@@ -408,11 +412,6 @@ def extract_cell_geometry(
 
                 poly = pv.PolyData().from_irregular_faces(poly.points, faces)
                 poly.cell_data["vtkOriginalCellIds"] = tmp
-
-    else:
-        raise ValueError(
-            f"could not extract cell geometry of a mesh of dimension '{ndim}'"
-        )
 
     return poly
 
