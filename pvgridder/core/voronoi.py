@@ -86,6 +86,74 @@ class VoronoiMesh2D(MeshBase):
 
         return self
 
+    def add_circle(
+        self,
+        radius: float,
+        constraint_radius: Optional[float] = None,
+        resolution: Optional[int | ArrayLike] = None,
+        center: Optional[ArrayLike] = None,
+        priority: int = 0,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Add points from a circle to Voronoi diagram.
+
+        Parameters
+        ----------
+        radius : scalar
+            Circle radius.
+        constraint_radius : scalar, optional
+            Constraint circle radius. If None, default to 1.5 times *radius*.
+        resolution : int | ArrayLike, optional
+            Number of subdivisions along the azimuthal axis or relative position of
+            subdivisions (in percentage) with respect to the starting angle (0 degree).
+        center : ArrayLike, optional
+            Center of the circle.
+        priority : int, default 0
+            Priority of item. Points enclosed in a cell with (strictly) higher
+            priority are discarded.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        from .. import Annulus, Circle, MeshMerge
+
+        constraint_radius = constraint_radius if constraint_radius is not None else 1.5 * radius
+        dr = constraint_radius - radius
+
+        if dr > 0.0:
+            self.add(
+                (
+                    MeshMerge()
+                    .add(Circle(radius - dr, resolution, center=center))
+                    .add(Annulus(radius - dr, radius, 1, resolution, center=center))
+                    .generate_mesh()
+                ),
+                priority=priority,
+                group=group,
+            )
+            self.add(
+                Annulus(radius, radius + dr, 1, resolution, center=center),
+                priority=0,
+            )
+
+        elif dr == 0.0:
+            self.add(
+                Circle(radius, resolution, center=center),
+                priority=priority,
+                group=group,
+            )
+
+        else:
+            raise ValueError("invalid constraint radius")
+
+        return self
+
     def add_polyline(
         self,
         mesh_or_points: ArrayLike | pv.PolyData,
