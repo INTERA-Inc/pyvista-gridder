@@ -3,6 +3,8 @@
 from .extrude import MeshExtrude
 from .geometric_objects import (
     AnnularSector,
+    Annulus,
+    Circle,
     Polygon,
     Quadrilateral,
     Rectangle,

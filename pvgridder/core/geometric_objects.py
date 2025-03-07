@@ -85,6 +85,91 @@ def AnnularSector(
     return mesh
 
 
+def Annulus(
+    inner_radius: float = 0.5,
+    outer_radius: float = 1.0,
+    r_resolution: Optional[int | ArrayLike] = None,
+    theta_resolution: Optional[int | ArrayLike] = None,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.StructuredGrid:
+    """
+    Generate an annulus mesh.
+
+    Parameters
+    ----------
+    inner_radius : scalar, default 0.5
+        Annulus inner radius.
+    outer_radius : scalar, optional 1.0
+        Annulus outer radius.
+    r_resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the annulus inner radius.
+    theta_resolution : int | ArrayLike, optional
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) with respect to the starting angle.
+    r_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *r_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    theta_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *theta_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the annulus.
+
+    Returns
+    -------
+    pyvista.StructuredGrid
+        Annulus mesh.
+
+    """
+    return AnnularSector(inner_radius, outer_radius, 0.0, 360.0, r_resolution, theta_resolution, r_method, theta_method, center).clean(produce_merge_map=False)
+
+
+def Circle(
+    radius: float = 1.0,
+    resolution: Optional[int | ArrayLike] = None,
+    method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.UnstructuredGrid:
+    """
+    Generate a circle mesh.
+
+    Parameters
+    ----------
+    radius : scalar, default 1.0
+        Circle radius.
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the inner radius.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the circle.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Circle mesh.
+
+    """
+    return Sector(radius, 0.0, 360.0, resolution, method, center).clean(produce_merge_map=False)
+
+
 def Surface(
     line_a: Optional[pv.PolyData | ArrayLike] = None,
     line_b: Optional[pv.PolyData | ArrayLike] = None,
