@@ -132,8 +132,7 @@ def Annulus(
         Annulus mesh.
 
     """
-    return AnnularSector(inner_radius, outer_radius, 0.0, 360.0, r_resolution, theta_resolution, r_method, theta_method, center).clean(produce_merge_map=False)
-
+    return AnnularSector(inner_radius, outer_radius, 0.0, 360.0, r_resolution, theta_resolution, r_method, theta_method, center)
 
 def Circle(
     radius: float = 1.0,
