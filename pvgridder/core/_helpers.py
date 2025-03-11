@@ -293,19 +293,11 @@ def generate_volume_from_two_surfaces(
         # Repeat data
         shape = surface_a.dimensions
         for k, v in surface_a.point_data.items():
-            mesh.point_data[k] = np.repeat(
-                v.reshape(shape, order="F"),
-                perc.size,
-                axis,
-            ).ravel(order="F")
+            mesh.point_data[k] = repeat_structured_data(shape, v, perc.size, axis)
 
         shape = [max(1, n - 1) for n in surface_a.dimensions]
         for k, v in surface_a.cell_data.items():
-            mesh.cell_data[k] = np.repeat(
-                v.reshape(shape, order="F"),
-                perc.size - 1,
-                axis,
-            ).ravel(order="F")
+            mesh.cell_data[k] = repeat_structured_data(shape, v, perc.size - 1, axis)
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
         if not (_celltype_map[surface_a.celltypes] != -1).all():
@@ -436,6 +428,41 @@ def resolution_to_perc(
         raise ValueError(f"invalid subdivision value '{resolution}'")
 
     return perc
+
+
+def repeat_structured_data(shape: ArrayLike, data: ArrayLike, repeats: int, axis: int) -> ArrayLike:
+    """
+    Repeat structured data array.
+
+    Parameters
+    ----------
+    shape : ArrayLike
+        Structured grid shape.
+    data : ArrayLike
+        Data array to repeat.
+    repeats : int
+        The number of repetitions.
+    axis : int
+        The axis along which to repeat values.
+
+    Returns
+    -------
+    ArrayLike
+        Data array with repeated values.
+
+    """
+    data = data if data.ndim == 2 else data[:, np.newaxis]
+
+    return np.column_stack(
+        [
+            np.repeat(
+                v.reshape(shape, order="F"),
+                repeats,
+                axis,
+            ).ravel(order="F")
+            for v in data.T
+        ]
+    ).squeeze()
 
 
 def translate(
