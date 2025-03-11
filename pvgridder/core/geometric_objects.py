@@ -169,6 +169,159 @@ def Circle(
     return Sector(radius, 0.0, 360.0, resolution, method, center).clean(produce_merge_map=False)
 
 
+def CylindricalShell(
+    inner_radius: float = 0.5,
+    outer_radius: float = 1.0,
+    height: float = 1.0,
+    r_resolution: Optional[int | ArrayLike] = None,
+    theta_resolution: Optional[int | ArrayLike] = None,
+    z_resolution: Optional[int | ArrayLike] = None,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    z_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.StructuredGrid:
+    """
+    Generate a cylindrical shell mesh.
+
+    Parameters
+    ----------
+    inner_radius : scalar, default 0.5
+        Annulus inner radius.
+    outer_radius : scalar, optional 1.0
+        Annulus outer radius.
+    height : scalar, default 1.0
+        Cylinder height.
+    r_resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the cylinder inner radius.
+    theta_resolution : int | ArrayLike, optional
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) with respect to the starting angle.
+    z_resolution : int | ArrayLike, optional
+        Number of subdivisions along the height axis or relative position of
+        subdivisions (in percentage) with respect to the bottom height.
+    r_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *r_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    theta_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *theta_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    z_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *z_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the cylindrical shell.
+
+    Returns
+    -------
+    pyvista.StructuredGrid
+        Cylindrical shell mesh.
+
+    """
+    return CylindricalShellSector(inner_radius, outer_radius, 0.0, 360.0, height, r_resolution, theta_resolution, z_resolution, r_method, theta_method, z_method, center)
+
+
+def CylindricalShellSector(
+    inner_radius: float = 0.5,
+    outer_radius: float = 1.0,
+    theta_min: float = 0.0,
+    theta_max: float = 90.0,
+    height: float = 1.0,
+    r_resolution: Optional[int | ArrayLike] = None,
+    theta_resolution: Optional[int | ArrayLike] = None,
+    z_resolution: Optional[int | ArrayLike] = None,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    z_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.StructuredGrid:
+    """
+    Generate a cylindrical shell sector mesh.
+
+    Parameters
+    ----------
+    inner_radius : scalar, default 0.5
+        Annulus inner radius.
+    outer_radius : scalar, optional 1.0
+        Annulus outer radius.
+    theta_min : scalar, default 0.0
+        Starting angle (in degree).
+    theta_max : scalar, default 90.0
+        Ending angle (in degree).
+    height : scalar, default 1.0
+        Cylinder height.
+    r_resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the cylinder inner radius.
+    theta_resolution : int | ArrayLike, optional
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) with respect to the starting angle.
+    z_resolution : int | ArrayLike, optional
+        Number of subdivisions along the height axis or relative position of
+        subdivisions (in percentage) with respect to the bottom height.
+    r_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *r_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    theta_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *theta_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    z_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *z_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the cylindrical shell sector.
+
+    Returns
+    -------
+    pyvista.StructuredGrid
+        Cylindrical shell sector mesh.
+
+    """
+    center = list(center) if center is not None else [0.0, 0.0, 0.0]
+    center[2] -= 0.5 * height
+
+    surface_a = AnnularSector(
+        inner_radius=inner_radius,
+        outer_radius=outer_radius,
+        theta_min=theta_min,
+        theta_max=theta_max,
+        r_resolution=r_resolution,
+        theta_resolution=theta_resolution,
+        r_method=r_method,
+        theta_method=theta_method,
+    )
+    surface_b = surface_a.translate([0.0, 0.0, height])
+    mesh = generate_volume_from_two_surfaces(surface_a, surface_b, z_resolution, z_method)
+    mesh = translate(mesh, center)
+
+    return mesh
+
+
 def Surface(
     line_a: Optional[pv.PolyData | ArrayLike] = None,
     line_b: Optional[pv.PolyData | ArrayLike] = None,
