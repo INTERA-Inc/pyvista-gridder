@@ -12,6 +12,7 @@ def interactive_selection(
     parallel_projection: bool = False,
     preference: Literal["cell", "point"] = "cell",
     tolerance: float = 0.0,
+    message: Optional[str] = None,
     **kwargs,
 ) -> ArrayLike:
     """
@@ -29,6 +30,8 @@ def interactive_selection(
         Picking mode.
     tolerance : float, default 0.0
         Picking tolerance.
+    message : str, optional
+        Text to display.
     
     Returns
     -------
@@ -65,6 +68,9 @@ def interactive_selection(
 
     if parallel_projection:
         p.enable_parallel_projection()
+
+    if message:
+        p.add_text(message, "upper_left")
 
     p.add_axes()
     p.show()
