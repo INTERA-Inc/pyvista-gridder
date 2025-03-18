@@ -8,11 +8,12 @@ import pyvista as pv
 
 def interactive_selection(
     mesh: pv.DataSet,
+    plotter: Optional[pv.Plotter] = None,
     scalars: Optional[str | ArrayLike] = None,
+    view: Optional[str] = None,
     parallel_projection: bool = False,
     preference: Literal["cell", "point"] = "cell",
     tolerance: float = 0.0,
-    message: Optional[str] = None,
     **kwargs,
 ) -> ArrayLike:
     """
@@ -22,16 +23,20 @@ def interactive_selection(
     ----------
     mesh : pyvista.DataSet
         Input mesh.
-    scalars : str | ArrayLike
+    plotter : pyvista.Plotter, optional
+        PyVista plotter.
+    scalars : str | ArrayLike, optional
         Scalars used to “color” the mesh.
+    view : str, optional
+        Isometric view.
     parallel_projection : bool, default False
         If True, enable parallel projection.
     preference : {'cell', 'point'}, default 'cell'
         Picking mode.
     tolerance : float, default 0.0
         Picking tolerance.
-    message : str, optional
-        Text to display.
+    **kwargs : dict, optional
+        Additional keyword arguments if *plotter* is None. See ``pyvista.Plotter`` for more details.
     
     Returns
     -------
@@ -39,7 +44,7 @@ def interactive_selection(
         Indice(s) of selected cell(s) or point(s).
 
     """
-    p = pv.Plotter(**kwargs)
+    p = plotter if plotter is not None else pv.Plotter(**kwargs)
     actors = {}
 
     def callback(mesh: pv.DataSet) -> None:
@@ -66,13 +71,30 @@ def interactive_selection(
         tolerance=tolerance,
     )
 
+    if view in {"xy", "-xy"}:
+        p.view_xy(negative=view.startswith("-"))
+
+    elif view in {"yx", "-yx"}:
+        p.view_yx(negative=view.startswith("-"))
+
+    elif view in {"xz", "-xz"}:
+        p.view_xz(negative=view.startswith("-"))
+
+    elif view in {"zx", "-zx"}:
+        p.view_zx(negative=view.startswith("-"))
+
+    elif view in {"yz", "-yz"}:
+        p.view_yz(negative=view.startswith("-"))
+
+    elif view in {"zy", "-zy"}:
+        p.view_zy(negative=view.startswith("-"))
+
+    else:
+        raise ValueError(f"invalid view '{view}'")
+
     if parallel_projection:
         p.enable_parallel_projection()
 
-    if message:
-        p.add_text(message, "upper_left")
-
-    p.add_axes()
     p.show()
 
     return np.array(list(actors))
