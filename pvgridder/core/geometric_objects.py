@@ -70,7 +70,7 @@ def AnnularSector(
         Annular sector mesh.
 
     """
-    if not 0.0 < inner_radius < outer_radius:
+    if not 0.0 <= inner_radius < outer_radius:
         raise ValueError("invalid annular sector radii")
 
     line_a = generate_arc(
@@ -148,8 +148,8 @@ def Circle(
     radius : scalar, default 1.0
         Circle radius.
     resolution : int | ArrayLike, optional
-        Number of subdivisions along the radial axis or relative position of
-        subdivisions (in percentage) with respect to the inner radius.
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) with respect to the starting angle.
     method : {'constant', 'log', 'log_r'}, optional
         Subdivision method if *resolution* is an integer:
 
@@ -646,6 +646,7 @@ def RegularLine(points: ArrayLike, resolution: Optional[int] = None) -> pv.PolyD
         Line mesh with regularly spaced points.
 
     """
+    points = np.asanyarray(points)
     resolution = resolution if resolution else len(points)
 
     xp = np.insert(
@@ -679,8 +680,8 @@ def Sector(
     theta_max : scalar, default 90.0
         Ending angle (in degree).
     resolution : int | ArrayLike, optional
-        Number of subdivisions along the radial axis or relative position of
-        subdivisions (in percentage) with respect to the inner radius.
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) with respect to the starting angle.
     method : {'constant', 'log', 'log_r'}, optional
         Subdivision method if *resolution* is an integer:
 
