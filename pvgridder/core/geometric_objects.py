@@ -385,6 +385,37 @@ def Polygon(
 
         return points
 
+    def add_surface(points: ArrayLike, celltype: str) -> int:
+        """Add a plane surface."""
+        # Compute mesh size
+        lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
+        lengths = np.insert(lengths, 0, lengths[-1])
+        sizes = np.maximum(lengths[:-1], lengths[1:])
+        sizes *= 1.0 if celltype == "triangle" else 2.0
+
+        # Add points
+        node_tags = []
+
+        for (x, y, z), size in zip(points[:-1], sizes):
+            tag = gmsh.model.occ.add_point(x, y, z, size)
+            node_tags.append(tag)
+
+        # Add lines
+        line_tags = []
+
+        for tag1, tag2 in zip(node_tags[:-1], node_tags[1:]):
+            tag = gmsh.model.occ.add_line(tag1, tag2)
+            line_tags.append(tag)
+
+        # Close loop
+        tag = gmsh.model.occ.add_line(node_tags[-1], node_tags[0])
+        line_tags.append(tag)
+
+        tag = gmsh.model.occ.add_curve_loop(line_tags)
+        tag = gmsh.model.occ.add_plane_surface([tag])
+
+        return (2, tag)
+
     shell = shell if shell is not None else pv.Polygon()
     shell = to_points(shell)
     holes = [to_points(hole) for hole in holes] if holes is not None else []
@@ -402,45 +433,29 @@ def Polygon(
     elif celltype in {"quad", "triangle"}:
         try:
             gmsh.initialize()
-            curve_tags = []
 
-            for points in [shell, *holes]:
-                # Compute mesh size
-                lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
-                lengths = np.insert(lengths, 0, lengths[-1])
-                sizes = np.maximum(lengths[:-1], lengths[1:])
-                sizes *= 1.0 if celltype == "triangle" else 2.0
+            # Generate plane surfaces from points
+            shell_tags = [add_surface(shell, celltype)]
 
-                # Add points
-                node_tags = []
-
-                for (x, y, z), size in zip(points[:-1], sizes):
-                    tag = gmsh.model.geo.add_point(x, y, z, size)
-                    node_tags.append(tag)
-
-                # Add lines
-                line_tags = []
-
-                for tag1, tag2 in zip(node_tags[:-1], node_tags[1:]):
-                    tag = gmsh.model.geo.add_line(tag1, tag2)
-                    line_tags.append(tag)
-
-                # Close loop
-                tag = gmsh.model.geo.add_line(node_tags[-1], node_tags[0])
-                line_tags.append(tag)
-
-                tag = gmsh.model.geo.add_curve_loop(line_tags)
-                curve_tags.append(tag)
-
-            # Add plane surface
-            tag = gmsh.model.geo.add_plane_surface(curve_tags)
+            if holes:
+                hole_tags = [add_surface(hole, celltype) for hole in holes]
+                dim_tags, _ = gmsh.model.occ.cut(
+                    shell_tags,
+                    hole_tags,
+                    removeObject=True,
+                    removeTool=True,
+                )
+            
+            else:
+                dim_tags = shell_tags
 
             # Generate mesh
             gmsh.option.set_number("Mesh.Algorithm", algorithm)
-            gmsh.model.geo.synchronize()
+            gmsh.model.occ.synchronize()
 
             if celltype == "quad":
-                gmsh.model.mesh.setRecombine(2, tag)
+                for dim_tag in dim_tags:
+                    gmsh.model.mesh.setRecombine(*dim_tag)
 
             gmsh.model.mesh.generate(2)
 
