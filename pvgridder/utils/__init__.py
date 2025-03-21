@@ -10,9 +10,10 @@ from ._misc import (
     extract_cells_by_dimension,
     merge,
     merge_lines,
-    quadraticize,
+    offset_polygon,
     reconstruct_line,
     remap_categorical_data,
     split_lines,
+    quadraticize,
 )
 from ._properties import get_dimension

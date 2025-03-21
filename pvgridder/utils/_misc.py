@@ -592,6 +592,92 @@ def merge_lines(
     return pv.PolyData(np.concatenate(points), lines=cells).merge_points()
 
 
+def offset_polygon(
+    mesh_or_points: pv.PolyData | ArrayLike,
+    distance: float,
+) -> pv.PolyData:
+    """
+    Offset a polygon by a specified distance.
+
+    Parameters
+    ----------
+    mesh_or_points : pyvista.PolyData | ArrayLike
+        Polygon to offset.
+    distance : scalar
+        Distance to offset the polygon.
+    
+    Returns
+    -------
+    pyvista.PolyData
+        Offset polygon.
+
+    """
+    if not isinstance(mesh_or_points, pv.PolyData):
+        n_points = len(mesh_or_points)
+        mesh = pv.PolyData(mesh_or_points, faces=[n_points, *np.arange(n_points)])
+
+    else:
+        mesh = mesh_or_points
+
+    if not mesh.n_faces_strict:
+        raise ValueError("could not offset polygon with zero polygon")
+
+    if distance > 0.0:
+        fac = -1.0
+
+    elif distance < 0.0:
+        fac = 1.0
+        distance *= -1.0
+
+    else:
+        return mesh.copy()
+
+    # Loop over faces
+    faces = []
+    points_ = []
+
+    for face in mesh.irregular_faces:
+        # Extract points
+        points = mesh.points[face]
+        mask = np.ptp(points, axis=0) == 0.0
+        
+        if mask.sum() != 1:
+            raise ValueError("could not offset non-planar polygon")
+
+        else:
+            axis = np.flatnonzero(mask)[0]
+
+        # Simple polygon offset algorithm
+        # Vectorized version of C# code
+        # <https://stackoverflow.com/a/73061541/9729313>
+        points = points[:, ~mask]
+        points = np.row_stack(
+            (
+                points[-1],
+                points,
+                points[0],
+            ),
+        )
+
+        vn = points[2:] - points[1:-1]
+        vn /= np.linalg.norm(vn, axis=1)[:, np.newaxis]
+
+        vp = points[1:-1] - points[:-2]
+        vp /= np.linalg.norm(vp, axis=1)[:, np.newaxis]
+
+        vb = (vn + vp) * fac
+        vb[:, 0] *= -1.0
+        vb /= np.linalg.norm(vb, axis=1)[:, np.newaxis]
+
+        dist = distance / (0.5 * (1.0 + (vn * vp).sum(axis=1))) ** 0.5
+        points = points[1:-1] + dist[:, np.newaxis] * vb[:, [1, 0]]
+
+        faces += [len(points), *(np.arange(len(points)) + len(points_))]
+        points_ += np.insert(points, axis, 0.0, axis=1).tolist()
+
+    return pv.PolyData(points_, faces=faces)
+
+
 def reconstruct_line(
     mesh: pv.DataSet,
     start: int = 0,
