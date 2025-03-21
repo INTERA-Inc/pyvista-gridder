@@ -13,7 +13,7 @@ from .geometric_objects import (
     RegularLine,
     Sector,
     SectorRectangle,
-    Surface,
+    StructuredSurface,
     Volume,
 )
 from .merge import MeshMerge

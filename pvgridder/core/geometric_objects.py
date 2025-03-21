@@ -79,7 +79,7 @@ def AnnularSector(
     line_b = generate_arc(
         outer_radius, theta_min, theta_max, theta_resolution, theta_method
     )
-    mesh = Surface(line_a, line_b, "xy", r_resolution, r_method)
+    mesh = StructuredSurface(line_a, line_b, "xy", r_resolution, r_method)
     mesh = translate(mesh, center)
 
     return mesh
@@ -322,47 +322,6 @@ def CylindricalShellSector(
     return mesh
 
 
-def Surface(
-    line_a: Optional[pv.PolyData | ArrayLike] = None,
-    line_b: Optional[pv.PolyData | ArrayLike] = None,
-    plane: Literal["xy", "yx", "xz", "zx", "yz", "zy"] = "xy",
-    resolution: Optional[int | ArrayLike] = None,
-    method: Optional[Literal["constant", "log", "log_r"]] = None,
-) -> pv.StructuredGrid:
-    """
-    Generate a surface mesh from two polylines.
-
-    Parameters
-    ----------
-    line_a : pyvista.PolyData | ArrayLike, optional
-        Starting polyline mesh or coordinates.
-    line_b : pyvista.PolyData | ArrayLike, optional
-        Ending polyline mesh or coordinates.
-    plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
-        Surface plane.
-    resolution : int | ArrayLike, optional
-        Number of subdivisions along the plane or relative position of subdivisions
-        (in percentage) with respect to the starting line.
-    method : {'constant', 'log', 'log_r'}, optional
-        Subdivision method if *resolution* is an integer:
-
-         - if 'constant', subdivisions are equally spaced.
-         - if 'log', subdivisions are logarithmically spaced (from small to large).
-         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
-
-    Returns
-    -------
-    pyvista.StructuredGrid
-        Surface mesh.
-
-    """
-    line_a = line_a if line_a is not None else [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
-    line_b = line_b if line_b is not None else [(0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
-    mesh = generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
-
-    return mesh
-
-
 @require_package("gmsh")
 def Polygon(
     shell: Optional[pv.DataSet | ArrayLike] = None,
@@ -567,7 +526,7 @@ def Quadrilateral(
 
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
-    mesh = Surface(line_a, line_b, "xy", y_resolution, y_method)
+    mesh = StructuredSurface(line_a, line_b, "xy", y_resolution, y_method)
     mesh = translate(mesh, center)
 
     return mesh
@@ -778,10 +737,51 @@ def SectorRectangle(
     )
     line_45 = generate_arc(radius, 0.0, 45.0, theta_resolution)
     line_90 = generate_arc(radius, 45.0, 90.0, theta_resolution)
-    mesh_y45 = Surface(line_45, line_y, "xy", r_resolution, r_method)
-    mesh_x90 = Surface(line_90, line_x, "xy", r_resolution, r_method)
+    mesh_y45 = StructuredSurface(line_45, line_y, "xy", r_resolution, r_method)
+    mesh_x90 = StructuredSurface(line_90, line_x, "xy", r_resolution, r_method)
     mesh = mesh_y45.cast_to_unstructured_grid() + mesh_x90.cast_to_unstructured_grid()
     mesh = translate(mesh, center)
+
+    return mesh
+
+
+def StructuredSurface(
+    line_a: Optional[pv.PolyData | ArrayLike] = None,
+    line_b: Optional[pv.PolyData | ArrayLike] = None,
+    plane: Literal["xy", "yx", "xz", "zx", "yz", "zy"] = "xy",
+    resolution: Optional[int | ArrayLike] = None,
+    method: Optional[Literal["constant", "log", "log_r"]] = None,
+) -> pv.StructuredGrid:
+    """
+    Generate a surface mesh from two polylines.
+
+    Parameters
+    ----------
+    line_a : pyvista.PolyData | ArrayLike, optional
+        Starting polyline mesh or coordinates.
+    line_b : pyvista.PolyData | ArrayLike, optional
+        Ending polyline mesh or coordinates.
+    plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
+        Surface plane.
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the plane or relative position of subdivisions
+        (in percentage) with respect to the starting line.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    Returns
+    -------
+    pyvista.StructuredGrid
+        Surface mesh.
+
+    """
+    line_a = line_a if line_a is not None else [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
+    line_b = line_b if line_b is not None else [(0.0, 1.0, 0.0), (1.0, 1.0, 0.0)]
+    mesh = generate_surface_from_two_lines(line_a, line_b, plane, resolution, method)
 
     return mesh
 
