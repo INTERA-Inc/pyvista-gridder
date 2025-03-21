@@ -679,7 +679,7 @@ def offset_polygon(
 
 
 def reconstruct_line(
-    mesh: pv.DataSet,
+    mesh_or_points: pv.DataSet | ArrayLike,
     start: int = 0,
     close: bool = False,
     tolerance: float = 1.0e-8,
@@ -689,7 +689,7 @@ def reconstruct_line(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh_or_points : pyvista.DataSet | ArrayLike
         Mesh from which points to reconstruct a line.
     start : int, default 0
         Index of point to use as starting point for 2-opt algorithm.
@@ -704,7 +704,11 @@ def reconstruct_line(
         Reconstructed line.
 
     """
-    points = mesh.points
+    if isinstance(mesh_or_points, pv.PolyData):
+        points = mesh_or_points.points
+
+    else:
+        points = np.asanyarray(mesh_or_points)
 
     if not (points.ndim == 2 and points.shape[1] in {2, 3}):
         raise ValueError(
