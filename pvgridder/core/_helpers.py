@@ -133,12 +133,26 @@ def generate_surface_from_two_lines(
         Surface mesh.
 
     """
-    line_points_a = (
-        line_a.points if isinstance(line_a, pv.PolyData) else np.asarray(line_a)
-    )
-    line_points_b = (
-        line_b.points if isinstance(line_b, pv.PolyData) else np.asarray(line_b)
-    )
+    def get_points(line: pv.PolyData | ArrayLike) -> ArrayLike:
+        """Get line points."""
+        if isinstance(line, pv.PolyData):
+            # Use the first line if available
+            if line.n_lines:
+                lines = line.lines
+                ids = lines[1 : lines[0] + 1]
+
+            # Use the first polygon otherwise
+            else:
+                ids = line.irregular_faces[0]
+                ids = np.append(ids, ids[0])
+
+            return line.points[ids]
+
+        else:
+            return np.asanyarray(line)
+
+    line_points_a = get_points(line_a)
+    line_points_b = get_points(line_b)
 
     if line_points_a.shape != line_points_b.shape:
         raise ValueError(
