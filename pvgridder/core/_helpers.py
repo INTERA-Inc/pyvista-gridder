@@ -136,9 +136,9 @@ def generate_surface_from_two_lines(
     def get_points(line: pv.PolyData | ArrayLike) -> ArrayLike:
         """Get line points."""
         if isinstance(line, pv.PolyData):
-            # Use the first line if available
+            # Use the first continuous polyline if available
             if line.n_lines:
-                lines = line.lines
+                lines = line.strip(join=True).lines
                 ids = lines[1 : lines[0] + 1]
 
             # Use the first polygon otherwise
