@@ -282,6 +282,7 @@ def extract_cell_geometry(
         supported_celltypes = {
             pv.CellType.EMPTY_CELL,
             pv.CellType.LINE,
+            pv.CellType.PIXEL,
             pv.CellType.POLYGON,
             pv.CellType.POLY_LINE,
             pv.CellType.QUAD,
@@ -298,6 +299,8 @@ def extract_cell_geometry(
         cell_edges = [
             np.column_stack((connectivity[i1:i2 - 1], connectivity[i1 + 1:i2]))
             if celltype in {pv.CellType.LINE, pv.CellType.POLY_LINE}
+            else np.column_stack((connectivity[i1:i2][[0, 1, 3, 2]], np.roll(connectivity[i1:i2][[0, 1, 3, 2]], -1)))
+            if celltype == pv.CellType.PIXEL
             else np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
             if not remove_empty_cells or celltype != pv.CellType.EMPTY_CELL
             else []
@@ -951,11 +954,21 @@ _celltype_to_faces = {
             ]
         ),
     },
+    "VOXEL": {
+        "QUAD": np.array(
+            [
+                [0, 2, 3, 1],
+                [4, 5, 7, 6],
+                [0, 1, 5, 4],
+                [1, 3, 7, 5],
+                [3, 2, 6, 7],
+                [0, 4, 6, 2],
+            ]
+        ),
+    },
 }
 
 _celltype_to_n_vertices = {
-    "TETRA": 4,
-    "PYRAMID": 5,
-    "WEDGE": 6,
-    "HEXAHEDRON": 8,
+    k: np.unique(np.concatenate([face.ravel() for face in v.values()])).size
+    for k, v in _celltype_to_faces.items()
 }

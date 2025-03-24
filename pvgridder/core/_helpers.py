@@ -314,7 +314,7 @@ def generate_volume_from_two_surfaces(
             mesh.cell_data[k] = repeat_structured_data(shape, v, perc.size - 1, axis)
 
     elif isinstance(surface_a, pv.UnstructuredGrid):
-        if not (_celltype_map[surface_a.celltypes] != -1).all():
+        if not (_extruded_celltype_map[surface_a.celltypes] != -1).all():
             raise ValueError(
                 "could not generate volume from surfaces with unsupported cell types"
             )
@@ -334,19 +334,25 @@ def generate_volume_from_two_surfaces(
 
         n = perc.size - 1
         offset = surface_a.offset
-        celltypes = _celltype_map[surface_a.celltypes]
+        celltypes = _extruded_celltype_map[surface_a.celltypes]
         cell_connectivity = surface_a.cell_connectivity
         cells = [[] for _ in range(n)]
         inactive = [[] for _ in range(n)]
 
-        for i1, i2, celltype in zip(offset[:-1], offset[1:], celltypes):
+        for i, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes)):
             cell = cell_connectivity[i1:i2]
+
+            # Handle pixel/voxel (convert to quad/hexahedron)
+            if celltype == pv.CellType.VOXEL:
+                cell = cell[[0, 1, 3, 2]]
+                celltypes[i] = pv.CellType.HEXAHEDRON
+
             faces = [cell, cell + n_points]
 
             # Handle collapsed cells
             is_collapsed = np.allclose(*points[faces])
 
-            if celltype == 42:
+            if celltype == pv.CellType.POLYHEDRON:
                 faces += [
                     np.array([p0, p1, p2, p3])
                     for p0, p1, p2, p3 in zip(
@@ -514,7 +520,8 @@ def translate(
     return mesh
 
 
-_celltype_map = -np.ones(int(max(pv.CellType)) + 1, dtype=int)
-_celltype_map[pv.CellType.TRIANGLE] = int(pv.CellType.WEDGE)
-_celltype_map[pv.CellType.QUAD] = int(pv.CellType.HEXAHEDRON)
-_celltype_map[pv.CellType.POLYGON] = int(pv.CellType.POLYHEDRON)
+_extruded_celltype_map = -np.ones(int(max(pv.CellType)) + 1, dtype=int)
+_extruded_celltype_map[pv.CellType.PIXEL] = int(pv.CellType.VOXEL)
+_extruded_celltype_map[pv.CellType.POLYGON] = int(pv.CellType.POLYHEDRON)
+_extruded_celltype_map[pv.CellType.QUAD] = int(pv.CellType.HEXAHEDRON)
+_extruded_celltype_map[pv.CellType.TRIANGLE] = int(pv.CellType.WEDGE)
