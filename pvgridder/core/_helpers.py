@@ -221,8 +221,8 @@ def generate_surface_from_two_lines(
 
 
 def generate_volume_from_two_surfaces(
-    surface_a: pv.StructuredGrid | pv.UnstructuredGrid,
-    surface_b: pv.StructuredGrid | pv.UnstructuredGrid,
+    surface_a: pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+    surface_b: pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
@@ -231,9 +231,9 @@ def generate_volume_from_two_surfaces(
 
     Parameters
     ----------
-    surface_a : pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_a : pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Starting surface mesh.
-    surface_b : pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_b : pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Ending surface mesh.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the extrusion axis or relative position of
@@ -252,6 +252,9 @@ def generate_volume_from_two_surfaces(
 
     """
     from .. import get_dimension
+
+    surface_a = surface_a.cast_to_structured_grid() if isinstance(surface_a, pv.RectilinearGrid) else surface_a
+    surface_b = surface_b.cast_to_structured_grid() if isinstance(surface_b, pv.RectilinearGrid) else surface_b
 
     if surface_a.points.shape != surface_b.points.shape or not isinstance(
         surface_a, type(surface_b)
