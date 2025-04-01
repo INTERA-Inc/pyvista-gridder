@@ -531,13 +531,16 @@ def Quadrilateral(
         Quadrilateral mesh.
 
     """
-    if points is None:
-        points = [
+    points = (
+        [
             (0.0, 0.0),
             (1.0, 0.0),
             (1.0, 1.0),
             (0.0, 1.0),
         ]
+        if points is None
+        else points
+    )   
 
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
