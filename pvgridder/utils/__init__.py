@@ -16,4 +16,4 @@ from ._misc import (
     split_lines,
     quadraticize,
 )
-from ._properties import get_dimension
+from ._properties import get_cell_connectivity, get_dimension

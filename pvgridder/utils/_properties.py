@@ -1,7 +1,71 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 import pyvista as pv
+
+
+def get_cell_connectivity(
+    mesh: pv.UnstructuredGrid,
+    flatten: bool = False,
+) -> Sequence[Sequence[int | Sequence[int]]] | Sequence[int]:
+    """
+    Get the original cell connectivity of an unstructured mesh.
+
+    Parameters
+    ----------
+    mesh : pyvista.UnstructuredGrid
+        Input mesh.
+    flatten : bool, default False
+        If True, flatten the cell connectivity array (e.g., as input of
+        :class:`pyvista.UnstructuredGrid`).
+    
+    Returns
+    -------
+    Sequence[Sequence[int | Sequence[int]]] | Sequence[int]
+        Cell connectivity.
+
+    """
+    from itertools import chain
+    from pyvista.core.cell import _get_irregular_cells
+
+    # Generate cells
+    cells = list(_get_irregular_cells(mesh.GetCells()))
+
+    # Generate polyhedral cell faces if any
+    polyhedral_cells = pv.convert_array(mesh.GetFaces())
+
+    if polyhedral_cells is not None:
+        locations = pv.convert_array(mesh.GetFaceLocations())
+
+        for cid, location in enumerate(locations):
+            if location == -1:
+                continue
+
+            n_faces = polyhedral_cells[location]
+            i, cell = location + 1, []
+
+            while len(cell) < n_faces:
+                n_vertices = polyhedral_cells[i]
+                cell.append(polyhedral_cells[i + 1 : i + 1 + n_vertices])
+                i += n_vertices + 1
+
+            cells[cid] = cell
+
+    if flatten:
+        cells_ = []
+
+        for cell, celltype in zip(cells, mesh.celltypes):
+            if celltype == pv.CellType.POLYHEDRON:
+                cell = [len(cell), *chain.from_iterable([[len(c), *c] for c in cell])]
+
+            cells_ += [len(cell), *cell]
+
+        return np.array(cells_)
+
+    else:
+        return tuple(cells)
 
 
 def get_dimension(
