@@ -256,7 +256,7 @@ def extract_cell_geometry(
                     cells_.append(c)
                     lines_or_faces += [len(c), *cells_[idx]]
 
-        tmp = -np.ones((len(cell_ids), 2), dtype=int)
+        tmp = -np.ones((len(cell_ids), len(max(cell_ids, key=len))), dtype=int)
         for i, ids in enumerate(cell_ids):
             tmp[i, : len(ids)] = ids
 
@@ -321,6 +321,7 @@ def extract_cell_geometry(
             if not mask.all():
                 lines = poly.lines.reshape((poly.n_lines, 3))[mask]
                 tmp = poly.cell_data["vtkOriginalCellIds"][mask]
+                tmp = tmp[:, np.ptp(tmp, axis=0) > 0]
 
                 poly = pv.PolyData(poly.points, lines=lines)
                 poly.cell_data["vtkOriginalCellIds"] = tmp
@@ -412,6 +413,7 @@ def extract_cell_geometry(
                     face for face, mask_ in zip(poly.irregular_faces, mask) if mask_
                 ]
                 tmp = poly.cell_data["vtkOriginalCellIds"][mask]
+                tmp = tmp[:, np.ptp(tmp, axis=0) > 0]
 
                 poly = pv.PolyData().from_irregular_faces(poly.points, faces)
                 poly.cell_data["vtkOriginalCellIds"] = tmp
