@@ -8,6 +8,7 @@ from ._misc import (
     extract_boundary_polygons,
     extract_cell_geometry,
     extract_cells_by_dimension,
+    fuse_cells,
     merge,
     merge_lines,
     offset_polygon,

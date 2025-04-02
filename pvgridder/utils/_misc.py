@@ -443,7 +443,8 @@ def extract_cells_by_dimension(
         Mesh with extracted cells.
 
     """
-    from ._properties import _dimension_map, get_dimension
+    from ._properties import _dimension_map
+    from .. import get_dimension
 
     ndim = ndim if ndim is not None else get_dimension(mesh)
 
@@ -460,6 +461,70 @@ def extract_cells_by_dimension(
         mesh = mesh.extract_cells(~mask)
 
     return mesh
+
+
+def fuse_cells(mesh: pv.DataSet, ind: ArrayLike) -> pv.UnstructuredGrid:
+    """
+    Fuse connected cells into a single cell.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        Mesh to fuse cells from.
+    ind : ArrayLike
+        Indices of cells to fuse.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Mesh with fused cells.
+
+    """
+    from .. import extract_boundary_polygons, get_cell_connectivity, get_dimension
+
+    mesh = mesh.cast_to_unstructured_grid()
+
+    if get_dimension(mesh) == 2:
+        poly = extract_boundary_polygons(mesh.extract_cells(ind), fill=True)
+
+        if len(poly) > 1:
+            raise ValueError("could not fuse not fully connected cells together")
+
+        # Find original point IDs of polygon
+        cell = poly[0].cast_to_unstructured_grid()
+        ids = np.flatnonzero((cell.points[:, None] == mesh.points).all(axis=-1).any(axis=0))
+        mesh_points = mesh.points[ids]
+        sorted_ids = ids[np.ravel([np.flatnonzero((mesh_points == point).all(axis=1)) for point in cell.points])]
+
+        # Update connectivity and cell type
+        connectivity = list(get_cell_connectivity(mesh))
+        celltypes = mesh.celltypes
+
+        connectivity[ind[0]] = sorted_ids
+        celltypes[ind[0]] = pv.CellType.POLYGON
+
+        for cell_id in ind[1:]:
+            connectivity[cell_id] = []
+            celltypes[cell_id] = pv.CellType.EMPTY_CELL
+
+        # Generate new mesh with fused cells
+        cells = [
+            item for cell, celltype in zip(connectivity, celltypes) for item in [len(cell), *cell]
+        ]
+
+    else:
+        raise NotImplementedError("could not fuse cells for non 2D mesh")
+
+    fused_mesh = pv.UnstructuredGrid(cells, celltypes, mesh.points)
+    fused_mesh.point_data.update(mesh.point_data)
+    fused_mesh.cell_data.update(mesh.cell_data)
+    fused_mesh.user_dict.update(mesh.user_dict)
+
+    # Tidy up
+    fused_mesh = fused_mesh.extract_cells(fused_mesh.celltypes != pv.CellType.EMPTY_CELL)
+    fused_mesh = fused_mesh.clean()
+
+    return fused_mesh
 
 
 def merge(
