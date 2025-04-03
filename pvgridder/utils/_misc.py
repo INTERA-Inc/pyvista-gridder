@@ -465,7 +465,7 @@ def extract_cells_by_dimension(
     return mesh
 
 
-def fuse_cells(mesh: pv.DataSet, ind: ArrayLike) -> pv.UnstructuredGrid:
+def fuse_cells(mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]) -> pv.UnstructuredGrid:
     """
     Fuse connected cells into a single cell.
 
@@ -473,8 +473,8 @@ def fuse_cells(mesh: pv.DataSet, ind: ArrayLike) -> pv.UnstructuredGrid:
     ----------
     mesh : pyvista.DataSet
         Mesh to fuse cells from.
-    ind : ArrayLike
-        Indices of cells to fuse.
+    ind : ArrayLike | Sequence[ArrayLike]
+        Indices or sequence of indices of cells to fuse.
 
     Returns
     -------
@@ -484,38 +484,43 @@ def fuse_cells(mesh: pv.DataSet, ind: ArrayLike) -> pv.UnstructuredGrid:
     """
     from .. import extract_boundary_polygons, get_cell_connectivity, get_dimension
 
+    indices = [ind] if np.ndim(ind[0]) == 0 else ind
     mesh = mesh.cast_to_unstructured_grid()
+    connectivity = list(get_cell_connectivity(mesh))
+    celltypes = mesh.celltypes
+    mask = np.ones(mesh.n_cells, dtype=bool)
 
-    if get_dimension(mesh) == 2:
-        poly = extract_boundary_polygons(mesh.extract_cells(ind), fill=True)
+    for ind in indices:
+        mesh_ = mesh.extract_cells(ind)
+        mask[ind[1:]] = False
 
-        if len(poly) > 1:
-            raise ValueError("could not fuse not fully connected cells together")
+        if get_dimension(mesh_) == 2:
+            poly = extract_boundary_polygons(mesh_, fill=True)
 
-        # Find original point IDs of polygon
-        cell = poly[0].cast_to_unstructured_grid()
-        ids = np.flatnonzero((cell.points[:, None] == mesh.points).all(axis=-1).any(axis=0))
-        mesh_points = mesh.points[ids]
-        sorted_ids = ids[np.ravel([np.flatnonzero((mesh_points == point).all(axis=1)) for point in cell.points])]
+            if len(poly) > 1:
+                raise ValueError("could not fuse not fully connected cells together")
 
-        # Update connectivity and cell type
-        connectivity = list(get_cell_connectivity(mesh))
-        celltypes = mesh.celltypes
+            # Find original point IDs of polygon
+            cell = poly[0].cast_to_unstructured_grid()
+            ids = np.flatnonzero((cell.points[:, None] == mesh.points).all(axis=-1).any(axis=0))
+            mesh_points = mesh.points[ids]
+            sorted_ids = ids[np.ravel([np.flatnonzero((mesh_points == point).all(axis=1)) for point in cell.points])]
 
-        connectivity[ind[0]] = sorted_ids
-        celltypes[ind[0]] = pv.CellType.POLYGON
+            # Update connectivity and cell type
+            connectivity[ind[0]] = sorted_ids
+            celltypes[ind[0]] = pv.CellType.POLYGON
 
-        for cell_id in ind[1:]:
-            connectivity[cell_id] = []
-            celltypes[cell_id] = pv.CellType.EMPTY_CELL
+            for cell_id in ind[1:]:
+                connectivity[cell_id] = []
+                celltypes[cell_id] = pv.CellType.EMPTY_CELL
 
-        # Generate new mesh with fused cells
-        cells = [
-            item for cell, celltype in zip(connectivity, celltypes) for item in [len(cell), *cell]
-        ]
+            # Generate new mesh with fused cells
+            cells = [
+                item for cell, celltype in zip(connectivity, celltypes) for item in [len(cell), *cell]
+            ]
 
-    else:
-        raise NotImplementedError("could not fuse cells for non 2D mesh")
+        else:
+            raise NotImplementedError("could not fuse cells for non 2D mesh")
 
     fused_mesh = pv.UnstructuredGrid(cells, celltypes, mesh.points)
     fused_mesh.point_data.update(mesh.point_data)
@@ -523,8 +528,7 @@ def fuse_cells(mesh: pv.DataSet, ind: ArrayLike) -> pv.UnstructuredGrid:
     fused_mesh.user_dict.update(mesh.user_dict)
 
     # Tidy up
-    fused_mesh = fused_mesh.extract_cells(fused_mesh.celltypes != pv.CellType.EMPTY_CELL)
-    fused_mesh = fused_mesh.clean()
+    fused_mesh = fused_mesh.extract_cells(mask).clean()
 
     return fused_mesh
 
