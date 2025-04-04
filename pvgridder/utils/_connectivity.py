@@ -72,7 +72,9 @@ def get_connectivity(
         # See <https://github.com/pyvista/pyvista/issues/7113>
         mesh_copy = mesh.copy(deep=False)
         mesh_copy.clear_data()
-        cell_centers = mesh_copy.cell_centers(vertex=False).points
+        mesh_copy = mesh_copy.cast_to_unstructured_grid()
+        cell_centers = np.full((mesh_copy.n_cells, 3), np.nan)
+        cell_centers[mesh.celltypes != pv.CellType.EMPTY_CELL] = mesh_copy.cell_centers(vertex=False).points
 
     if np.shape(cell_centers) != (mesh.n_cells, 3):
         raise ValueError(
