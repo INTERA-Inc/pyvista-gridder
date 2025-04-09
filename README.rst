@@ -6,13 +6,13 @@ Structured and unstructured mesh generation using PyVista for the Finite-Element
 Features
 --------
 
- - **Pre-Meshed Geometric Objects**: Easily create basic geometric objects with pre-defined meshes, using structured grids whenever possible.
- - **Line/Polyline Extrusion**: Extrude lines or polylines into 2D structured grids.
- - **Surface Extrusion**: Extrude surface meshes into volumetric meshes while preserving their original type.
- - **1.5D/2.5D Mesh Creation**: Generate meshes by stacking polylines or surfaces, ideal for geological modeling and similar applications.
- - **2D Voronoi Mesh Generation**: Create 2D Voronoi meshes from a background mesh, with support for adding constraint points to define custom shapes.
- - **Mesh Merging**: Combine multiple PyVista meshes into a single mesh and assign cell groups, leaving conformity checks to the user.
- - **Additional Utility Functions**: Includes tools to manipulate structured and unstructured grids.
+- **Pre-Meshed Geometric Objects**: Easily create basic geometric objects with pre-defined meshes, using structured grids whenever possible.
+- **Line/Polyline Extrusion**: Extrude lines or polylines into 2D structured grids.
+- **Surface Extrusion**: Extrude surface meshes into volumetric meshes while preserving their original type.
+- **1.5D/2.5D Mesh Creation**: Generate meshes by stacking polylines or surfaces, ideal for geological modeling and similar applications.
+- **2D Voronoi Mesh Generation**: Create 2D Voronoi meshes from a background mesh, with support for adding constraint points to define custom shapes.
+- **Mesh Merging**: Combine multiple PyVista meshes into a single mesh and assign cell groups, leaving conformity checks to the user.
+- **Additional Utility Functions**: Includes tools to manipulate structured and unstructured grids.
 
 Installation
 ------------
