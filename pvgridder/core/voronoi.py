@@ -407,7 +407,7 @@ class VoronoiMesh2D(MeshBase):
                 raise ValueError(f"region {i} is not a valid polygon")
 
             polygon = boundary.intersection(polygon)
-            points_ = list(get_coordinates(polygon))
+            points_ = list(get_coordinates(polygon)[:-1])
             cells += [len(points_), *(np.arange(len(points_)) + n_points)]
 
             points += points_
