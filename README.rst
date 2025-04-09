@@ -89,3 +89,8 @@ Examples
    :alt: nightmare-fuel
    :width: 100%
    :align: center
+
+Acknowledgements
+----------------
+
+This project is supported by Nagra (National Cooperative for the Disposal of Radioactive Waste), Switzerland.
