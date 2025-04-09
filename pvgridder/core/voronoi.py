@@ -319,7 +319,7 @@ class VoronoiMesh2D(MeshBase):
             2D Voronoi mesh.
 
         """
-        from shapely import Polygon
+        from shapely import get_coordinates, Polygon
 
         from .. import average_points, decimate_rdp, extract_boundary_polygons
 
@@ -407,7 +407,7 @@ class VoronoiMesh2D(MeshBase):
                 raise ValueError(f"region {i} is not a valid polygon")
 
             polygon = boundary.intersection(polygon)
-            points_ = list(polygon.exterior.coords[:-1])
+            points_ = list(get_coordinates(polygon))
             cells += [len(points_), *(np.arange(len(points_)) + n_points)]
 
             points += points_
