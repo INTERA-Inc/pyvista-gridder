@@ -159,7 +159,7 @@ def extract_boundary_polygons(
         Extracted boundary polylines or polygons.
 
     """
-    poly = mesh.extract_feature_edges(
+    poly = mesh.cast_to_unstructured_grid().clean().extract_feature_edges(
         boundary_edges=True,
         non_manifold_edges=False,
         feature_edges=False,
