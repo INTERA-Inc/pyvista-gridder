@@ -81,7 +81,8 @@ Examples
       .generate_mesh()
    )
 
-   group_map = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
+   groups = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
+   mesh.plot(show_edges=True, scalars=[groups[i] for i in mesh.cell_data["CellGroup"]])
    
 .. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true
 
