@@ -56,6 +56,12 @@ Examples
    )
    mesh.plot(show_edges=True)
 
+.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/anticline.png?raw=true
+
+   :alt: anticline
+   :width: 100%
+   :align: center
+
 .. code:: python
 
    import numpy as np
@@ -77,3 +83,8 @@ Examples
 
    group_map = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
    
+.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true
+
+   :alt: nightmare-fuel
+   :width: 100%
+   :align: center
