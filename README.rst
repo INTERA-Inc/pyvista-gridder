@@ -38,6 +38,9 @@ To test the integrity of the installed package, check out this repository and ru
 Examples
 --------
 
+2D structured grid
+******************
+
 .. code:: python
 
    import numpy as np
@@ -61,6 +64,39 @@ Examples
    :alt: anticline
    :width: 100%
    :align: center
+
+3D structured grid
+******************
+
+.. code:: python
+
+   import pyvista as pv
+   import pvgridder as pv
+
+   terrain = pv.examples.download_crater_topo().extract_subset(
+      (500, 900, 400, 800, 0, 0), (10, 10, 1)
+   )
+   terrain = terrain.cast_to_structured_grid().warp_by_scalar("scalar1of1")
+
+   mesh = (
+      pvg.MeshStack3D(terrain)
+      .add(0.0)
+      .add(terrain.translate((0.0, 0.0, -1000.0)), 5, group="Bottom layer")
+      .add(terrain.translate((0.0, 0.0, -500.0)), 5, group="Middle layer")
+      .add(terrain, 5, group="Top Layer")
+      .generate_mesh()
+   )
+   groups = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
+   mesh.plot(show_edges=True, scalars=[groups[i] for i in mesh.cell_data["CellGroup"]])
+
+.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true
+
+   :alt: topographic-terrain
+   :width: 100%
+   :align: center
+
+2D Voronoi mesh
+***************
 
 .. code:: python
 
