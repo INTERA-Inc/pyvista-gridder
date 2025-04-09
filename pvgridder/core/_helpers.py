@@ -445,12 +445,12 @@ def resolution_to_perc(
             perc = 1.0 - perc
 
     elif np.ndim(resolution) == 1:
-        perc = np.sort(resolution)
+        perc = resolution
 
     else:
         raise ValueError(f"invalid subdivision value '{resolution}'")
 
-    return perc
+    return np.sort(perc)
 
 
 def repeat_structured_data(shape: ArrayLike, data: ArrayLike, repeats: int, axis: int) -> ArrayLike:
