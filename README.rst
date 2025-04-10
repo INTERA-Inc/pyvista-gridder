@@ -21,7 +21,7 @@ The recommended way to install **pvgridder** and all its dependencies is through
 
 .. code:: bash
 
-   pip install pvgridder --user
+   pip install pyvista-gridder --user
 
 Otherwise, clone and extract the package, then run from the package location:
 
