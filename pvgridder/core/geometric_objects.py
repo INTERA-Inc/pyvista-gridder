@@ -378,7 +378,7 @@ def Polygon(
             points = np.asanyarray(points)
 
         if not (points[0] == points[-1]).all():
-            points = np.row_stack((points, points[0]))
+            points = np.vstack((points, points[0]))
 
         if points.shape[1] == 2:
             points = np.insert(points, 2, 0.0, axis=-1)
@@ -687,7 +687,7 @@ def Sector(
             np.arange(2, n_cells + 2),
         )
     ).astype(int)
-    points = np.row_stack((np.zeros(3), points))
+    points = np.vstack((np.zeros(3), points))
     mesh = pv.UnstructuredGrid({pv.CellType.TRIANGLE: cells}, points)
     mesh = translate(mesh, center)
 

@@ -118,10 +118,10 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
             res1 = decimate(points[: imax + 1])
             res2 = decimate(points[imax:])
 
-            return np.row_stack((res1[:-1], res2))
+            return np.vstack((res1[:-1], res2))
 
         else:
-            return np.row_stack((points[0], points[-1]))
+            return np.vstack((points[0], points[-1]))
 
     lines = []
     points = []
@@ -731,7 +731,7 @@ def offset_polygon(
         # Vectorized version of C# code
         # <https://stackoverflow.com/a/73061541/9729313>
         points = points[:, ~mask]
-        points = np.row_stack(
+        points = np.vstack(
             (
                 points[-1],
                 points,
@@ -1002,7 +1002,7 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
         n_points += n_new_points
 
     quad_points = np.concatenate(quad_points)
-    points = np.row_stack((mesh.points, quad_points))
+    points = np.vstack((mesh.points, quad_points))
 
     return pv.UnstructuredGrid(cells, celltypes, points)
 

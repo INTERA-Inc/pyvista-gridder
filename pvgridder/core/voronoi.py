@@ -227,7 +227,7 @@ class VoronoiMesh2D(MeshBase):
             # Calculate new point coordinates if cell centers
             if preference == "cell":
                 padding = padding if padding is not None else 0.5 * width
-                points = np.row_stack(
+                points = np.vstack(
                     (
                         points[0]
                         + padding
@@ -243,22 +243,22 @@ class VoronoiMesh2D(MeshBase):
 
             # Calculate forward direction vectors
             fdvec = np.diff(points, axis=0)
-            fdvec = np.row_stack((fdvec, fdvec[-1]))
+            fdvec = np.vstack((fdvec, fdvec[-1]))
 
             # Calculate backward direction vectors
             bdvec = np.diff(points[::-1], axis=0)[::-1]
-            bdvec = np.row_stack((bdvec[0], bdvec))
+            bdvec = np.vstack((bdvec[0], bdvec))
 
             # Append constraint points at the start and at the end of the polyline
             for _ in range(constraint_start):
-                points = np.row_stack((points[0] - fdvec[0], points))
-                fdvec = np.row_stack((fdvec[0], fdvec))
-                bdvec = np.row_stack((bdvec[0], bdvec))
+                points = np.vstack((points[0] - fdvec[0], points))
+                fdvec = np.vstack((fdvec[0], fdvec))
+                bdvec = np.vstack((bdvec[0], bdvec))
 
             for _ in range(constraint_end):
-                points = np.row_stack((points, points[-1] - bdvec[-1]))
-                fdvec = np.row_stack((fdvec, fdvec[-1]))
-                bdvec = np.row_stack((bdvec, bdvec[-1]))
+                points = np.vstack((points, points[-1] - bdvec[-1]))
+                fdvec = np.vstack((fdvec, fdvec[-1]))
+                bdvec = np.vstack((bdvec, bdvec[-1]))
 
             # Calculate normal vectors
             fnorm = np.column_stack((-fdvec[:, 1], fdvec[:, 0]))

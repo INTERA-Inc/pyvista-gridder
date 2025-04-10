@@ -64,7 +64,7 @@ class MeshStack2D(MeshStackBase):
         from .. import Polygon
 
         mesh_a, mesh_b, groups, group = args
-        points = np.row_stack((mesh_a.points, mesh_b.points[::-1]))
+        points = np.vstack((mesh_a.points, mesh_b.points[::-1]))
         mesh = Polygon(points, celltype="triangle")
         mesh.cell_data["CellGroup"] = self._initialize_group_array(
             mesh, groups, group
