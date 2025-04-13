@@ -109,10 +109,6 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
 
     def decimate(points: ArrayLike) -> ArrayLike:
         """Ramer-Douglas-Packer algorithm."""
-        # If tolerance is 0 or points are too few, return original points
-        if tolerance == 0.0 or len(points) <= 2:
-            return points
-
         u = points[-1] - points[0]
         un = np.linalg.norm(u)
         dist = (
@@ -266,7 +262,7 @@ def extract_cell_geometry(
                     cell_ids.append([i])
 
                     cells_.append(c)
-                    lines_or_faces += [len(c), *c]
+                    lines_or_faces += [len(c), *cells_[idx]]
 
         tmp = -np.ones((len(cell_ids), len(max(cell_ids, key=len))), dtype=int)
         for i, ids in enumerate(cell_ids):
@@ -328,8 +324,6 @@ def extract_cell_geometry(
             )
         ]
 
-        # Generate actual point indices without using cells_
-        # This ensures we're using the correct point indices from the original mesh
         poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
 
         # Handle collapsed cells
@@ -344,7 +338,7 @@ def extract_cell_geometry(
                 tmp = poly.cell_data["vtkOriginalCellIds"][mask]
                 tmp = tmp[:, np.ptp(tmp, axis=0) > 0]
 
-                poly = pv.PolyData(poly.points, lines=lines.ravel())
+                poly = pv.PolyData(poly.points, lines=lines)
                 poly.cell_data["vtkOriginalCellIds"] = tmp
 
     else:
@@ -405,7 +399,7 @@ def extract_cell_geometry(
                 elif celltype in _celltype_to_faces:
                     cell = connectivity[i1:i2]
                     cell_face = [
-                        cell[v]
+                        face
                         for v in _celltype_to_faces[celltype].values()
                         for face in cell[v]
                     ]
@@ -707,9 +701,7 @@ def merge_lines(
             )
             offset += line.n_points
 
-    # Ensure we're correctly handling all point coordinates without loss of precision
-    merged = pv.PolyData(np.vstack(points) if points else np.empty((0, 3)), lines=cells)
-    return merged.merge_points()
+    return pv.PolyData(np.concatenate(points), lines=cells).merge_points()
 
 
 def offset_polygon(
@@ -1038,35 +1030,17 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
             raise NotImplementedError()
 
         celltype = f"QUADRATIC_{cell.type.name}"
-        # Calculate midpoints by taking the average of each edge's endpoints
-        point_ids = cell.point_ids
-        n_points_in_cell = len(point_ids)
-
-        new_points = []
-        for i in range(n_points_in_cell):
-            # Get the two endpoints of each edge
-            p1 = cell.points[i]
-            p2 = cell.points[(i + 1) % n_points_in_cell]
-            # Calculate the midpoint
-            midpoint = 0.5 * (p1 + p2)
-            new_points.append(midpoint)
-
-        new_points = np.array(new_points)
+        new_points = 0.5 * (cell.points + np.roll(cell.points, -1, axis=0))
         n_new_points = len(new_points)
         new_points_ids = np.arange(n_new_points) + n_points
 
         celltypes.append(int(pv.CellType[celltype]))
-        # For quadratic elements, we need to add midpoint nodes between each vertex
-        cell_ = []
-        for i in range(n_points_in_cell):
-            cell_.append(point_ids[i])
-            cell_.append(new_points_ids[i])
-
+        cell_ = cell.point_ids + new_points_ids.tolist()
         cells += [len(cell_), *cell_]
         quad_points.append(new_points)
         n_points += n_new_points
 
-    quad_points = np.vstack(quad_points) if quad_points else np.empty((0, 3))
+    quad_points = np.concatenate(quad_points)
     points = np.vstack((mesh.points, quad_points))
 
     return pv.UnstructuredGrid(cells, celltypes, points)
