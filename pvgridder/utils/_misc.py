@@ -703,10 +703,10 @@ def offset_polygon(
         raise ValueError("could not offset polygon with zero polygon")
 
     if distance > 0.0:
-        fac = -1.0
+        fac = 1.0
 
     elif distance < 0.0:
-        fac = 1.0
+        fac = -1.0
         distance *= -1.0
 
     else:
@@ -739,13 +739,16 @@ def offset_polygon(
             ),
         )
 
+        x, y = points.T
+        signed_area = (x[:-1] * y[1:] - x[1:] * y[:-1]).sum()
+
         vn = points[2:] - points[1:-1]
         vn /= np.linalg.norm(vn, axis=1)[:, np.newaxis]
 
         vp = points[1:-1] - points[:-2]
         vp /= np.linalg.norm(vp, axis=1)[:, np.newaxis]
 
-        vb = (vn + vp) * fac
+        vb = (vn + vp) * fac * np.sign(signed_area)
         vb[:, 0] *= -1.0
         vb /= np.linalg.norm(vb, axis=1)[:, np.newaxis]
 
