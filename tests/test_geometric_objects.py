@@ -1,7 +1,7 @@
-import pytest
-
 import numpy as np
+import pytest
 import pyvista as pv
+
 import pvgridder as pvg
 
 
@@ -24,7 +24,7 @@ def test_circle():
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 0.41999998688697804)
     assert np.allclose(np.abs(mesh.cell_data["Area"]).sum(), 0.498934534707864)
-    
+
 
 def test_cylindrical_shell():
     mesh = pvg.CylindricalShell(0.42, 8.0, 8.0, 8, 8)
@@ -81,7 +81,7 @@ def test_quadrilateral():
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 2925.0)
     assert np.allclose(np.abs(mesh.cell_data["Area"]).sum(), 42.0 * 88.0)
-    
+
 
 def test_rectangle():
     mesh = pvg.Rectangle(42.0, 88.0, 4, 8)
@@ -132,7 +132,9 @@ def test_volume():
     assert np.allclose(mesh.points.sum(), 163584.0)
     assert np.allclose(np.abs(mesh.cell_data["Volume"]).sum(), 7056.0)
 
-    mesh = pvg.Volume(surface_a.cast_to_unstructured_grid(), surface_b.cast_to_unstructured_grid(), 8)
+    mesh = pvg.Volume(
+        surface_a.cast_to_unstructured_grid(), surface_b.cast_to_unstructured_grid(), 8
+    )
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 163584.0)
     assert np.allclose(np.abs(mesh.cell_data["Volume"]).sum(), 7056.0)

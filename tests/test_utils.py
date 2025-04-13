@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import pyvista as pv
+
 import pvgridder as pvg
 
 
@@ -14,12 +15,15 @@ import pvgridder as pvg
         pvg.examples.load_well_2d(voronoi=True),
         pvg.examples.load_well_3d(),
         pvg.examples.load_well_3d(voronoi=True),
-    ]
+    ],
 )
 def test_get_neighborhood(mesh):
     ndim = pvg.get_dimension(mesh)
     neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=True)
-    neighbors_ref = [mesh.cell_neighbors(i, "edges" if ndim == 2 else "faces") for i in range(mesh.n_cells)]
+    neighbors_ref = [
+        mesh.cell_neighbors(i, "edges" if ndim == 2 else "faces")
+        for i in range(mesh.n_cells)
+    ]
 
     for neighbor, neighbor_ref in zip(neighbors, neighbors_ref):
         assert set(neighbor) == set(neighbor_ref)
@@ -95,12 +99,12 @@ def test_get_neighborhood(mesh):
                         [3.0, 0.0, 1.0],
                         [3.0, 1.0, 1.0],
                     ]
-                )
+                ),
             ),
             [0, 1],
             [[1], [0]],
         ),
-    ]
+    ],
 )
 def test_get_neighborhood_empty_cells(mesh, cell_ids, empty_cell_ids):
     """Test whether empty cells are kept or removed from neighborhood."""

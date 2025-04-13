@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Optional
-from typing_extensions import Self
 
 import numpy as np
 import pyvista as pv
+from typing_extensions import Self
 
 from ._base import MeshStackBase
 from ._helpers import (
@@ -66,9 +66,7 @@ class MeshStack2D(MeshStackBase):
         mesh_a, mesh_b, groups, group = args
         points = np.vstack((mesh_a.points, mesh_b.points[::-1]))
         mesh = Polygon(points, celltype="triangle")
-        mesh.cell_data["CellGroup"] = self._initialize_group_array(
-            mesh, groups, group
-        )
+        mesh.cell_data["CellGroup"] = self._initialize_group_array(mesh, groups, group)
 
         return mesh
 
@@ -90,7 +88,9 @@ class MeshStack2D(MeshStackBase):
         from .. import RegularLine, split_lines
 
         if isinstance(mesh_or_resolution, int):
-            mesh_or_resolution = RegularLine(self.mesh.points, resolution=mesh_or_resolution)
+            mesh_or_resolution = RegularLine(
+                self.mesh.points, resolution=mesh_or_resolution
+            )
 
         self._mesh = split_lines(mesh_or_resolution)[0]
         self._transition_flag = True

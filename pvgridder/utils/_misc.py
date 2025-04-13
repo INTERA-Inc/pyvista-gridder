@@ -6,7 +6,6 @@ from typing import Optional
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
-
 from scipy.spatial import KDTree
 
 
@@ -28,6 +27,7 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
         Mesh with averaged points.
 
     """
+
     def decimate(cell: ArrayLike, close: bool) -> ArrayLike:
         cell = cell[np.insert(np.diff(cell), 0, 1) != 0]
 
@@ -59,7 +59,7 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
             groups.append([i, j])
             group_map[i] = gid
             group_map[j] = gid
-    
+
     point_map = np.arange(mesh.n_points)
     new_points = points.copy()
 
@@ -71,10 +71,14 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
         new_points[group[0]] = points[group].mean(axis=0)
 
     if mesh.n_faces_strict:
-        irregular_faces = [decimate(point_map[face], close=True) for face in mesh.irregular_faces]
+        irregular_faces = [
+            decimate(point_map[face], close=True) for face in mesh.irregular_faces
+        ]
         faces = [face for face in irregular_faces if face.size > 2]
         new_mesh = pv.PolyData().from_irregular_faces(new_points, faces)
-        new_mesh.cell_data["vtkOriginalCellIds"] = [i for i, face in enumerate(irregular_faces) if face.size > 2]
+        new_mesh.cell_data["vtkOriginalCellIds"] = [
+            i for i, face in enumerate(irregular_faces) if face.size > 2
+        ]
 
     else:
         new_mesh = pv.PolyData(new_points)
@@ -159,12 +163,16 @@ def extract_boundary_polygons(
         Extracted boundary polylines or polygons.
 
     """
-    poly = mesh.cast_to_unstructured_grid().clean().extract_feature_edges(
-        boundary_edges=True,
-        non_manifold_edges=False,
-        feature_edges=False,
-        manifold_edges=False,
-        clear_data=True,
+    poly = (
+        mesh.cast_to_unstructured_grid()
+        .clean()
+        .extract_feature_edges(
+            boundary_edges=True,
+            non_manifold_edges=False,
+            feature_edges=False,
+            manifold_edges=False,
+            clear_data=True,
+        )
     )
     lines = poly.lines.reshape((poly.n_cells, 3))[:, 1:]
     lines = np.sort(lines, axis=1).tolist()
@@ -297,11 +305,18 @@ def extract_cell_geometry(
 
         # Generate edge data
         cell_edges = [
-            np.column_stack((connectivity[i1:i2 - 1], connectivity[i1 + 1:i2]))
+            np.column_stack((connectivity[i1 : i2 - 1], connectivity[i1 + 1 : i2]))
             if celltype in {pv.CellType.LINE, pv.CellType.POLY_LINE}
-            else np.column_stack((connectivity[i1:i2][[0, 1, 3, 2]], np.roll(connectivity[i1:i2][[0, 1, 3, 2]], -1)))
+            else np.column_stack(
+                (
+                    connectivity[i1:i2][[0, 1, 3, 2]],
+                    np.roll(connectivity[i1:i2][[0, 1, 3, 2]], -1),
+                )
+            )
             if celltype == pv.CellType.PIXEL
-            else np.column_stack((connectivity[i1:i2], np.roll(connectivity[i1:i2], -1)))
+            else np.column_stack(
+                (connectivity[i1:i2], np.roll(connectivity[i1:i2], -1))
+            )
             if not remove_empty_cells or celltype != pv.CellType.EMPTY_CELL
             else []
             for i, (i1, i2, celltype) in enumerate(
@@ -471,7 +486,9 @@ def extract_cells_by_dimension(
     return mesh
 
 
-def fuse_cells(mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]) -> pv.UnstructuredGrid:
+def fuse_cells(
+    mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]
+) -> pv.UnstructuredGrid:
     """
     Fuse connected cells into a single cell.
 
@@ -508,9 +525,18 @@ def fuse_cells(mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]) -> pv.Uns
 
             # Find original point IDs of polygon
             cell = poly[0].cast_to_unstructured_grid()
-            ids = np.flatnonzero((cell.points[:, None] == mesh.points).all(axis=-1).any(axis=0))
+            ids = np.flatnonzero(
+                (cell.points[:, None] == mesh.points).all(axis=-1).any(axis=0)
+            )
             mesh_points = mesh.points[ids]
-            sorted_ids = ids[np.ravel([np.flatnonzero((mesh_points == point).all(axis=1)) for point in cell.points])]
+            sorted_ids = ids[
+                np.ravel(
+                    [
+                        np.flatnonzero((mesh_points == point).all(axis=1))
+                        for point in cell.points
+                    ]
+                )
+            ]
 
             # Update connectivity and cell type
             connectivity[ind[0]] = sorted_ids
@@ -522,7 +548,9 @@ def fuse_cells(mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]) -> pv.Uns
 
             # Generate new mesh with fused cells
             cells = [
-                item for cell, celltype in zip(connectivity, celltypes) for item in [len(cell), *cell]
+                item
+                for cell, celltype in zip(connectivity, celltypes)
+                for item in [len(cell), *cell]
             ]
 
         else:
@@ -627,7 +655,9 @@ def merge(
             )
 
     else:
-        mesh = pv.merge((mesh_a, mesh_b), merge_points=merge_points, main_has_priority=True)
+        mesh = pv.merge(
+            (mesh_a, mesh_b), merge_points=merge_points, main_has_priority=True
+        )
 
     return mesh
 
@@ -663,7 +693,9 @@ def merge_lines(
             points.append(line.points)
             ids = np.arange(line.n_points) + offset
             cells += (
-                np.insert(np.column_stack((ids[:-1], ids[1:])), 0, 2, axis=-1).ravel().tolist()
+                np.insert(np.column_stack((ids[:-1], ids[1:])), 0, 2, axis=-1)
+                .ravel()
+                .tolist()
                 if as_lines
                 else [line.n_points, *ids]
             )
@@ -685,7 +717,7 @@ def offset_polygon(
         Polygon to offset.
     distance : scalar
         Distance to offset the polygon.
-    
+
     Returns
     -------
     pyvista.PolyData
@@ -703,10 +735,10 @@ def offset_polygon(
         raise ValueError("could not offset polygon with zero polygon")
 
     if distance > 0.0:
-        fac = -1.0
+        fac = 1.0
 
     elif distance < 0.0:
-        fac = 1.0
+        fac = -1.0
         distance *= -1.0
 
     else:
@@ -720,7 +752,7 @@ def offset_polygon(
         # Extract points
         points = mesh.points[face]
         mask = np.ptp(points, axis=0) == 0.0
-        
+
         if mask.sum() != 1:
             raise ValueError("could not offset non-planar polygon")
 
@@ -739,13 +771,16 @@ def offset_polygon(
             ),
         )
 
+        x, y = points.T
+        signed_area = (x[:-1] * y[1:] - x[1:] * y[:-1]).sum()
+
         vn = points[2:] - points[1:-1]
         vn /= np.linalg.norm(vn, axis=1)[:, np.newaxis]
 
         vp = points[1:-1] - points[:-2]
         vp /= np.linalg.norm(vp, axis=1)[:, np.newaxis]
 
-        vb = (vn + vp) * fac
+        vb = (vn + vp) * fac * np.sign(signed_area)
         vb[:, 0] *= -1.0
         vb /= np.linalg.norm(vb, axis=1)[:, np.newaxis]
 
@@ -954,12 +989,16 @@ def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyDat
             mesh.points[line],
             lines=(
                 np.insert(
-                    np.column_stack((np.arange(line.size - 1), np.arange(1, line.size))), 0, 2,
-                    axis=-1
+                    np.column_stack(
+                        (np.arange(line.size - 1), np.arange(1, line.size))
+                    ),
+                    0,
+                    2,
+                    axis=-1,
                 ).ravel()
                 if as_lines
                 else [line.size, *np.arange(line.size)]
-            )
+            ),
         )
         for line in _get_irregular_cells(mesh.GetLines())
     ]

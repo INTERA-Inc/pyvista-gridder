@@ -12,9 +12,9 @@ from ._misc import (
     merge,
     merge_lines,
     offset_polygon,
+    quadraticize,
     reconstruct_line,
     remap_categorical_data,
     split_lines,
-    quadraticize,
 )
 from ._properties import get_cell_connectivity, get_dimension
