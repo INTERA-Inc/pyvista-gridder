@@ -15,6 +15,11 @@ jobs:
       with:
         lfs: true
         
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev libxt-dev xvfb
+        
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
@@ -29,7 +34,7 @@ jobs:
       run: |
         pip install pytest
         pip install coverage
-        coverage run -m pytest
+        xvfb-run -a coverage run -m pytest
         
     - name: Submit coverage
       if: ${{ matrix.python-version == '3.12' }}
