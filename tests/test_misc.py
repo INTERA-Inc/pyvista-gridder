@@ -483,6 +483,8 @@ def test_merge_basic(mesh_type, axes):
     (True, 11.0), 
     (False, 11.0)
 ])
+@pytest.mark.skipif(PYVISTA_VERSION < packaging.version.parse("0.45"), 
+                   reason="PyVista version < 0.45 doesn't fully support this functionality")
 def test_merge_lines_basic(multiple_lines_polydata, simple_line, as_lines, reference_point_sum):
     """Test basic line merging with different output formats."""
     # Split the multiple lines polydata
