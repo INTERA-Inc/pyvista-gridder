@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 from typing import Literal, Optional
-from numpy.typing import ArrayLike
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 
 
 def interactive_selection(
@@ -37,7 +38,7 @@ def interactive_selection(
         Picking tolerance.
     **kwargs : dict, optional
         Additional keyword arguments if *plotter* is None. See ``pyvista.Plotter`` for more details.
-    
+
     Returns
     -------
     ArrayLike
@@ -53,7 +54,7 @@ def interactive_selection(
             if preference == "cell"
             else mesh.point_data["vtkOriginalPointIds"][0]
         )
-        
+
         if id_ not in actors:
             actors[id_] = p.add_mesh(mesh, style="wireframe", color="red", line_width=3)
             p.update()

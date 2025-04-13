@@ -20,7 +20,7 @@ def get_cell_connectivity(
     flatten : bool, default False
         If True, flatten the cell connectivity array (e.g., as input of
         :class:`pyvista.UnstructuredGrid`).
-    
+
     Returns
     -------
     Sequence[Sequence[int | Sequence[int]]] | Sequence[int]
@@ -28,6 +28,7 @@ def get_cell_connectivity(
 
     """
     from itertools import chain
+
     from pyvista.core.cell import _get_irregular_cells
 
     # Generate cells

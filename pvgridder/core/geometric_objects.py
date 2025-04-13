@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
 from collections.abc import Sequence
+from typing import Literal, Optional
 
 import numpy as np
 import pyvista as pv
@@ -132,7 +132,18 @@ def Annulus(
         Annulus mesh.
 
     """
-    return AnnularSector(inner_radius, outer_radius, 0.0, 360.0, r_resolution, theta_resolution, r_method, theta_method, center)
+    return AnnularSector(
+        inner_radius,
+        outer_radius,
+        0.0,
+        360.0,
+        r_resolution,
+        theta_resolution,
+        r_method,
+        theta_method,
+        center,
+    )
+
 
 def Circle(
     radius: float = 1.0,
@@ -166,7 +177,9 @@ def Circle(
         Circle mesh.
 
     """
-    return Sector(radius, 0.0, 360.0, resolution, method, center).clean(produce_merge_map=False)
+    return Sector(radius, 0.0, 360.0, resolution, method, center).clean(
+        produce_merge_map=False
+    )
 
 
 def CylindricalShell(
@@ -231,7 +244,20 @@ def CylindricalShell(
         Cylindrical shell mesh.
 
     """
-    return CylindricalShellSector(inner_radius, outer_radius, 0.0, 360.0, height, r_resolution, theta_resolution, z_resolution, r_method, theta_method, z_method, center)
+    return CylindricalShellSector(
+        inner_radius,
+        outer_radius,
+        0.0,
+        360.0,
+        height,
+        r_resolution,
+        theta_resolution,
+        z_resolution,
+        r_method,
+        theta_method,
+        z_method,
+        center,
+    )
 
 
 def CylindricalShellSector(
@@ -316,7 +342,9 @@ def CylindricalShellSector(
         theta_method=theta_method,
     )
     surface_b = surface_a.translate([0.0, 0.0, height])
-    mesh = generate_volume_from_two_surfaces(surface_a, surface_b, z_resolution, z_method)
+    mesh = generate_volume_from_two_surfaces(
+        surface_a, surface_b, z_resolution, z_method
+    )
     mesh = translate(mesh, center)
 
     return mesh
@@ -327,7 +355,7 @@ def Polygon(
     shell: Optional[pv.DataSet | ArrayLike] = None,
     holes: Optional[Sequence[pv.DataSet | ArrayLike]] = None,
     celltype: Optional[Literal["polygon", "quad", "triangle"]] = None,
-    algorithm: int=6,
+    algorithm: int = 6,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
 ) -> pv.UnstructuredGrid:
     """
@@ -423,7 +451,9 @@ def Polygon(
 
     if celltype == "polygon":
         if holes:
-            raise ValueError("could not generate a polygon of cell type 'polygon' with holes")
+            raise ValueError(
+                "could not generate a polygon of cell type 'polygon' with holes"
+            )
 
         points = shell[:-1]
         cells = np.insert(np.arange(len(points)), 0, len(points))
@@ -445,7 +475,7 @@ def Polygon(
                     removeObject=True,
                     removeTool=True,
                 )
-            
+
             else:
                 dim_tags = shell_tags
 
@@ -472,7 +502,8 @@ def Polygon(
                 gmsh_to_pyvista_type[type_]: np.reshape(
                     node_tags,
                     (-1, gmsh.model.mesh.getElementProperties(type_)[3]),
-                ) - 1
+                )
+                - 1
                 for type_, node_tags in zip(element_types, element_node_tags)
                 if type_ not in {1, 15}  # ignore line and vertex
             }
@@ -540,7 +571,7 @@ def Quadrilateral(
         ]
         if points is None
         else points
-    )   
+    )
 
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
@@ -616,7 +647,7 @@ def RegularLine(points: ArrayLike, resolution: Optional[int] = None) -> pv.PolyD
         List of points defining a polyline.
     resolution : int, optional
         Number of points to interpolate along the points array. Defaults to `len(points)`.
-    
+
     Returns
     -------
     pyvista.PolyData

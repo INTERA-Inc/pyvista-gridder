@@ -137,7 +137,9 @@ class MeshBase(ABC):
                         else mesh.cell_data["CellGroup"] == groups[v]
                     )
 
-                elif isinstance(v, (list, tuple, np.ndarray)) and all(isinstance(x, str) for x in v):
+                elif isinstance(v, (list, tuple, np.ndarray)) and all(
+                    isinstance(x, str) for x in v
+                ):
                     mask = np.zeros(mesh.n_cells, dtype=bool)
 
                     for cid in v:
@@ -294,14 +296,14 @@ class MeshStackBase(MeshBase):
              - if value is a string or a sequence of strings, group or list of groups
                in the base mesh to replace by the group. The selection is inverted if
                the string starts with a tilde (~).
-            
+
              - if value is a Callable, must be in the form ``f(mesh) -> ind_or_mask``
                where ``mesh`` is the base mesh, and ``ind_or_mask`` are the indices of
                cells or a boolean array of the same size.
 
              - if value is an ArrayLike, indices of cells or mask array to assign to the
                group.
-            
+
             Ignored if first item of stack.
 
         Returns
@@ -386,7 +388,11 @@ class MeshStackBase(MeshBase):
             if item2.transition:
                 continue
 
-            shift = item2.mesh.points[:, self.axis] - item1.mesh.points[:, self.axis] - item2.thickness
+            shift = (
+                item2.mesh.points[:, self.axis]
+                - item1.mesh.points[:, self.axis]
+                - item2.thickness
+            )
 
             if item2.priority < item1.priority:
                 item2.mesh.points[:, self.axis] = np.where(
@@ -414,9 +420,13 @@ class MeshStackBase(MeshBase):
                 mesh_b.cell_data["vtkOriginalCellIds"] = np.full(mesh_b.n_cells, -1)
 
             else:
-                mesh_b = self._extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
+                mesh_b = self._extrude(
+                    mesh_a, item2.mesh, item2.resolution, item2.method
+                )
                 nsub, repeats = mesh_b.n_cells // mesh_a.n_cells, mesh_a.n_cells
-                mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(np.arange(mesh_a.n_cells), nsub)
+                mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
+                    np.arange(mesh_a.n_cells), nsub
+                )
 
             mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
             mesh_b.cell_data["StackSubItem"] = np.repeat(np.arange(nsub), repeats)
@@ -446,7 +456,9 @@ class MeshStackBase(MeshBase):
         pass
 
     def _interpolate(
-        self, points: ArrayLike, extrapolation: Optional[Literal["nearest"]] = None,
+        self,
+        points: ArrayLike,
+        extrapolation: Optional[Literal["nearest"]] = None,
     ) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
         """Interpolate new point coordinates."""
         mesh = self.mesh.copy()
@@ -477,7 +489,10 @@ class MeshStackBase(MeshBase):
             x = mesh.points[:, idx]
             xp = points[:, idx]
 
-            if not (xp[0] <= x[0] <= xp[-1] and xp[0] <= x[-1] <= xp[-1]) and not extrapolation:
+            if (
+                not (xp[0] <= x[0] <= xp[-1] and xp[0] <= x[-1] <= xp[-1])
+                and not extrapolation
+            ):
                 raise ValueError(
                     "could not interpolate from points not fully enclosing base mesh"
                 )

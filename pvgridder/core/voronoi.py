@@ -79,7 +79,7 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
-        
+
         mesh.points[:, self.axis] = 0.0
         item = MeshItem(mesh, group=group, priority=priority)
         self.items.append(item)
@@ -123,7 +123,9 @@ class VoronoiMesh2D(MeshBase):
         """
         from .. import Annulus, Circle, MeshMerge
 
-        constraint_radius = constraint_radius if constraint_radius is not None else 1.5 * radius
+        constraint_radius = (
+            constraint_radius if constraint_radius is not None else 1.5 * radius
+        )
         dr = constraint_radius - radius
 
         if dr > 0.0:
@@ -319,7 +321,7 @@ class VoronoiMesh2D(MeshBase):
             2D Voronoi mesh.
 
         """
-        from shapely import get_coordinates, Polygon
+        from shapely import Polygon, get_coordinates
 
         from .. import average_points, decimate_rdp, extract_boundary_polygons
 
@@ -374,7 +376,9 @@ class VoronoiMesh2D(MeshBase):
         # Average points within minimum distance
         if min_length > 0.0:
             poly = average_points(
-                pv.PolyData().from_irregular_faces(np.insert(vertices, 2, 0.0, axis=-1), regions),
+                pv.PolyData().from_irregular_faces(
+                    np.insert(vertices, 2, 0.0, axis=-1), regions
+                ),
                 tolerance=min_length,
             )
             regions = poly.irregular_faces
@@ -390,7 +394,7 @@ class VoronoiMesh2D(MeshBase):
                 idx = np.arange(len(active))[active]
                 active[idx[mask]] = False
                 voronoi_points = voronoi_points[~mask]
-            
+
         # Generate boundary polygon
         boundary = extract_boundary_polygons(self.mesh)[0]
         boundary = decimate_rdp(boundary)

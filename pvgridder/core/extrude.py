@@ -93,7 +93,7 @@ class MeshExtrude(MeshBase):
              - if value is a string or a sequence of strings, group or list of groups
                in the base mesh to replace by the group. The selection is inverted if
                the string starts with a tilde (~).
-            
+
              - if value is a Callable, must be in the form ``f(mesh) -> ind_or_mask``
                where ``mesh`` is the base mesh, and ``ind_or_mask`` are the indices of
                cells or a boolean array of the same size.
@@ -158,15 +158,19 @@ class MeshExtrude(MeshBase):
             mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
                 mesh_a, groups, item2.group
             )
-            
+
             mesh_b = generate_volume_from_two_surfaces(
                 mesh_a, item2.mesh, item2.resolution, item2.method
             )
 
             nsub = mesh_b.n_cells // mesh_a.n_cells
-            mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(np.arange(mesh_a.n_cells), nsub)
+            mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
+                np.arange(mesh_a.n_cells), nsub
+            )
             mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
-            mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(np.arange(nsub), mesh_a.n_cells)
+            mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(
+                np.arange(nsub), mesh_a.n_cells
+            )
 
             if i > 0:
                 axis = (

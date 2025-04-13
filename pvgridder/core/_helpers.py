@@ -133,6 +133,7 @@ def generate_surface_from_two_lines(
         Surface mesh.
 
     """
+
     def get_points(line: pv.PolyData | ArrayLike) -> ArrayLike:
         """Get line points."""
         if isinstance(line, pv.PolyData):
@@ -211,10 +212,10 @@ def generate_surface_from_two_lines(
     # Handle collapsed cells
     if "vtkGhostType" not in mesh.cell_data:
         mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
-        
-    areas = mesh.compute_cell_sizes(
-        length=False, area=True, volume=False
-    ).cell_data["Area"]
+
+    areas = mesh.compute_cell_sizes(length=False, area=True, volume=False).cell_data[
+        "Area"
+    ]
     mesh.cell_data["vtkGhostType"][np.abs(areas) == 0.0] = 32
 
     return mesh
@@ -253,8 +254,16 @@ def generate_volume_from_two_surfaces(
     """
     from .. import get_dimension
 
-    surface_a = surface_a.cast_to_structured_grid() if isinstance(surface_a, pv.RectilinearGrid) else surface_a
-    surface_b = surface_b.cast_to_structured_grid() if isinstance(surface_b, pv.RectilinearGrid) else surface_b
+    surface_a = (
+        surface_a.cast_to_structured_grid()
+        if isinstance(surface_a, pv.RectilinearGrid)
+        else surface_a
+    )
+    surface_b = (
+        surface_b.cast_to_structured_grid()
+        if isinstance(surface_b, pv.RectilinearGrid)
+        else surface_b
+    )
 
     if surface_a.points.shape != surface_b.points.shape or not isinstance(
         surface_a, type(surface_b)
@@ -453,7 +462,9 @@ def resolution_to_perc(
     return np.sort(perc)
 
 
-def repeat_structured_data(shape: ArrayLike, data: ArrayLike, repeats: int, axis: int) -> ArrayLike:
+def repeat_structured_data(
+    shape: ArrayLike, data: ArrayLike, repeats: int, axis: int
+) -> ArrayLike:
     """
     Repeat structured data array.
 
