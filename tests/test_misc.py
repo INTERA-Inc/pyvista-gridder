@@ -7,22 +7,6 @@ import pytest
 import pyvista as pv
 
 import pvgridder as pvg
-from pvgridder import (
-    average_points,
-    decimate_rdp,
-    extract_boundary_polygons,
-    extract_cell_geometry,
-    extract_cells_by_dimension,
-    fuse_cells,
-    merge,
-    merge_lines,
-    offset_polygon,
-    quadraticize,
-    reconstruct_line,
-    remap_categorical_data,
-    split_lines,
-)
-
 
 # Check PyVista version for merge_points compatibility
 PYVISTA_VERSION = packaging.version.parse(pv.__version__)
@@ -220,7 +204,7 @@ def test_average_points(request, mesh, tolerance, expected_points, reference_poi
 
     # Apply average_points
     original_point_count = actual_mesh.n_points
-    result = average_points(actual_mesh, tolerance=tolerance)
+    result = pvg.average_points(actual_mesh, tolerance=tolerance)
 
     # Basic verification for all meshes
     assert isinstance(result, pv.PolyData)
@@ -254,7 +238,7 @@ def test_average_points(request, mesh, tolerance, expected_points, reference_poi
         ),
         # Example mesh with curved lines
         pytest.param(
-            lambda: extract_boundary_polygons(
+            lambda: pvg.extract_boundary_polygons(
                 pvg.examples.load_anticline_2d(), fill=False
             )[0],
             0.1,
@@ -294,7 +278,7 @@ def test_decimate_rdp(request, line_source, tolerance, reference_point_sum):
 
     try:
         # Decimate the line
-        result = decimate_rdp(actual_line, tolerance=tolerance)
+        result = pvg.decimate_rdp(actual_line, tolerance=tolerance)
 
         # Should be a polydata with lines
         assert isinstance(result, pv.PolyData)
@@ -356,7 +340,7 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
     actual_mesh = mesh() if callable(mesh) else mesh
 
     # Extract boundaries
-    boundaries = extract_boundary_polygons(actual_mesh, fill=fill)
+    boundaries = pvg.extract_boundary_polygons(actual_mesh, fill=fill)
 
     # Should be a sequence of polydata objects
     assert isinstance(boundaries, Sequence)
@@ -422,7 +406,7 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
     actual_mesh = mesh() if callable(mesh) else mesh
 
     # Extract cell geometry
-    result = extract_cell_geometry(actual_mesh, remove_empty_cells=remove_empty_cells)
+    result = pvg.extract_cell_geometry(actual_mesh, remove_empty_cells=remove_empty_cells)
 
     # Should be a polydata with cell outlines
     assert isinstance(result, pv.PolyData)
@@ -458,7 +442,7 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
         actual_mesh = mesh()
 
     # Extract cells by dimension
-    result = extract_cells_by_dimension(actual_mesh, ndim=ndim, method=method)
+    result = pvg.extract_cells_by_dimension(actual_mesh, ndim=ndim, method=method)
 
     # Should have cells if expected_result is True
     if expected_result:
@@ -517,7 +501,7 @@ def test_fuse_cells(mesh, cell_ids):
 
     try:
         # Try to fuse the cells
-        result = fuse_cells(actual_mesh, cell_ids)
+        result = pvg.fuse_cells(actual_mesh, cell_ids)
 
         # Should have fewer cells than before
         assert result.n_cells < actual_mesh.n_cells
@@ -587,7 +571,7 @@ def test_merge_basic(mesh_type, axes):
 
             try:
                 # Merge along axis
-                result = merge(grid1, grid2, axis=axis)
+                result = pvg.merge(grid1, grid2, axis=axis)
 
                 # Should be a structured grid with more points along the specified axis
                 assert isinstance(result, pv.StructuredGrid)
@@ -614,7 +598,7 @@ def test_merge_basic(mesh_type, axes):
         )
 
         # Merge unstructured grids - we already know MERGE_POINTS_COMPATIBLE is True at this point
-        result = merge(grid1, grid2, merge_points=True)
+        result = pvg.merge(grid1, grid2, merge_points=True)
 
         # Should be an unstructured grid with more cells
         assert isinstance(result, pv.UnstructuredGrid)
@@ -631,13 +615,13 @@ def test_merge_lines_basic(
 ):
     """Test basic line merging with different output formats."""
     # Split the multiple lines polydata
-    lines = split_lines(multiple_lines_polydata, as_lines=False)
+    lines = pvg.split_lines(multiple_lines_polydata, as_lines=False)
 
     # Add a simple line
     lines.append(simple_line)
 
     # Merge the lines
-    result = merge_lines(lines, as_lines=as_lines)
+    result = pvg.merge_lines(lines, as_lines=as_lines)
 
     # Should be a polydata with lines
     assert isinstance(result, pv.PolyData)
@@ -658,8 +642,8 @@ def test_merge_lines_basic(
         pytest.param("square_points", 0.1, None, id="square_points"),
         # Example mesh boundaries - using a direct function to create the boundary
         pytest.param(
-            lambda: extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True)[0]
-            if len(extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True))
+            lambda: pvg.extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True)[0]
+            if len(pvg.extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True))
             > 0
             else None,
             0.1,
@@ -697,7 +681,7 @@ def test_offset_polygon(request, mesh_or_points, distance, expected_area_change)
 
     try:
         # Offset the polygon
-        result = offset_polygon(actual_input, distance=distance)
+        result = pvg.offset_polygon(actual_input, distance=distance)
 
         # Basic verification for all inputs
         assert isinstance(result, pv.PolyData)
@@ -800,7 +784,7 @@ def test_reconstruct_line(points_source, close):
 
     try:
         # Reconstruct line
-        result = reconstruct_line(points, close=close)
+        result = pvg.reconstruct_line(points, close=close)
 
         # Should be a valid polydata
         assert isinstance(result, pv.PolyData)
@@ -886,7 +870,7 @@ def test_remap_categorical_data(request, mesh, key, mapping, inplace, preference
 
     try:
         # Remap
-        result = remap_categorical_data(
+        result = pvg.remap_categorical_data(
             actual_mesh, key, mapping, preference=preference, inplace=inplace
         )
 
@@ -934,7 +918,7 @@ def test_remap_categorical_data(request, mesh, key, mapping, inplace, preference
 def test_split_lines_basic(multiple_lines_polydata, as_lines, reference_point_sum):
     """Test basic line splitting with different output formats."""
     # Split the lines
-    result = split_lines(multiple_lines_polydata, as_lines=as_lines)
+    result = pvg.split_lines(multiple_lines_polydata, as_lines=as_lines)
 
     # Should return a sequence of polydata objects
     assert isinstance(result, Sequence)
@@ -949,7 +933,7 @@ def test_split_lines_basic(multiple_lines_polydata, as_lines, reference_point_su
 def test_split_lines_with_sinusoidal_line(sinusoidal_line):
     """Test splitting with sinusoidal line."""
     # Test with sinusoidal line
-    result_sine = split_lines(sinusoidal_line)
+    result_sine = pvg.split_lines(sinusoidal_line)
 
     # Should return a sequence with one polydata object (the original line)
     assert isinstance(result_sine, Sequence)
@@ -1002,7 +986,7 @@ def test_quadraticize(mesh, expected_celltype, reference_point_sum):
 
     try:
         # Convert to quadratic
-        result = quadraticize(actual_mesh)
+        result = pvg.quadraticize(actual_mesh)
 
         # Should have quadratic cells
         assert isinstance(result, pv.UnstructuredGrid)

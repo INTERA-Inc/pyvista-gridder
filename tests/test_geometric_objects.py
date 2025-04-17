@@ -6,6 +6,7 @@ import pvgridder as pvg
 
 
 def test_annular_sector():
+    """Test annular sector geometric object."""
     mesh = pvg.AnnularSector(0.42, 8.0, -42.0, 42.0, 8, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 304.0763618052006)
@@ -13,6 +14,7 @@ def test_annular_sector():
 
 
 def test_annulus():
+    """Test annulus geometric object."""	
     mesh = pvg.Annulus(0.42, 8.0, 8, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 37.88999953866005)
@@ -20,6 +22,7 @@ def test_annulus():
 
 
 def test_circle():
+    """Test circle geometric object."""
     mesh = pvg.Circle(0.42, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 0.41999998688697804)
@@ -27,6 +30,7 @@ def test_circle():
 
 
 def test_cylindrical_shell():
+    """Test cylindrical shell geometric object."""	
     mesh = pvg.CylindricalShell(0.42, 8.0, 8.0, 8, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 75.7799990773201)
@@ -34,6 +38,7 @@ def test_cylindrical_shell():
 
 
 def test_cylindrical_shell_sector():
+    """Test cylindrical shell sector geometric object."""
     mesh = pvg.CylindricalShellSector(0.42, 8.0, -42.0, 42.0, 8.0, 8, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 608.1527236104012)
@@ -60,6 +65,7 @@ def test_cylindrical_shell_sector():
     ],
 )
 def test_polygon(shell, holes, ref_area):
+    """Test polygon geometric object."""	
     for celltype in ("polygon", "triangle", "quad"):
         if celltype == "polygon" and holes:
             continue
@@ -71,6 +77,7 @@ def test_polygon(shell, holes, ref_area):
 
 
 def test_quadrilateral():
+    """Test quadrilateral geometric object."""
     points = [
         [0.0, 0.0, 0.0],
         [42.0, 0.0, 0.0],
@@ -84,6 +91,7 @@ def test_quadrilateral():
 
 
 def test_rectangle():
+    """Test rectangle geometric object."""
     mesh = pvg.Rectangle(42.0, 88.0, 4, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 2925.0)
@@ -91,6 +99,7 @@ def test_rectangle():
 
 
 def test_regular_line():
+    """Test regular line geometric object."""
     mesh = pvg.RegularLine(pv.Polygon(radius=8.0, n_sides=42).points, 21)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 3.700252)
@@ -98,6 +107,7 @@ def test_regular_line():
 
 
 def test_sector():
+    """Test sector geometric object."""
     mesh = pvg.Sector(0.42, -42.0, 42.0)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 0.6242416501045227)
@@ -105,6 +115,7 @@ def test_sector():
 
 
 def test_sector_rectangle():
+    """Test sector rectangle geometric object."""
     mesh = pvg.SectorRectangle(0.42, 4.0, 8.0, 8, 4)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 372.07949244976044)
@@ -112,6 +123,7 @@ def test_sector_rectangle():
 
 
 def test_structured_surface():
+    """Test structured surface geometric object."""
     x = np.linspace(0.0, 8.0, 16)
     line_a = np.column_stack((x, np.cos(x), np.zeros_like(x)))
     line_b = pv.MultipleLines(np.column_stack((x, np.sin(x) + 2.0, np.zeros_like(x))))
@@ -122,6 +134,7 @@ def test_structured_surface():
 
 
 def test_volume():
+    """Test volume geometric object."""
     x = np.linspace(0.0, 42.0, 16)
     y = np.linspace(0.0, 21.0, 32)
     surface_a = pv.RectilinearGrid(x, y, [0.0]).cast_to_structured_grid()
