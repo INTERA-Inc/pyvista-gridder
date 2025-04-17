@@ -8,145 +8,9 @@ import pyvista as pv
 
 import pvgridder as pvg
 
-# Check PyVista version for merge_points compatibility
-PYVISTA_VERSION = packaging.version.parse(pv.__version__)
-MERGE_POINTS_COMPATIBLE = PYVISTA_VERSION <= packaging.version.parse("0.45")
+from conftest import MERGE_POINTS_COMPATIBLE, PYVISTA_VERSION
 
 
-# Test fixtures and helper functions
-@pytest.fixture
-def simple_polydata_with_duplicates():
-    """Create a simple polydata with duplicate points."""
-    points = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],  # duplicate
-            [0.0, 1.0, 0.0],
-        ],
-        dtype=np.float64,
-    )
-    faces = np.array([3, 0, 1, 3])  # triangle
-
-    return pv.PolyData(points, faces=faces)
-
-
-@pytest.fixture
-def simple_polydata_with_close_points():
-    """Create a simple polydata with points that are very close."""
-    points = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [1.0001, 0.0, 0.0],  # very close to previous point
-            [0.0, 1.0, 0.0],
-        ],
-        dtype=np.float64,
-    )
-    faces = np.array([4, 0, 1, 2, 3])  # quad
-
-    return pv.PolyData(points, faces=faces)
-
-
-@pytest.fixture
-def simple_line():
-    """Create a simple line with redundant points."""
-    return pv.Line([0.0, 0.0, 0.0], [1.0, 0.0, 0.0], resolution=5)
-
-
-@pytest.fixture
-def sinusoidal_line():
-    """Create a sinusoidal line with many points."""
-    # Create a more robust sinusoidal line for testing
-    x = np.linspace(0.0, 2.0 * np.pi, 100)
-    y = np.sin(x)
-    z = np.zeros_like(x)
-    points = np.column_stack((x, y, z)).astype(np.float64)
-
-    # Create polydata with lines
-    line_indices = np.arange(len(points))
-    lines = np.array([len(line_indices)] + line_indices.tolist())
-
-    return pv.PolyData(points, lines=lines)
-
-
-@pytest.fixture
-def multiple_lines_polydata():
-    """Create a polydata with multiple lines."""
-    points = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [2.0, 0.0, 0.0],  # First line
-            [0.0, 1.0, 0.0],
-            [1.0, 1.0, 0.0],
-            [2.0, 1.0, 0.0],  # Second line
-        ],
-        dtype=np.float64,
-    )
-    lines = np.array([3, 0, 1, 2, 3, 3, 4, 5])  # Two lines with 3 points each
-
-    return pv.PolyData(points, lines=lines)
-
-
-@pytest.fixture
-def square_points():
-    """Create a square as points."""
-    return np.array(
-        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
-        dtype=np.float64,
-    )
-
-
-@pytest.fixture
-def square_polydata(square_points):
-    """Create a square as polydata."""
-    faces = np.array([4, 0, 1, 2, 3])
-
-    return pv.PolyData(square_points, faces=faces)
-
-
-@pytest.fixture
-def mixed_dimension_grid():
-    """Create a mixed-dimension unstructured grid."""
-    return pv.UnstructuredGrid(
-        {
-            pv.CellType.HEXAHEDRON: np.array([[0, 1, 3, 2, 4, 5, 7, 6]]),
-            pv.CellType.QUAD: np.array([[8, 9, 11, 10]]),
-        },
-        np.array(
-            [
-                [0.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [1.0, 1.0, 0.0],
-                [0.0, 0.0, 1.0],
-                [1.0, 0.0, 1.0],
-                [0.0, 1.0, 1.0],
-                [1.0, 1.0, 1.0],
-                [2.0, 0.0, 0.0],
-                [3.0, 0.0, 0.0],
-                [2.0, 1.0, 0.0],
-                [3.0, 1.0, 0.0],
-            ],
-            dtype=np.float64,
-        ),
-    )
-
-
-@pytest.fixture
-def mesh_with_categorical_data():
-    """Create a mesh with categorical data."""
-    grid = pv.ImageData(dimensions=(3, 3, 3))
-    grid.cell_data["category"] = np.array([0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2])[
-        : grid.n_cells
-    ]
-    grid.user_dict["category"] = {"A": 0, "B": 1, "C": 2}
-
-    return grid
-
-
-# Test functions with parametrize
 @pytest.mark.parametrize(
     "mesh, tolerance, expected_points, reference_point_sum",
     [
@@ -319,6 +183,7 @@ def test_decimate_rdp(request, line_source, tolerance, reference_point_sum):
             1.4901161e-08,
             id="plane_outline",
         ),
+
         # Example meshes
         pytest.param(
             pvg.examples.load_anticline_2d,
@@ -425,6 +290,7 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
         # Basic mesh with mixed dimensions
         pytest.param("mixed_dimension_grid", 2, "lower", True, id="basic_2d_lower"),
         pytest.param("mixed_dimension_grid", 3, "upper", True, id="basic_3d_upper"),
+
         # Example meshes
         pytest.param(pvg.examples.load_well_2d, 2, "lower", True, id="well_2d_lower"),
         pytest.param(pvg.examples.load_well_2d, 2, "upper", True, id="well_2d_upper"),
@@ -474,6 +340,7 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
             [0, 1],
             id="basic_quads",
         ),
+
         # Example mesh - will look for fusable cells
         pytest.param(pvg.examples.load_well_2d, None, id="well_2d"),
     ],
@@ -579,6 +446,7 @@ def test_merge_basic(mesh_type, axes):
 
             except ValueError:
                 pytest.skip("Grids can't be merged due to interface mismatch")
+                
     else:
         # Create two simple unstructured grids
         grid1 = pv.UnstructuredGrid(
