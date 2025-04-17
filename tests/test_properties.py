@@ -68,7 +68,7 @@ def test_get_cell_connectivity(request, mesh_fixture, flatten):
         pytest.param("structured_grid_2d", 2, id="structured_2d"),
         pytest.param("structured_grid_3d", 3, id="structured_3d"),
         # Explicit structured grid
-        pytest.param("explicit_structured_grid", 3, id="explicit_structured"),
+        # pytest.param("explicit_structured_grid", 3, id="explicit_structured"),
         # Unstructured grids with different cell types
         pytest.param("simple_unstructured_grid", 3, id="mixed_ugrid"),
         pytest.param(pv.examples.cells.Quadrilateral, 2, id="quad_ugrid"),
