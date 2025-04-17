@@ -51,8 +51,8 @@ def test_cylindrical_shell_sector():
         (pv.Polygon(radius=8.0, n_sides=42), None, 200.3128038269316),
         (
             pv.Polygon(radius=8.0, n_sides=42),
-            [pv.Polygon(radius=4.0, n_sides=21)],
-            150.79393499901744,
+            [pv.Polygon(radius=4.0, n_sides=42)],
+            150.2346028701987,
         ),
         (
             pv.Polygon(radius=8.0, n_sides=42),
