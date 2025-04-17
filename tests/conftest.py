@@ -1,4 +1,5 @@
 """Pytest fixtures for pyvista-gridder tests."""
+
 from collections.abc import Sequence
 
 import numpy as np
@@ -12,6 +13,7 @@ import pvgridder as pvg
 # Check PyVista version for merge_points compatibility
 PYVISTA_VERSION = packaging.version.parse(pv.__version__)
 MERGE_POINTS_COMPATIBLE = PYVISTA_VERSION <= packaging.version.parse("0.45")
+
 
 # Common fixtures for meshes
 @pytest.fixture
@@ -214,7 +216,7 @@ def simple_2d_grid():
                 [3.0, 0.0, 0.0],
                 [3.0, 1.0, 0.0],
             ]
-        )
+        ),
     )
 
 
@@ -250,7 +252,7 @@ def simple_3d_grid():
                 [3.0, 0.0, 1.0],
                 [3.0, 1.0, 1.0],
             ]
-        )
+        ),
     )
 
 
@@ -275,7 +277,7 @@ def small_quad_grid():
                 [2.0, 0.0, 0.0],
                 [2.0, 1.0, 0.0],
             ]
-        )
+        ),
     )
 
 
@@ -301,7 +303,9 @@ def pyramid_grid():
 @pytest.fixture
 def explicit_structured_grid():
     """Create a simple explicit structured grid."""
-    return pv.ExplicitStructuredGrid(pv.RectilinearGrid([0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0]))
+    return pv.ExplicitStructuredGrid(
+        pv.RectilinearGrid([0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0])
+    )
 
 
 @pytest.fixture
@@ -313,10 +317,14 @@ def structured_grid_1d():
 @pytest.fixture
 def structured_grid_2d():
     """Create a 2D structured grid."""
-    return pv.RectilinearGrid([0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0]).cast_to_structured_grid()
+    return pv.RectilinearGrid(
+        [0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0]
+    ).cast_to_structured_grid()
 
 
 @pytest.fixture
 def structured_grid_3d():
     """Create a 3D structured grid."""
-    return pv.RectilinearGrid([0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0]).cast_to_structured_grid()
+    return pv.RectilinearGrid(
+        [0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0]
+    ).cast_to_structured_grid()

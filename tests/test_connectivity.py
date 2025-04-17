@@ -21,7 +21,7 @@ def test_get_neighborhood(mesh_fixture, request):
     """Test neighborhood extraction with different mesh types."""
     # Get the mesh from the fixture
     mesh = request.getfixturevalue(mesh_fixture)
-    
+
     ndim = pvg.get_dimension(mesh)
     neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=True)
     neighbors_ref = [
@@ -40,25 +40,19 @@ def test_get_neighborhood(mesh_fixture, request):
             "anticline_2d",
             [387, 388, 389, 390, 391],
             [[428], [429], [430], [431], [432]],
-            id="anticline-2d-empty-cells"
+            id="anticline-2d-empty-cells",
         ),
         pytest.param(
             "anticline_3d",
             [3708, 3709, 3710, 3711, 3712],
             [[4118], [4119], [4120], [4121], [4122]],
-            id="anticline-3d-empty-cells"
+            id="anticline-3d-empty-cells",
         ),
         pytest.param(
-            "simple_2d_grid",
-            [0, 1],
-            [[1], [0]],
-            id="simple-2d-grid-empty-cells"
+            "simple_2d_grid", [0, 1], [[1], [0]], id="simple-2d-grid-empty-cells"
         ),
         pytest.param(
-            "simple_3d_grid",
-            [0, 1],
-            [[1], [0]],
-            id="simple-3d-grid-empty-cells"
+            "simple_3d_grid", [0, 1], [[1], [0]], id="simple-3d-grid-empty-cells"
         ),
     ],
 )
@@ -66,7 +60,7 @@ def test_get_neighborhood_empty_cells(mesh_fixture, cell_ids, empty_cell_ids, re
     """Test whether empty cells are kept or removed from neighborhood."""
     # Get the mesh from the fixture
     mesh = request.getfixturevalue(mesh_fixture)
-    
+
     assert len(cell_ids) == len(empty_cell_ids)
 
     neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=False)
@@ -94,24 +88,24 @@ def test_get_connectivity(mesh_fixture, test_custom_centers, request):
     """Test connectivity extraction with different meshes."""
     # Get the mesh from the fixture
     mesh = request.getfixturevalue(mesh_fixture)
-    
+
     # Test with default parameters
     connectivity = pvg.get_connectivity(mesh)
-    
+
     # Basic checks
     assert isinstance(connectivity, pv.PolyData)
     assert connectivity.n_points == mesh.n_cells
     assert connectivity.n_lines > 0
-    
+
     # Test with custom cell centers only for specified meshes
     if test_custom_centers:
         cell_centers = mesh.cell_centers().points
         connectivity_custom = pvg.get_connectivity(mesh, cell_centers=cell_centers)
-        
+
         assert isinstance(connectivity_custom, pv.PolyData)
         assert connectivity_custom.n_points == mesh.n_cells
         assert connectivity_custom.n_lines > 0
-    
+
     # Test with remove_empty_cells=False
     connectivity_with_empty = pvg.get_connectivity(mesh, remove_empty_cells=False)
     assert isinstance(connectivity_with_empty, pv.PolyData)
@@ -121,4 +115,6 @@ def test_get_connectivity_invalid_centers(anticline_2d):
     """Test get_connectivity with invalid cell centers."""
     # Test with invalid cell centers shape
     with pytest.raises(ValueError, match="invalid cell centers"):
-        pvg.get_connectivity(anticline_2d, cell_centers=np.ones((anticline_2d.n_cells, 2)))
+        pvg.get_connectivity(
+            anticline_2d, cell_centers=np.ones((anticline_2d.n_cells, 2))
+        )

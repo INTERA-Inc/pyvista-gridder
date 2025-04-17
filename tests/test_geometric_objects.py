@@ -14,7 +14,7 @@ def test_annular_sector():
 
 
 def test_annulus():
-    """Test annulus geometric object."""	
+    """Test annulus geometric object."""
     mesh = pvg.Annulus(0.42, 8.0, 8, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 37.88999953866005)
@@ -30,7 +30,7 @@ def test_circle():
 
 
 def test_cylindrical_shell():
-    """Test cylindrical shell geometric object."""	
+    """Test cylindrical shell geometric object."""
     mesh = pvg.CylindricalShell(0.42, 8.0, 8.0, 8, 8)
     mesh = mesh.compute_cell_sizes()
     assert np.allclose(mesh.points.sum(), 75.7799990773201)
@@ -65,7 +65,7 @@ def test_cylindrical_shell_sector():
     ],
 )
 def test_polygon(shell, holes, ref_area):
-    """Test polygon geometric object."""	
+    """Test polygon geometric object."""
     for celltype in ("polygon", "triangle", "quad"):
         if celltype == "polygon" and holes:
             continue

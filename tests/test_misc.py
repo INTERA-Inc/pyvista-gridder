@@ -5,10 +5,9 @@ import numpy as np
 import packaging.version
 import pytest
 import pyvista as pv
+from conftest import MERGE_POINTS_COMPATIBLE, PYVISTA_VERSION
 
 import pvgridder as pvg
-
-from conftest import MERGE_POINTS_COMPATIBLE, PYVISTA_VERSION
 
 
 @pytest.mark.parametrize(
@@ -183,7 +182,6 @@ def test_decimate_rdp(request, line_source, tolerance, reference_point_sum):
             1.4901161e-08,
             id="plane_outline",
         ),
-
         # Example meshes
         pytest.param(
             pvg.examples.load_anticline_2d,
@@ -271,7 +269,9 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
     actual_mesh = mesh() if callable(mesh) else mesh
 
     # Extract cell geometry
-    result = pvg.extract_cell_geometry(actual_mesh, remove_empty_cells=remove_empty_cells)
+    result = pvg.extract_cell_geometry(
+        actual_mesh, remove_empty_cells=remove_empty_cells
+    )
 
     # Should be a polydata with cell outlines
     assert isinstance(result, pv.PolyData)
@@ -290,7 +290,6 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
         # Basic mesh with mixed dimensions
         pytest.param("mixed_dimension_grid", 2, "lower", True, id="basic_2d_lower"),
         pytest.param("mixed_dimension_grid", 3, "upper", True, id="basic_3d_upper"),
-
         # Example meshes
         pytest.param(pvg.examples.load_well_2d, 2, "lower", True, id="well_2d_lower"),
         pytest.param(pvg.examples.load_well_2d, 2, "upper", True, id="well_2d_upper"),
@@ -340,7 +339,6 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
             [0, 1],
             id="basic_quads",
         ),
-
         # Example mesh - will look for fusable cells
         pytest.param(pvg.examples.load_well_2d, None, id="well_2d"),
     ],
@@ -446,7 +444,7 @@ def test_merge_basic(mesh_type, axes):
 
             except ValueError:
                 pytest.skip("Grids can't be merged due to interface mismatch")
-                
+
     else:
         # Create two simple unstructured grids
         grid1 = pv.UnstructuredGrid(
@@ -510,8 +508,12 @@ def test_merge_lines_basic(
         pytest.param("square_points", 0.1, None, id="square_points"),
         # Example mesh boundaries - using a direct function to create the boundary
         pytest.param(
-            lambda: pvg.extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True)[0]
-            if len(pvg.extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True))
+            lambda: pvg.extract_boundary_polygons(
+                pvg.examples.load_well_2d(), fill=True
+            )[0]
+            if len(
+                pvg.extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True)
+            )
             > 0
             else None,
             0.1,
