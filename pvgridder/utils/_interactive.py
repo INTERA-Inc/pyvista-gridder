@@ -72,26 +72,15 @@ def interactive_selection(
         tolerance=tolerance,
     )
 
-    if view in {"xy", "-xy"}:
-        p.view_xy(negative=view.startswith("-"))
+    if view:
+        negative = view.startswith("-")
+        view = view[1:] if negative else view
 
-    elif view in {"yx", "-yx"}:
-        p.view_yx(negative=view.startswith("-"))
+        try:
+            getattr(p, f"view_{view}")(negative=negative)
 
-    elif view in {"xz", "-xz"}:
-        p.view_xz(negative=view.startswith("-"))
-
-    elif view in {"zx", "-zx"}:
-        p.view_zx(negative=view.startswith("-"))
-
-    elif view in {"yz", "-yz"}:
-        p.view_yz(negative=view.startswith("-"))
-
-    elif view in {"zy", "-zy"}:
-        p.view_zy(negative=view.startswith("-"))
-
-    else:
-        raise ValueError(f"invalid view '{view}'")
+        except AttributeError:
+            raise ValueError(f"invalid view '{view}'")
 
     if parallel_projection:
         p.enable_parallel_projection()
