@@ -62,6 +62,36 @@ def get_cell_connectivity(
         return tuple(cells)
 
 
+def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | str]:
+    """
+    Get the cell group of a mesh.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        Input mesh.
+    key : str, default "CellGroup"
+        Key to use to get the cell group.
+
+    Returns
+    -------
+    Sequence[int | str]
+        Cell group.
+
+    """
+    if key in mesh.cell_data:
+        cell_groups = mesh.cell_data[key]
+
+        if key in mesh.user_dict:
+            groups = {v: k for k, v in mesh.user_dict[key].items()}
+            cell_groups = [groups[i] for i in cell_groups]
+
+        return cell_groups
+
+    else:
+        return []
+
+
 def get_dimension(
     mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
 ) -> int:
