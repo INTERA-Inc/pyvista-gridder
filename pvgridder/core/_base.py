@@ -121,7 +121,11 @@ class MeshBase(ABC):
 
         arr = np.full(size, -1, dtype=int)
 
-        if mesh is not None and "CellGroup" in mesh.cell_data and "CellGroup" in mesh.user_dict:
+        if (
+            mesh is not None
+            and "CellGroup" in mesh.cell_data
+            and "CellGroup" in mesh.user_dict
+        ):
             for k, v in mesh.user_dict["CellGroup"].items():
                 if k in self.ignore_groups:
                     continue
