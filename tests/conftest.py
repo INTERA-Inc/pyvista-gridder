@@ -3,16 +3,10 @@
 from collections.abc import Sequence
 
 import numpy as np
-import packaging.version
 import pytest
 import pyvista as pv
 
 import pvgridder as pvg
-
-
-# Check PyVista version for merge_points compatibility
-PYVISTA_VERSION = packaging.version.parse(pv.__version__)
-MERGE_POINTS_COMPATIBLE = PYVISTA_VERSION <= packaging.version.parse("0.45")
 
 
 # Common fixtures for meshes
