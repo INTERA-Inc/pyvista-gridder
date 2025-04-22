@@ -25,6 +25,8 @@ class VoronoiMesh2D(MeshBase):
         Background mesh.
     axis : int, default 2
         Background mesh axis to discard.
+    preference : {'cell', 'point'}, default 'cell'
+        Determine which data to use for background mesh.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -39,6 +41,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
+        preference: Literal["cell", "point"] = "cell",
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
@@ -46,6 +49,7 @@ class VoronoiMesh2D(MeshBase):
         super().__init__(default_group, ignore_groups)
         self._mesh = mesh.copy()
         self._axis = axis
+        self._preference = preference
         self.mesh.points[:, self.axis] = 0.0
 
     def add(
@@ -325,13 +329,20 @@ class VoronoiMesh2D(MeshBase):
 
         from .. import average_points, decimate_rdp, extract_boundary_polygons
 
-        points = self.mesh.cell_centers().points.tolist()
-        active = np.ones(len(points), dtype=bool)
-
         groups = {}
-        group_array = self._initialize_group_array(self.mesh, groups)
-        priority_array = np.full(self.mesh.n_cells, -np.inf)
         items = sorted(self.items, key=lambda item: abs(item.priority))
+
+        if self.preference == "cell":
+            points = self.mesh.cell_centers().points.tolist()
+            group_array = self._initialize_group_array(self.mesh, groups)
+            priority_array = np.full(self.mesh.n_cells, -np.inf)
+
+        elif self.preference == "point":
+            points = self.mesh.points.tolist()
+            group_array = self._initialize_group_array(self.mesh.n_points, groups)
+            priority_array = np.full(self.mesh.n_points, -np.inf)
+
+        active = np.ones(len(points), dtype=bool)
 
         for i, item in enumerate(items):
             mesh_a = item.mesh
@@ -506,3 +517,8 @@ class VoronoiMesh2D(MeshBase):
     def axis(self) -> int:
         """Return discarded axis."""
         return self._axis
+
+    @property
+    def preference(self) -> Literal["cell", "point"]:
+        """Return preference."""
+        return self._preference
