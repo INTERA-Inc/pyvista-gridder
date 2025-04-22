@@ -282,6 +282,7 @@ def extract_cell_geometry(
     ndim = get_dimension(mesh)
     mesh = mesh.cast_to_unstructured_grid()
     celltypes = mesh.celltypes
+    connectivity = get_cell_connectivity(mesh)
 
     if ndim in {1, 2}:
         supported_celltypes = {
@@ -301,26 +302,20 @@ def extract_cell_geometry(
             )
 
         # Generate edge data
-        offset = mesh.offset
-        connectivity = mesh.cell_connectivity
         cell_edges = [
-            np.column_stack((connectivity[i1 : i2 - 1], connectivity[i1 + 1 : i2]))
+            np.column_stack((cell[:-1], cell[1:]))
             if celltype in {pv.CellType.LINE, pv.CellType.POLY_LINE}
             else np.column_stack(
                 (
-                    connectivity[i1:i2][[0, 1, 3, 2]],
-                    np.roll(connectivity[i1:i2][[0, 1, 3, 2]], -1),
+                    cell[[0, 1, 3, 2]],
+                    np.roll(cell[[0, 1, 3, 2]], -1),
                 )
             )
             if celltype == pv.CellType.PIXEL
-            else np.column_stack(
-                (connectivity[i1:i2], np.roll(connectivity[i1:i2], -1))
-            )
+            else np.column_stack((cell, np.roll(cell, -1)))
             if not remove_empty_cells or celltype != pv.CellType.EMPTY_CELL
             else []
-            for i, (i1, i2, celltype) in enumerate(
-                zip(offset[:-1], offset[1:], celltypes)
-            )
+            for cell, celltype in zip(connectivity, celltypes)
         ]
 
         poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
@@ -341,8 +336,6 @@ def extract_cell_geometry(
                 poly.cell_data["vtkOriginalCellIds"] = tmp
 
     else:
-        connectivity = get_cell_connectivity(mesh)
-
         # Generate face data
         if np.ptp(celltypes) == 0:
             celltype = celltypes[0]
