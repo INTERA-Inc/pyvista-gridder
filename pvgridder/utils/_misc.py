@@ -273,7 +273,7 @@ def extract_cell_geometry(
 
         return poly
 
-    from .. import get_dimension
+    from .. import get_cell_connectivity, get_dimension
 
     if not remove_empty_cells and "vtkGhostType" in mesh.cell_data:
         mesh = mesh.copy(deep=False)
@@ -281,10 +281,7 @@ def extract_cell_geometry(
 
     ndim = get_dimension(mesh)
     mesh = mesh.cast_to_unstructured_grid()
-
-    offset = mesh.offset
     celltypes = mesh.celltypes
-    connectivity = mesh.cell_connectivity
 
     if ndim in {1, 2}:
         supported_celltypes = {
@@ -304,6 +301,8 @@ def extract_cell_geometry(
             )
 
         # Generate edge data
+        offset = mesh.offset
+        connectivity = mesh.cell_connectivity
         cell_edges = [
             np.column_stack((connectivity[i1 : i2 - 1], connectivity[i1 + 1 : i2]))
             if celltype in {pv.CellType.LINE, pv.CellType.POLY_LINE}
@@ -342,74 +341,44 @@ def extract_cell_geometry(
                 poly.cell_data["vtkOriginalCellIds"] = tmp
 
     else:
-        # Generate polyhedral cell faces if any
-        polyhedral_cells = pv.convert_array(mesh.GetFaces())
-
-        if polyhedral_cells is not None:
-            locations = pv.convert_array(mesh.GetFaceLocations())
-            polyhedral_cell_faces = []
-
-            for location in locations:
-                if location == -1:
-                    continue
-
-                n_faces = polyhedral_cells[location]
-                i, cell = location + 1, []
-
-                while len(cell) < n_faces:
-                    n_vertices = polyhedral_cells[i]
-                    cell.append(polyhedral_cells[i + 1 : i + 1 + n_vertices])
-                    i += n_vertices + 1
-
-                polyhedral_cell_faces.append(cell)
+        connectivity = get_cell_connectivity(mesh)
 
         # Generate face data
-        if celltypes.min() == celltypes.max():
-            celltype = pv.CellType(celltypes[0]).name
-
-            if celltype == "POLYHEDRON":
-                cell_faces = polyhedral_cell_faces
-
-            else:
-                n_vertices = _celltype_to_n_vertices[celltype]
-                cells = connectivity.reshape(
-                    (connectivity.size // n_vertices, n_vertices)
-                )
-                cell_faces = [
+        if np.ptp(celltypes) == 0:
+            celltype = celltypes[0]
+            cell_faces = (
+                [
                     [
                         face
                         for v in _celltype_to_faces[celltype].values()
                         for face in cell[v]
                     ]
-                    for cell in cells
+                    for cell in connectivity
                 ]
+                if celltype != pv.CellType.POLYHEDRON
+                else connectivity
+            )
 
         else:
-            polyhedron_count, cell_faces = 0, []
+            cell_faces = []
 
-            for i, (i1, i2, celltype) in enumerate(
-                zip(offset[:-1], offset[1:], celltypes)
-            ):
-                celltype = pv.CellType(celltype).name
-
-                if celltype == "POLYHEDRON":
-                    cell_face = polyhedral_cell_faces[polyhedron_count]
-                    polyhedron_count += 1
+            for cell, celltype in zip(connectivity, celltypes):
+                if celltype == pv.CellType.POLYHEDRON:
+                    cell_face = cell
 
                 elif celltype in _celltype_to_faces:
-                    cell = connectivity[i1:i2]
                     cell_face = [
                         face
                         for v in _celltype_to_faces[celltype].values()
                         for face in cell[v]
                     ]
 
-                elif celltype == "EMPTY_CELL":
+                elif celltype == pv.CellType.EMPTY_CELL:
                     cell_face = []
 
                 else:
                     raise NotImplementedError(
-                        f"cells of type '{celltype}' are not supported yet"
+                        f"cells of type '{celltype.name}' are not supported yet"
                     )
 
                 cell_faces.append(cell_face)
@@ -1047,18 +1016,18 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
 
 
 _celltype_to_faces = {
-    "TETRA": {
+    pv.CellType.TETRA: {
         "TRIANGLE": np.array([[1, 2, 3], [0, 3, 2], [0, 1, 3], [0, 2, 1]]),
     },
-    "PYRAMID": {
+    pv.CellType.PYRAMID: {
         "QUAD": np.array([[0, 3, 2, 1]]),
         "TRIANGLE": np.array([[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]]),
     },
-    "WEDGE": {
+    pv.CellType.WEDGE: {
         "TRIANGLE": np.array([[0, 2, 1], [3, 4, 5]]),
         "QUAD": np.array([[0, 1, 4, 3], [1, 2, 5, 4], [0, 3, 5, 2]]),
     },
-    "HEXAHEDRON": {
+    pv.CellType.HEXAHEDRON: {
         "QUAD": np.array(
             [
                 [0, 3, 2, 1],
@@ -1070,7 +1039,7 @@ _celltype_to_faces = {
             ]
         ),
     },
-    "VOXEL": {
+    pv.CellType.VOXEL: {
         "QUAD": np.array(
             [
                 [0, 2, 3, 1],
@@ -1082,9 +1051,4 @@ _celltype_to_faces = {
             ]
         ),
     },
-}
-
-_celltype_to_n_vertices = {
-    k: np.unique(np.concatenate([face.ravel() for face in v.values()])).size
-    for k, v in _celltype_to_faces.items()
 }

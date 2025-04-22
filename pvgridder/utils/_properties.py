@@ -31,28 +31,21 @@ def get_cell_connectivity(
 
     from pyvista.core.cell import _get_irregular_cells
 
+    mesh = mesh.cast_to_unstructured_grid()
+
     # Generate cells
     cells = list(_get_irregular_cells(mesh.GetCells()))
 
     # Generate polyhedral cell faces if any
-    polyhedral_cells = pv.convert_array(mesh.GetFaces())
-
-    if polyhedral_cells is not None:
-        locations = pv.convert_array(mesh.GetFaceLocations())
+    if (mesh.celltypes == pv.CellType.POLYHEDRON).any():
+        faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
+        locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
 
         for cid, location in enumerate(locations):
-            if location == -1:
+            if location.size == 0:
                 continue
 
-            n_faces = polyhedral_cells[location]
-            i, cell = location + 1, []
-
-            while len(cell) < n_faces:
-                n_vertices = polyhedral_cells[i]
-                cell.append(polyhedral_cells[i + 1 : i + 1 + n_vertices])
-                i += n_vertices + 1
-
-            cells[cid] = cell
+            cells[cid] = [faces[face] for face in location]
 
     if flatten:
         cells_ = []
