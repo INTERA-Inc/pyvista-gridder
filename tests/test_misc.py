@@ -2,10 +2,8 @@ from collections.abc import Sequence
 from typing import Literal, Union
 
 import numpy as np
-import packaging.version
 import pytest
 import pyvista as pv
-from conftest import MERGE_POINTS_COMPATIBLE, PYVISTA_VERSION
 
 import pvgridder as pvg
 
@@ -393,14 +391,7 @@ def test_fuse_cells(mesh, cell_ids):
     "mesh_type, axes",
     [
         ("structured", [0, 1, 2]),
-        pytest.param(
-            "unstructured",
-            [None],
-            marks=pytest.mark.skipif(
-                not MERGE_POINTS_COMPATIBLE,
-                reason="PyVista version > 0.45 doesn't support merge_points parameter",
-            ),
-        ),
+        pytest.param("unstructured", [None]),
     ],
 )
 def test_merge_basic(mesh_type, axes):
@@ -472,10 +463,6 @@ def test_merge_basic(mesh_type, axes):
 
 
 @pytest.mark.parametrize("as_lines, reference_point_sum", [(True, 11.0), (False, 11.0)])
-@pytest.mark.skipif(
-    PYVISTA_VERSION < packaging.version.parse("0.45"),
-    reason="PyVista version < 0.45 doesn't fully support this functionality",
-)
 def test_merge_lines_basic(
     multiple_lines_polydata, simple_line, as_lines, reference_point_sum
 ):
