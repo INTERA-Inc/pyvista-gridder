@@ -106,3 +106,32 @@ def test_get_dimension_invalid_mesh(invalid_mesh):
     """Test that get_dimension raises an appropriate error for unsupported mesh types."""
     with pytest.raises(TypeError):
         pvg.get_dimension(invalid_mesh)
+
+
+@pytest.mark.parametrize(
+    "mesh_fixture, key, expected_result",
+    [
+        pytest.param(
+            "simple_unstructured_grid",
+            "CellGroup",
+            ["group1", "group2"],
+            id="simple_ugrid",
+        ),
+        pytest.param("structured_grid_3d", "NonExistentKey", [], id="no_key"),
+    ],
+)
+def test_get_cell_group(request, mesh_fixture, key, expected_result):
+    """Test retrieving cell group with different meshes and keys."""
+    # Get the actual mesh
+    actual_mesh = request.getfixturevalue(mesh_fixture)
+
+    # Add mock cell data and user_dict if necessary
+    if key == "CellGroup":
+        actual_mesh.cell_data[key] = [0, 1]
+        actual_mesh.user_dict[key] = {"group1": 0, "group2": 1}
+
+    # Get cell group
+    result = pvg.get_cell_group(actual_mesh, key=key)
+
+    # Verify the result matches the expected output
+    assert result == expected_result
