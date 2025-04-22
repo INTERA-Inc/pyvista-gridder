@@ -105,15 +105,27 @@ class MeshBase(ABC):
 
     def _initialize_group_array(
         self,
-        mesh: pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh_or_size: pv.StructuredGrid | pv.UnstructuredGrid | int,
         groups: dict,
         group: Optional[str | dict[str, Callable]] = None,
         default_group: Optional[str] = None,
     ) -> ArrayLike:
         """Initialize group array."""
-        arr = np.full(mesh.n_cells, -1, dtype=int)
+        if isinstance(mesh_or_size, pv.DataSet):
+            mesh = mesh_or_size
+            size = mesh.n_cells
 
-        if "CellGroup" in mesh.cell_data and "CellGroup" in mesh.user_dict:
+        else:
+            mesh = None
+            size = mesh_or_size
+
+        arr = np.full(size, -1, dtype=int)
+
+        if (
+            mesh is not None
+            and "CellGroup" in mesh.cell_data
+            and "CellGroup" in mesh.user_dict
+        ):
             for k, v in mesh.user_dict["CellGroup"].items():
                 if k in self.ignore_groups:
                     continue
@@ -122,9 +134,9 @@ class MeshBase(ABC):
                     k, groups
                 )
 
-        if group:
+        if mesh is not None and group:
             if isinstance(group, str):
-                group = {group: np.ones(mesh.n_cells, dtype=bool)}
+                group = {group: np.ones(size, dtype=bool)}
 
             for k, v in group.items():
                 if hasattr(v, "__call__"):
@@ -140,7 +152,7 @@ class MeshBase(ABC):
                 elif isinstance(v, (list, tuple, np.ndarray)) and all(
                     isinstance(x, str) for x in v
                 ):
-                    mask = np.zeros(mesh.n_cells, dtype=bool)
+                    mask = np.zeros(size, dtype=bool)
 
                     for cid in v:
                         mask |= (
@@ -153,7 +165,7 @@ class MeshBase(ABC):
                     mask = np.asanyarray(v)
 
                     if mask.dtype.kind.startswith("i"):
-                        mask_ = np.zeros(mesh.n_cells, dtype=bool)
+                        mask_ = np.zeros(size, dtype=bool)
                         mask_[mask] = True
                         mask = mask_
 
