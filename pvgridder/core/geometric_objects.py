@@ -355,6 +355,7 @@ def Polygon(
     shell: Optional[pv.DataSet | ArrayLike] = None,
     holes: Optional[Sequence[pv.DataSet | ArrayLike]] = None,
     celltype: Optional[Literal["polygon", "quad", "triangle"]] = None,
+    cellsize: Optional[float] = None,
     algorithm: int = 6,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
 ) -> pv.UnstructuredGrid:
@@ -372,6 +373,8 @@ def Polygon(
     celltype : {'polygon', 'quad', 'triangle'}, optional
         Preferred cell type. If `quad` or `triangle`, use Gmsh to perform 2D Delaunay
         triangulation.
+    cellsize : float, optional
+        Size of the mesh elements. If None, the size is computed from the input points.
     algorithm : int, default 6
         Gmsh algorithm.
     optimization : {'Netgen', 'Laplace2D', 'Relocate2D'}, optional
@@ -413,12 +416,17 @@ def Polygon(
 
         return points
 
-    def add_surface(points: ArrayLike, celltype: str) -> int:
+    def add_surface(points: ArrayLike, celltype: str, cellsize: float) -> int:
         """Add a plane surface."""
         # Compute mesh size
-        lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
-        lengths = np.insert(lengths, 0, lengths[-1])
-        sizes = np.maximum(lengths[:-1], lengths[1:])
+        if cellsize is None:
+            lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
+            lengths = np.insert(lengths, 0, lengths[-1])
+            sizes = np.maximum(lengths[:-1], lengths[1:])
+
+        else:
+            sizes = np.full(len(points) - 1, cellsize)
+
         sizes *= 1.0 if celltype == "triangle" else 2.0
 
         # Add points
@@ -465,10 +473,10 @@ def Polygon(
             gmsh.initialize()
 
             # Generate plane surfaces from points
-            shell_tags = [add_surface(shell, celltype)]
+            shell_tags = [add_surface(shell, celltype, cellsize)]
 
             if holes:
-                hole_tags = [add_surface(hole, celltype) for hole in holes]
+                hole_tags = [add_surface(hole, celltype, cellsize) for hole in holes]
                 dim_tags, _ = gmsh.model.occ.cut(
                     shell_tags,
                     hole_tags,
@@ -480,6 +488,14 @@ def Polygon(
                 dim_tags = shell_tags
 
             # Generate mesh
+            if cellsize is not None:
+                gmsh.option.set_number("Mesh.MeshSizeMin", cellsize)
+                gmsh.option.set_number("Mesh.MeshSizeMax", cellsize)
+                # gmsh.option.set_number("Mesh.MeshSizeExtendFromBoundary", 0)
+                # gmsh.option.set_number("Mesh.MeshSizeExtendFromBoundary", 0)
+                gmsh.option.set_number("Mesh.MeshSizeFromPoints", 0)
+                gmsh.option.set_number("Mesh.MeshSizeFromCurvature", 0)
+
             gmsh.option.set_number("Mesh.Algorithm", algorithm)
             gmsh.model.occ.synchronize()
 
