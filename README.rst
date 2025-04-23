@@ -1,3 +1,7 @@
+.. raw:: html
+
+   <figure style="width: 50%;"><img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/logo/logo.png?raw=true" alt="PyVista Gridder logo"></figure>
+
 PyVista Gridder
 ===============
 
@@ -57,41 +61,11 @@ Examples
       .add(lambda x, y, z: np.full_like(x, 3.4), 4, group="Layer 5")
       .generate_mesh()
    )
-   mesh.plot(show_edges=True)
+   mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 
 .. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/anticline.png?raw=true
 
    :alt: anticline
-   :width: 100%
-   :align: center
-
-3D structured grid
-******************
-
-.. code:: python
-
-   import pyvista as pv
-   import pvgridder as pv
-
-   terrain = pv.examples.download_crater_topo().extract_subset(
-      (500, 900, 400, 800, 0, 0), (10, 10, 1)
-   )
-   terrain = terrain.cast_to_structured_grid().warp_by_scalar("scalar1of1")
-
-   mesh = (
-      pvg.MeshStack3D(terrain)
-      .add(0.0)
-      .add(terrain.translate((0.0, 0.0, -1000.0)), 5, group="Bottom layer")
-      .add(terrain.translate((0.0, 0.0, -500.0)), 5, group="Middle layer")
-      .add(terrain, 5, group="Top Layer")
-      .generate_mesh()
-   )
-   groups = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
-   mesh.plot(show_edges=True, scalars=[groups[i] for i in mesh.cell_data["CellGroup"]])
-
-.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true
-
-   :alt: topographic-terrain
    :width: 100%
    :align: center
 
@@ -116,13 +90,42 @@ Examples
       .add_polyline(smile_points, width=0.05, group="Mouth")
       .generate_mesh()
    )
-
-   groups = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
-   mesh.plot(show_edges=True, scalars=[groups[i] for i in mesh.cell_data["CellGroup"]])
+   mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
    
 .. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true
 
    :alt: nightmare-fuel
+   :width: 100%
+   :align: center
+
+2.5D geological model
+*********************
+
+.. code:: python
+
+   import pyvista as pv
+   import pvgridder as pv
+
+   terrain = pv.examples.download_crater_topo().extract_subset(
+      (500, 900, 400, 800, 0, 0), (10, 10, 1)
+   )
+   bgmesh = pvg.VoronoiMesh2D(pvg.Polygon(terrain, celltype="triangle"), preference="point").generate_mesh()
+   terrain_delaunay = pvg.Polygon(terrain, celltype="triangle")
+   terrain = terrain.cast_to_structured_grid().warp_by_scalar("scalar1of1")
+
+   mesh = (
+      pvg.MeshStack3D(pvg.VoronoiMesh2D(terrain_delaunay, preference="point").generate_mesh())
+      .add(0.0)
+      .add(terrain.translate((0.0, 0.0, -1000.0)), 5, group="Bottom layer")
+      .add(terrain.translate((0.0, 0.0, -500.0)), 5, group="Middle layer")
+      .add(terrain, 5, group="Top Layer")
+      .generate_mesh()
+   )
+   mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
+
+.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true
+
+   :alt: topographic-terrain
    :width: 100%
    :align: center
 
