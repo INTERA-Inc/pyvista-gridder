@@ -527,11 +527,7 @@ def test_offset_polygon(request, mesh_or_points, distance, expected_area_change)
     assert result.n_faces_strict > 0
 
     # Check area change if applicable
-    if (
-        is_polydata
-        and expected_area_change is not None
-        and original_area is not None
-    ):
+    if is_polydata and expected_area_change is not None and original_area is not None:
         result_area = result.compute_cell_sizes()["Area"][0]
 
         if expected_area_change == "increase":

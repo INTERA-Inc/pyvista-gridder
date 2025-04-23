@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import itertools
 from collections.abc import Sequence
 from typing import Optional
 
-import itertools
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
@@ -148,7 +148,10 @@ def extract_boundary_polygons(
     mesh: pv.DataSet,
     fill: bool = False,
     with_holes: bool = False,
-) -> Sequence[pv.PolyData | pv.UnstructuredGrid] | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]:
+) -> (
+    Sequence[pv.PolyData | pv.UnstructuredGrid]
+    | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]
+):
     """
     Extract boundary edges of a mesh as continuous polylines or polygons.
 
@@ -194,7 +197,9 @@ def extract_boundary_polygons(
             if i in holes or j in holes:
                 continue
 
-            if polygons[i].area > polygons[j].area and polygons[i].contains(polygons[j]):
+            if polygons[i].area > polygons[j].area and polygons[i].contains(
+                polygons[j]
+            ):
                 holes[j] = i
 
         # Group boundary edges and holes
@@ -204,12 +209,19 @@ def extract_boundary_polygons(
             polygons[v].append(edges[k])
 
         polygons = [polygon for polygon in polygons if polygon]
-        polygons = [Polygon(polygon[0], polygon[1:]) for polygon in polygons] if fill else polygons
+        polygons = (
+            [Polygon(polygon[0], polygon[1:]) for polygon in polygons]
+            if fill
+            else polygons
+        )
 
     else:
         polygons = (
             [
-                polygon + pv.PolyData().from_regular_faces(polygon.points, [np.arange(polygon.n_points)])
+                polygon
+                + pv.PolyData().from_regular_faces(
+                    polygon.points, [np.arange(polygon.n_points)]
+                )
                 for polygon in edges
             ]
             if fill
