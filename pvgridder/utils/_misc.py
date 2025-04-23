@@ -166,7 +166,7 @@ def extract_boundary_polygons(
 
     Returns
     -------
-    Sequence[pv.PolyData | pv.UnstructuredGrid] | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]
+    Sequence[pyvista.PolyData | pyvista.UnstructuredGrid] | Sequence[Sequence[pyvista.PolyData | pyvista.UnstructuredGrid]]
         Extracted boundary polylines or polygons.
 
     """
