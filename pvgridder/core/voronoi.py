@@ -407,9 +407,12 @@ class VoronoiMesh2D(MeshBase):
                 voronoi_points = voronoi_points[~mask]
 
         # Generate boundary polygon
-        boundary = extract_boundary_polygons(self.mesh)[0]
-        boundary = decimate_rdp(boundary)
-        boundary = Polygon(np.delete(boundary.points, self.axis, axis=1))
+        boundary = extract_boundary_polygons(self.mesh, with_holes=True)[0]
+        boundary = [
+            np.delete(decimate_rdp(polygon).points, self.axis, axis=1)
+            for polygon in boundary
+        ]
+        boundary = Polygon(boundary[0], boundary[1:])
 
         # Generate polygonal mesh
         points, cells = [], []

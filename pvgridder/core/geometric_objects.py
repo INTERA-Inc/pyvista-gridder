@@ -392,7 +392,7 @@ def Polygon(
         if isinstance(points, pv.DataSet):
             edges = (
                 split_lines(points, as_lines=False)
-                if isinstance(points, pv.PolyData)
+                if isinstance(points, pv.PolyData) and points.n_lines > 0
                 else extract_boundary_polygons(points, fill=False)
             )
 
