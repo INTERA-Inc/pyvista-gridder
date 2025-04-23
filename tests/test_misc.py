@@ -497,12 +497,7 @@ def test_merge_lines_basic(
         pytest.param(
             lambda: pvg.extract_boundary_polygons(
                 pvg.examples.load_well_2d(), fill=True
-            )[0]
-            if len(
-                pvg.extract_boundary_polygons(pvg.examples.load_well_2d(), fill=True)
-            )
-            > 0
-            else None,
+            )[0],
             0.1,
             "increase",
             id="well_2d_boundary",
@@ -516,61 +511,37 @@ def test_offset_polygon(request, mesh_or_points, distance, expected_area_change)
         actual_input = request.getfixturevalue(mesh_or_points)
 
     else:
-        try:
-            actual_input = mesh_or_points()
-
-        except Exception:
-            pytest.skip("Failed to create input for offset_polygon test")
-
-    # Skip if we got an empty list or None
-    if actual_input is None:
-        pytest.skip("No valid polygons found to offset")
+        actual_input = mesh_or_points()
 
     # Calculate original area if applicable
     is_polydata = isinstance(actual_input, pv.PolyData)
     original_area = None
+
     if is_polydata and expected_area_change is not None:
-        try:
-            original_area = actual_input.compute_cell_sizes()["Area"][0]
+        original_area = actual_input.compute_cell_sizes()["Area"][0]
 
-        except (KeyError, IndexError):
-            pytest.skip("Could not compute area for input mesh")
+    result = pvg.offset_polygon(actual_input, distance=distance)
 
-    try:
-        # Offset the polygon
-        result = pvg.offset_polygon(actual_input, distance=distance)
+    # Basic verification for all inputs
+    assert isinstance(result, pv.PolyData)
+    assert result.n_faces_strict > 0
 
-        # Basic verification for all inputs
-        assert isinstance(result, pv.PolyData)
-        assert result.n_faces_strict > 0
+    # Check area change if applicable
+    if (
+        is_polydata
+        and expected_area_change is not None
+        and original_area is not None
+    ):
+        result_area = result.compute_cell_sizes()["Area"][0]
 
-        # Check area change if applicable
-        if (
-            is_polydata
-            and expected_area_change is not None
-            and original_area is not None
-        ):
-            try:
-                result_area = result.compute_cell_sizes()["Area"][0]
+        if expected_area_change == "increase":
+            assert result_area > original_area
 
-                if expected_area_change == "increase":
-                    assert result_area > original_area
+        elif expected_area_change == "decrease":
+            assert result_area < original_area
 
-                elif expected_area_change == "decrease":
-                    assert result_area < original_area
-
-                else:  # "same"
-                    assert np.isclose(result_area, original_area)
-
-            except (KeyError, IndexError):
-                pytest.skip("Could not compute area for result mesh")
-
-    except ValueError as e:
-        if "could not offset non-planar polygon" in str(e).lower():
-            pytest.skip(f"Could not offset: {str(e)}")
-
-        else:
-            raise
+        else:  # "same"
+            assert np.isclose(result_area, original_area)
 
 
 @pytest.mark.parametrize(
