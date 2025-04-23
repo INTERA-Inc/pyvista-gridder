@@ -1,5 +1,11 @@
-PyVista Gridder
-===============
+.. raw:: html
+
+   <p align="center">
+      <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/logo/logo.png?raw=true" width=25% height=25%>
+      <h1 align="center"><b>PyVista Gridder</b></h1>
+   </p>
+
+|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black|
 
 Structured and unstructured mesh generation using PyVista for the Finite-Element (FEM), Finite-Difference (FDM) and Finite-Volume Methods (FVM).
 
@@ -17,7 +23,7 @@ Features
 Installation
 ------------
 
-The recommended way to install **pvgridder** and all its dependencies is through the Python Package Index:
+The recommended way to install **pyvista-gridder** and all its dependencies is through the Python Package Index:
 
 .. code:: bash
 
@@ -57,41 +63,11 @@ Examples
       .add(lambda x, y, z: np.full_like(x, 3.4), 4, group="Layer 5")
       .generate_mesh()
    )
-   mesh.plot(show_edges=True)
+   mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 
 .. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/anticline.png?raw=true
 
    :alt: anticline
-   :width: 100%
-   :align: center
-
-3D structured grid
-******************
-
-.. code:: python
-
-   import pyvista as pv
-   import pvgridder as pv
-
-   terrain = pv.examples.download_crater_topo().extract_subset(
-      (500, 900, 400, 800, 0, 0), (10, 10, 1)
-   )
-   terrain = terrain.cast_to_structured_grid().warp_by_scalar("scalar1of1")
-
-   mesh = (
-      pvg.MeshStack3D(terrain)
-      .add(0.0)
-      .add(terrain.translate((0.0, 0.0, -1000.0)), 5, group="Bottom layer")
-      .add(terrain.translate((0.0, 0.0, -500.0)), 5, group="Middle layer")
-      .add(terrain, 5, group="Top Layer")
-      .generate_mesh()
-   )
-   groups = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
-   mesh.plot(show_edges=True, scalars=[groups[i] for i in mesh.cell_data["CellGroup"]])
-
-.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true
-
-   :alt: topographic-terrain
    :width: 100%
    :align: center
 
@@ -116,9 +92,7 @@ Examples
       .add_polyline(smile_points, width=0.05, group="Mouth")
       .generate_mesh()
    )
-
-   groups = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
-   mesh.plot(show_edges=True, scalars=[groups[i] for i in mesh.cell_data["CellGroup"]])
+   mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
    
 .. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true
 
@@ -126,7 +100,56 @@ Examples
    :width: 100%
    :align: center
 
+2.5D geological model
+*********************
+
+.. code:: python
+
+   import pyvista as pv
+   import pvgridder as pv
+
+   terrain = pv.examples.download_crater_topo().extract_subset(
+      (500, 900, 400, 800, 0, 0), (10, 10, 1)
+   )
+   bgmesh = pvg.VoronoiMesh2D(pvg.Polygon(terrain, celltype="triangle"), preference="point").generate_mesh()
+   terrain_delaunay = pvg.Polygon(terrain, celltype="triangle")
+   terrain = terrain.cast_to_structured_grid().warp_by_scalar("scalar1of1")
+
+   mesh = (
+      pvg.MeshStack3D(pvg.VoronoiMesh2D(terrain_delaunay, preference="point").generate_mesh())
+      .add(0.0)
+      .add(terrain.translate((0.0, 0.0, -1000.0)), 5, group="Bottom layer")
+      .add(terrain.translate((0.0, 0.0, -500.0)), 5, group="Middle layer")
+      .add(terrain, 5, group="Top Layer")
+      .generate_mesh()
+   )
+   mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
+
+.. figure:: https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true
+
+   :alt: topographic-terrain
+   :width: 100%
+   :align: center
+
 Acknowledgements
 ----------------
 
 This project is supported by Nagra (National Cooperative for the Disposal of Radioactive Waste), Switzerland.
+
+.. |License| image:: https://img.shields.io/badge/license-BSD--3--Clause-green
+   :target: https://github.com/INTERA-Inc/pyvista-gridder/blob/master/LICENSE
+
+.. |Stars| image:: https://img.shields.io/github/stars/INTERA-Inc/pyvista-gridder?style=flat&logo=github
+   :target: https://github.com/INTERA-Inc/pyvista-gridder
+
+.. |Pyversions| image:: https://img.shields.io/pypi/pyversions/pyvista-gridder.svg?style=flat
+   :target: https://pypi.org/pypi/pyvista-gridder/
+
+.. |Version| image:: https://img.shields.io/pypi/v/pyvista-gridder.svg?style=flat
+   :target: https://pypi.org/project/pyvista-gridder
+
+.. |Downloads| image:: https://pepy.tech/badge/pyvista-gridder
+   :target: https://pepy.tech/project/pyvista-gridder
+
+.. |Code style: black| image:: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat
+   :target: https://github.com/psf/black
