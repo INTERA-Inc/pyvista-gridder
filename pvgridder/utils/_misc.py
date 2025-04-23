@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Optional
 
+import itertools
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
@@ -146,7 +147,8 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
 def extract_boundary_polygons(
     mesh: pv.DataSet,
     fill: bool = False,
-) -> Sequence[pv.PolyData]:
+    with_holes: bool = False,
+) -> Sequence[pv.PolyData | pv.UnstructuredGrid] | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]:
     """
     Extract boundary edges of a mesh as continuous polylines or polygons.
 
@@ -155,15 +157,21 @@ def extract_boundary_polygons(
     mesh : pyvista.DataSet
         Mesh to extract boundary edges from.
     fill : bool, default False
-        If False, only return boundary edges as polylines.
+        If True, return boundary edges as polygons.
+    with_holes : bool, default False
+        If True, group holes with their corresponding boundary edges.
 
     Returns
     -------
-    Sequence[pyvista.PolyData]
+    Sequence[pv.PolyData | pv.UnstructuredGrid] | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]
         Extracted boundary polylines or polygons.
 
     """
-    poly = (
+    import shapely
+
+    from .. import Polygon
+
+    edges = (
         mesh.cast_to_unstructured_grid()
         .clean()
         .extract_feature_edges(
@@ -173,47 +181,42 @@ def extract_boundary_polygons(
             manifold_edges=False,
             clear_data=True,
         )
+        .strip()
     )
-    lines = poly.lines.reshape((poly.n_cells, 3))[:, 1:]
-    lines = np.sort(lines, axis=1).tolist()
-    polygon, polygons = [], []
+    edges = [edge.merge_points() for edge in split_lines(edges, as_lines=False)]
 
-    while lines:
-        if not polygon:
-            polygon += lines.pop(0)
+    # Identify holes
+    if with_holes:
+        holes = {}
+        polygons = [shapely.Polygon(edge.points) for edge in edges]
 
-        cond = np.array(lines) == polygon[-1]
+        for i, j in itertools.permutations(range(len(polygons)), 2):
+            if i in holes or j in holes:
+                continue
 
-        if cond[:, 0].any():
-            j1, j2 = 0, 1
+            if polygons[i].area > polygons[j].area and polygons[i].contains(polygons[j]):
+                holes[j] = i
 
-        elif cond[:, 1].any():
-            j1, j2 = 1, 0
+        # Group boundary edges and holes
+        polygons = [[edge] if i not in holes else [] for i, edge in enumerate(edges)]
 
-        else:
-            raise ValueError("could not match end point with another start point")
+        for k, v in holes.items():
+            polygons[v].append(edges[k])
 
-        i = np.flatnonzero(cond[:, j1])[0]
-        polygon.append(lines[i][j2])
-        _ = lines.pop(i)
+        polygons = [polygon for polygon in polygons if polygon]
+        polygons = [Polygon(polygon[0], polygon[1:]) for polygon in polygons] if fill else polygons
 
-        if polygon[-1] == polygon[0]:
-            polygons.append(polygon)
-            polygon = []
-
-    return [
-        pv.PolyData(
-            poly.points[polygon[:-1]],
-            lines=[len(polygon), *list(range(len(polygon) - 1)), 0],
-            faces=[len(polygon) - 1, *list(range(len(polygon) - 1))],
+    else:
+        polygons = (
+            [
+                polygon + pv.PolyData().from_regular_faces(polygon.points, [np.arange(polygon.n_points)])
+                for polygon in edges
+            ]
+            if fill
+            else edges
         )
-        if fill
-        else pv.PolyData(
-            poly.points[polygon[:-1]],
-            lines=[len(polygon), *list(range(len(polygon) - 1)), 0],
-        )
-        for polygon in polygons
-    ]
+
+    return tuple(polygons)
 
 
 def extract_cell_geometry(
