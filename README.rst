@@ -5,6 +5,8 @@
       <h1 align="center"><b>PyVista Gridder</b></h1>
    </p>
 
+|License| |Stars| |Pyversions| |Version| |Downloads| |Code style: black|
+
 Structured and unstructured mesh generation using PyVista for the Finite-Element (FEM), Finite-Difference (FDM) and Finite-Volume Methods (FVM).
 
 Features
@@ -21,7 +23,7 @@ Features
 Installation
 ------------
 
-The recommended way to install **pvgridder** and all its dependencies is through the Python Package Index:
+The recommended way to install **pyvista-gridder** and all its dependencies is through the Python Package Index:
 
 .. code:: bash
 
@@ -133,3 +135,21 @@ Acknowledgements
 ----------------
 
 This project is supported by Nagra (National Cooperative for the Disposal of Radioactive Waste), Switzerland.
+
+.. |License| image:: https://img.shields.io/badge/license-BSD--3--Clause-green
+   :target: https://github.com/INTERA-Inc/pyvista-gridder/blob/master/LICENSE
+
+.. |Stars| image:: https://img.shields.io/github/stars/INTERA-Inc/pyvista-gridder?style=flat&logo=github
+   :target: https://github.com/INTERA-Inc/pyvista-gridder
+
+.. |Pyversions| image:: https://img.shields.io/pypi/pyversions/pyvista-gridder.svg?style=flat
+   :target: https://pypi.org/pypi/pyvista-gridder/
+
+.. |Version| image:: https://img.shields.io/pypi/v/pyvista-gridder.svg?style=flat
+   :target: https://pypi.org/project/pyvista-gridder
+
+.. |Downloads| image:: https://pepy.tech/badge/pyvista-gridder
+   :target: https://pepy.tech/project/pyvista-gridder
+
+.. |Code style: black| image:: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat
+   :target: https://github.com/psf/black
