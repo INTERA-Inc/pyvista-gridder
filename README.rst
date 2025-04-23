@@ -1,9 +1,9 @@
 .. raw:: html
 
-   <figure style="width: 50%;"><img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/logo/logo.png?raw=true" alt="PyVista Gridder logo"></figure>
-
-PyVista Gridder
-===============
+   <p align="center">
+      <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/logo/logo.png?raw=true" width=25% height=25%>
+      <h1 align="center"><b>PyVista Gridder</b></h1>
+   </p>
 
 Structured and unstructured mesh generation using PyVista for the Finite-Element (FEM), Finite-Difference (FDM) and Finite-Volume Methods (FVM).
 
