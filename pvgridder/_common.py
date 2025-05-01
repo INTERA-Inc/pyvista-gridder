@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import importlib
 from functools import wraps
+from importlib import import_module, metadata
 from typing import Callable, Optional
 
 
@@ -11,10 +11,10 @@ def require_package(name: str, version: Optional[tuple[int]] = None) -> Callable
     def decorator(func: Callable):
         """Decorate function."""
         try:
-            importlib.import_module(name)
+            import_module(name)
 
             if version:
-                package_version = importlib.metadata.version(name)
+                package_version = metadata.version(name)
                 package_version = tuple(map(int, package_version.split(".")))
 
                 if package_version < version:
