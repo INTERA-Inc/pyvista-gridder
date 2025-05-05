@@ -41,7 +41,7 @@ def get_cell_connectivity(
         # Use PyVista's public API while VTK < 9.4
         # faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
         # locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
-        
+
         def split(arr: Sequence[int]) -> list[Sequence[int]]:
             i = 0
             offsets: list[int] = [0]

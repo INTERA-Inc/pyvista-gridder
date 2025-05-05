@@ -327,7 +327,11 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
         # Example mesh
         pytest.param("well_2d", np.arange(8), id="well_2d"),
         # Example mesh with hidden cells
-        pytest.param("anticline_2d", [[164, 165, 205, 206], [20, 61, 102, 143]], id="anticline_2d"),
+        pytest.param(
+            "anticline_2d",
+            [[164, 165, 205, 206], [20, 61, 102, 143]],
+            id="anticline_2d",
+        ),
     ],
 )
 def test_fuse_cells(request, mesh, cell_ids):
@@ -346,10 +350,15 @@ def test_fuse_cells(request, mesh, cell_ids):
         assert results.n_cells == actual_mesh.n_cells - len(cell_ids) + 1
 
     else:
-        assert results.n_cells == actual_mesh.n_cells - np.concatenate(cell_ids).size + len(cell_ids)
+        assert results.n_cells == actual_mesh.n_cells - np.concatenate(
+            cell_ids
+        ).size + len(cell_ids)
 
     # Check area
-    assert np.allclose(results.compute_cell_sizes()["Area"].sum(), actual_mesh.compute_cell_sizes()["Area"].sum())
+    assert np.allclose(
+        results.compute_cell_sizes()["Area"].sum(),
+        actual_mesh.compute_cell_sizes()["Area"].sum(),
+    )
 
 
 @pytest.mark.parametrize(
