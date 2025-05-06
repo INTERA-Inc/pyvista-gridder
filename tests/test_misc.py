@@ -318,73 +318,47 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
 @pytest.mark.parametrize(
     "mesh, cell_ids",
     [
-        # Basic mesh with adjacent quads
+        # # Basic mesh with adjacent quads
         pytest.param(
-            lambda: pv.UnstructuredGrid(
-                {pv.CellType.QUAD: np.array([[0, 1, 3, 2], [1, 4, 5, 3]])},
-                np.array(
-                    [
-                        [0.0, 0.0, 0.0],
-                        [1.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0],
-                        [1.0, 1.0, 0.0],
-                        [2.0, 0.0, 0.0],
-                        [2.0, 1.0, 0.0],
-                    ],
-                    dtype=np.float64,
-                ),
-            ),
+            lambda: pv.ImageData(dimensions=(2, 3, 1)),
             [0, 1],
             id="basic_quads",
         ),
-        # Example mesh - will look for fusable cells
-        pytest.param(pvg.examples.load_well_2d, None, id="well_2d"),
+        # Example mesh
+        pytest.param("well_2d", np.arange(8), id="well_2d"),
+        # Example mesh with hidden cells
+        pytest.param(
+            "anticline_2d",
+            [[164, 165, 205, 206], [20, 61, 102, 143]],
+            id="anticline_2d",
+        ),
     ],
 )
-def test_fuse_cells(mesh, cell_ids):
+def test_fuse_cells(request, mesh, cell_ids):
     """Test cell fusion with different meshes."""
-    # Get the actual mesh (executing the function if it's a callable)
-    actual_mesh = mesh() if callable(mesh) else mesh()
+    if isinstance(mesh, str):
+        actual_mesh = request.getfixturevalue(mesh)
 
-    # For example meshes, find cells with the same group to fuse
-    if cell_ids is None and "CellGroup" in actual_mesh.cell_data:
-        groups = actual_mesh.cell_data["CellGroup"]
-        unique_groups = np.unique(groups)
+    else:
+        actual_mesh = mesh()
 
-        if len(unique_groups) > 1:
-            # Get cells from the first group
-            group_cell_indices = np.where(groups == unique_groups[0])[0]
+    # Fuse cells
+    results = pvg.fuse_cells(actual_mesh, cell_ids)
 
-            if len(group_cell_indices) >= 2:
-                cell_ids = group_cell_indices[:2]
+    # Check number of cells
+    if np.ndim(cell_ids[0]) == 0:
+        assert results.n_cells == actual_mesh.n_cells - len(cell_ids) + 1
 
-    # Skip if we couldn't find valid cell IDs
-    if cell_ids is None:
-        pytest.skip("Could not find suitable cells to fuse")
+    else:
+        assert results.n_cells == actual_mesh.n_cells - np.concatenate(
+            cell_ids
+        ).size + len(cell_ids)
 
-    try:
-        # Try to fuse the cells
-        result = pvg.fuse_cells(actual_mesh, cell_ids)
-
-        # Should have fewer cells than before
-        assert result.n_cells < actual_mesh.n_cells
-
-        # Check that the first cell is now a polygon
-        if cell_ids[0] < result.n_cells:
-            assert result.celltypes[cell_ids[0]] == pv.CellType.POLYGON
-
-    except ValueError as e:
-        if "could not fuse not fully connected cells" in str(e):
-            pytest.skip("Cells not fully connected, skipping test")
-
-        elif "could not extract boundary" in str(e).lower():
-            pytest.skip("Could not extract boundary, skipping test")
-
-        else:
-            raise
-
-    except NotImplementedError:
-        pytest.skip("Fuse cells not implemented for this mesh type")
+    # Check area
+    assert np.allclose(
+        results.compute_cell_sizes()["Area"].sum(),
+        actual_mesh.compute_cell_sizes()["Area"].sum(),
+    )
 
 
 @pytest.mark.parametrize(
