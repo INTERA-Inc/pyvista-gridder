@@ -487,7 +487,7 @@ def fuse_cells(
     indices = [ind] if np.ndim(ind[0]) == 0 else ind
     mesh = mesh.cast_to_unstructured_grid()
     connectivity = list(get_cell_connectivity(mesh))
-    celltypes = mesh.celltypes
+    celltypes = mesh.celltypes.copy()
     mask = np.ones(mesh.n_cells, dtype=bool)
 
     for ind in indices:
