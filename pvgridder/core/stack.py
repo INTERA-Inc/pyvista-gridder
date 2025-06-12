@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from numpy.typing import ArrayLike
 from typing import Optional
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 from typing_extensions import Self
 
 from ._base import MeshStackBase
@@ -144,7 +144,7 @@ class MeshStack3D(MeshStackBase):
         angles: Sequence[float, float, float],
         point: Sequence[float, float, float],
         *args,
-        **kwargs
+        **kwargs,
     ) -> Self:
         """
         Add a plane to the stack.
@@ -168,7 +168,7 @@ class MeshStack3D(MeshStackBase):
 
         angles = np.array(angles)
         point = np.asanyarray(point)
-        
+
         angles[self.axis] = 0.0
         rot = Rotation.from_rotvec(angles, degrees=True)
         idx = np.delete(np.arange(3), self.axis)
@@ -177,7 +177,7 @@ class MeshStack3D(MeshStackBase):
             points = np.column_stack((x, y, z))
             points[:, idx] -= point[idx]
             points[:, self.axis] = 0.0
-            
+
             return rot.apply(points, inverse=True)[:, self.axis] + point[self.axis]
 
         return self.add(func, *args, **kwargs)

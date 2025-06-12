@@ -165,7 +165,9 @@ class VoronoiMesh2D(MeshBase):
         if plain:
             center = np.zeros(3) if center is None else center
             center = np.insert(center, self.axis, 0.0) if len(center) == 2 else center
-            self.fuse_cells.append(lambda x: np.linalg.norm(x - center, axis=1) < radius)
+            self.fuse_cells.append(
+                lambda x: np.linalg.norm(x - center, axis=1) < radius
+            )
 
         return self
 
@@ -336,7 +338,12 @@ class VoronoiMesh2D(MeshBase):
         """
         from shapely import Polygon, get_coordinates
 
-        from .. import average_points, decimate_rdp, extract_boundary_polygons, fuse_cells
+        from .. import (
+            average_points,
+            decimate_rdp,
+            extract_boundary_polygons,
+            fuse_cells,
+        )
 
         groups = {}
         items = sorted(self.items, key=lambda item: abs(item.priority))
