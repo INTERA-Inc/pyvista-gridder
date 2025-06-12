@@ -152,11 +152,11 @@ class MeshStack3D(MeshStackBase):
         Parameters
         ----------
         angles : Sequence[float, float, float]
-            Rotation angles in degrees around the x, y, and z axes.
+            Rotation angles in degrees around the X, Y, and Z axes.
         point : Sequence[float, float, float]
-            Point in space where the plane is located.
+            Coordinates of one point on the plane.
         *args, **kwargs
-            Additional arguments for the `add` method.
+            Additional arguments. See ``pvgridder.MeshStack3D.add`` for details.
 
         Returns
         -------
