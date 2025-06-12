@@ -37,8 +37,8 @@ smile_points = [
 ]
 mesh = (
     pvg.VoronoiMesh2D(pvg.Annulus(0.0, 1.0, 16, 32), default_group="Face")
-    .add_circle(0.16, resolution=16, center=(-0.32, 0.32, 0.0), group="Eye")
-    .add_circle(0.16, resolution=16, center=(0.32, 0.32, 0.0), group="Eye")
+    .add_circle(0.16, plain=False, resolution=16, center=(-0.32, 0.32, 0.0), group="Eye")
+    .add_circle(0.16, plain=True, resolution=16, center=(0.32, 0.32, 0.0), group="Eye")
     .add_polyline(smile_points, width=0.05, group="Mouth")
     .generate_mesh()
 )
