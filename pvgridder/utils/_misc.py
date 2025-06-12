@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Sequence
-from typing import Optional
+from typing import Literal, Optional
 
 import numpy as np
 import pyvista as pv
@@ -491,6 +491,8 @@ def fuse_cells(
     mask = np.ones(mesh.n_cells, dtype=bool)
 
     for ind in indices:
+        ind = np.asanyarray(ind)
+        ind = np.flatnonzero(ind) if ind.dtype.kind == "b" else ind
         mesh_ = mesh.extract_cells(ind)
         mask[ind[1:]] = False
 
