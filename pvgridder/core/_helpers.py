@@ -395,11 +395,15 @@ def generate_volume_from_two_surfaces(
         # Repeat data
         reps = (perc.size, 1)
         for k, v in surface_a.point_data.items():
-            mesh.point_data[k] = np.tile(v, reps[: v.ndim]).copy()  # random crashes in VTK if not copied
+            mesh.point_data[k] = np.tile(
+                v, reps[: v.ndim]
+            ).copy()  # random crashes in VTK if not copied
 
         reps = (perc.size - 1, 1)
         for k, v in surface_a.cell_data.items():
-            mesh.cell_data[k] = np.tile(v, reps[: v.ndim]).copy()  # random crashes in VTK if not copied
+            mesh.cell_data[k] = np.tile(
+                v, reps[: v.ndim]
+            ).copy()  # random crashes in VTK if not copied
 
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")
