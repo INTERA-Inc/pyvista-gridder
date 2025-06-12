@@ -153,6 +153,9 @@ class MeshExtrude(MeshBase):
 
         groups = {}
 
+        # Generate submeshes
+        meshes = []
+
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
             mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
@@ -166,23 +169,20 @@ class MeshExtrude(MeshBase):
             nsub = mesh_b.n_cells // mesh_a.n_cells
             mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
                 np.arange(mesh_a.n_cells), nsub
-            )
+            ).copy()
             mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
             mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(
                 np.arange(nsub), mesh_a.n_cells
-            )
+            ).copy()
+            meshes.append(mesh_b)
 
-            if i > 0:
-                axis = (
-                    self.mesh.dimensions.index(1)
-                    if isinstance(mesh, pv.StructuredGrid)
-                    else None
-                )
-                mesh = merge(mesh, mesh_b, axis, merge_points=False)
-
-            else:
-                mesh = mesh_b
-
+        # Merge submeshes
+        axis = (
+            self.mesh.dimensions.index(1)
+            if isinstance(self.mesh, pv.StructuredGrid)
+            else None
+        )
+        mesh = merge(meshes, axis=axis, merge_points=False)
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 

@@ -401,7 +401,7 @@ def test_merge_basic(mesh_type, axes):
 
             try:
                 # Merge along axis
-                result = pvg.merge(grid1, grid2, axis=axis)
+                result = pvg.merge((grid1, grid2), axis=axis)
 
                 # Should be a structured grid with more points along the specified axis
                 assert isinstance(result, pv.StructuredGrid)
@@ -429,7 +429,7 @@ def test_merge_basic(mesh_type, axes):
         )
 
         # Merge unstructured grids - we already know MERGE_POINTS_COMPATIBLE is True at this point
-        result = pvg.merge(grid1, grid2, merge_points=True)
+        result = pvg.merge((grid1, grid2), merge_points=True)
 
         # Should be an unstructured grid with more cells
         assert isinstance(result, pv.UnstructuredGrid)
