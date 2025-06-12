@@ -80,8 +80,8 @@ smile_points = [
 ]
 mesh = (
    pvg.VoronoiMesh2D(pvg.Annulus(0.0, 1.0, 16, 32), default_group="Face")
-   .add_circle(0.16, resolution=16, center=(-0.32, 0.32, 0.0), group="Eye")
-   .add_circle(0.16, resolution=16, center=(0.32, 0.32, 0.0), group="Eye")
+   .add_circle(0.16, plain=False, resolution=16, center=(-0.32, 0.32, 0.0), group="Eye")
+   .add_circle(0.16, plain=True, resolution=16, center=(0.32, 0.32, 0.0), group="Eye")
    .add_polyline(smile_points, width=0.05, group="Mouth")
    .generate_mesh()
 )
@@ -99,16 +99,17 @@ import pvgridder as pvg
 terrain = pv.examples.download_crater_topo().extract_subset(
    (500, 900, 400, 800, 0, 0), (10, 10, 1)
 )
-bgmesh = pvg.VoronoiMesh2D(pvg.Polygon(terrain, celltype="triangle"), preference="point").generate_mesh()
 terrain_delaunay = pvg.Polygon(terrain, celltype="triangle")
 terrain = terrain.cast_to_structured_grid().warp_by_scalar("scalar1of1")
 
 mesh = (
-   pvg.MeshStack3D(pvg.VoronoiMesh2D(terrain_delaunay, preference="point").generate_mesh())
+   pvg.MeshStack3D(
+      pvg.VoronoiMesh2D(terrain_delaunay, preference="point").generate_mesh()
+   )
    .add(0.0)
-   .add(terrain.translate((0.0, 0.0, -1000.0)), 5, group="Bottom layer")
+   .add(terrain.translate((0.0, 0.0, -1000.0)), 5, method="log_r", group="Bottom layer")
    .add(terrain.translate((0.0, 0.0, -500.0)), 5, group="Middle layer")
-   .add(terrain, 5, group="Top Layer")
+   .add(terrain, 5, method="log", group="Top Layer")
    .generate_mesh()
 )
 mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
