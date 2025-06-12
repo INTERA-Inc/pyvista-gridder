@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Optional
+from numpy.typing import ArrayLike
 
 import numpy as np
 import pyvista as pv
