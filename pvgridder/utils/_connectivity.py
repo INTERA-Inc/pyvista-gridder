@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 
 
 def get_neighborhood(

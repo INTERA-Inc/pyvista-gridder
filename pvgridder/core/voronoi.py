@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Literal, Optional
 
 import numpy as np
@@ -50,6 +50,7 @@ class VoronoiMesh2D(MeshBase):
         self._mesh = mesh.copy()
         self._axis = axis
         self._preference = preference
+        self._fuse_cells = []
         self.mesh.points[:, self.axis] = 0.0
 
     def add(
@@ -96,6 +97,7 @@ class VoronoiMesh2D(MeshBase):
         constraint_radius: Optional[float] = None,
         resolution: Optional[int | ArrayLike] = None,
         center: Optional[ArrayLike] = None,
+        plain: bool = False,
         priority: int = 0,
         group: Optional[str] = None,
     ) -> Self:
@@ -113,6 +115,8 @@ class VoronoiMesh2D(MeshBase):
             subdivisions (in percentage) with respect to the starting angle (0 degree).
         center : ArrayLike, optional
             Center of the circle.
+        plain : bool, default False
+            If True, fuse all cells within the circle into a single cell.
         priority : int, default 0
             Priority of item. Points enclosed in a cell with (strictly) higher
             priority are discarded.
@@ -157,6 +161,13 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             raise ValueError("invalid constraint radius")
+
+        if plain:
+            center = np.zeros(3) if center is None else center
+            center = np.insert(center, self.axis, 0.0) if len(center) == 2 else center
+            self.fuse_cells.append(
+                lambda x: np.linalg.norm(x - center, axis=1) < radius
+            )
 
         return self
 
@@ -327,7 +338,12 @@ class VoronoiMesh2D(MeshBase):
         """
         from shapely import Polygon, get_coordinates
 
-        from .. import average_points, decimate_rdp, extract_boundary_polygons
+        from .. import (
+            average_points,
+            decimate_rdp,
+            extract_boundary_polygons,
+            fuse_cells,
+        )
 
         groups = {}
         items = sorted(self.items, key=lambda item: abs(item.priority))
@@ -445,6 +461,12 @@ class VoronoiMesh2D(MeshBase):
         mesh.cell_data["Y"] = voronoi_points[:, 1]
         mesh.cell_data["Z"] = voronoi_points[:, 2]
 
+        # Fuse cells, if any
+        if self.fuse_cells:
+            points = mesh.cell_centers().points
+            indices = [func(points) for func in self.fuse_cells]
+            mesh = fuse_cells(mesh, indices)
+
         return mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
     def _generate_voronoi_tesselation(
@@ -525,3 +547,8 @@ class VoronoiMesh2D(MeshBase):
     def preference(self) -> Literal["cell", "point"]:
         """Return preference."""
         return self._preference
+
+    @property
+    def fuse_cells(self) -> Sequence[Callable]:
+        """Return list of cells to fuse."""
+        return self._fuse_cells

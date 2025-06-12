@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 from typing_extensions import Self
 
 from ._base import MeshStackBase
@@ -137,6 +138,49 @@ class MeshStack3D(MeshStackBase):
             )
 
         super().__init__(mesh, axis, default_group, ignore_groups)
+
+    def add_plane(
+        self,
+        angles: Sequence[float, float, float],
+        point: Sequence[float, float, float],
+        *args,
+        **kwargs,
+    ) -> Self:
+        """
+        Add a plane to the stack.
+
+        Parameters
+        ----------
+        angles : Sequence[float, float, float]
+            Rotation angles in degrees around the X, Y, and Z axes.
+        point : Sequence[float, float, float]
+            Coordinates of one point on the plane.
+        *args, **kwargs
+            Additional arguments. See ``pvgridder.MeshStack3D.add`` for details.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        from scipy.spatial.transform import Rotation
+
+        angles = np.array(angles)
+        point = np.asanyarray(point)
+
+        angles[self.axis] = 0.0
+        rot = Rotation.from_rotvec(angles, degrees=True)
+        idx = np.delete(np.arange(3), self.axis)
+
+        def func(x: ArrayLike, y: ArrayLike, z: ArrayLike) -> ArrayLike:
+            points = np.column_stack((x, y, z))
+            points[:, idx] -= point[idx]
+            points[:, self.axis] = 0.0
+
+            return rot.apply(points, inverse=True)[:, self.axis] + point[self.axis]
+
+        return self.add(func, *args, **kwargs)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """Extrude a line."""
