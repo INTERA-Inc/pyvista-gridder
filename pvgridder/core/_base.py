@@ -441,7 +441,7 @@ class MeshStackBase(MeshBase):
                 nsub, repeats = mesh_b.n_cells // mesh_a.n_cells, mesh_a.n_cells
                 mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
                     np.arange(mesh_a.n_cells), nsub
-                )
+                ).copy()
 
             mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
             mesh_b.cell_data["StackSubItem"] = np.repeat(np.arange(nsub), repeats)

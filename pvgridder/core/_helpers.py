@@ -203,11 +203,11 @@ def generate_surface_from_two_lines(
     if isinstance(line_a, pv.PolyData):
         reps = (perc.size, 1)
         for k, v in line_a.point_data.items():
-            mesh.point_data[k] = np.tile(v, reps[: v.ndim])
+            mesh.point_data[k] = np.tile(v, reps[: v.ndim]).copy()
 
         reps = (perc.size - 1, 1)
         for k, v in line_a.cell_data.items():
-            mesh.cell_data[k] = np.tile(v, reps[: v.ndim])
+            mesh.cell_data[k] = np.tile(v, reps[: v.ndim]).copy()
 
     # Handle collapsed cells
     if "vtkGhostType" not in mesh.cell_data:
@@ -395,11 +395,11 @@ def generate_volume_from_two_surfaces(
         # Repeat data
         reps = (perc.size, 1)
         for k, v in surface_a.point_data.items():
-            mesh.point_data[k] = np.tile(v, reps[: v.ndim])
+            mesh.point_data[k] = np.tile(v, reps[: v.ndim]).copy()  # random crashes in VTK if not copied
 
         reps = (perc.size - 1, 1)
         for k, v in surface_a.cell_data.items():
-            mesh.cell_data[k] = np.tile(v, reps[: v.ndim])
+            mesh.cell_data[k] = np.tile(v, reps[: v.ndim]).copy()  # random crashes in VTK if not copied
 
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")

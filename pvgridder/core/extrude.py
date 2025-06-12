@@ -169,11 +169,11 @@ class MeshExtrude(MeshBase):
             nsub = mesh_b.n_cells // mesh_a.n_cells
             mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
                 np.arange(mesh_a.n_cells), nsub
-            )
+            ).copy()
             mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
             mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(
                 np.arange(nsub), mesh_a.n_cells
-            )
+            ).copy()
             meshes.append(mesh_b)
 
         # Merge submeshes
