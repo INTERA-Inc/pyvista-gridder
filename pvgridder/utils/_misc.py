@@ -547,18 +547,17 @@ def fuse_cells(
 
 
 def merge(
-    mesh_a: pv.StructuredGrid | pv.UnstructuredGrid,
-    mesh_b: pv.StructuredGrid | pv.UnstructuredGrid,
+    dataset: Sequence[pv.StructuredGrid | pv.UnstructuredGrid],
     axis: Optional[int] = None,
     merge_points: bool = True,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
     """
-    Merge two meshes.
+    Merge several meshes.
 
     Parameters
     ----------
-    mesh_a, mesh_b : pyvista.StructuredGrid | pyvista.UnstructuredGrid
-        The meshes to merge together.
+    dataset : Sequence[pyvista.StructuredGrid | pyvista.UnstructuredGrid]
+        Meshes to merge together. At least two meshes are required.
     axis : int, optional
         The axis along which two structured grids are merged (if *mesh_a* and *mesh_b*
         are structured grids).
@@ -571,71 +570,79 @@ def merge(
         Merged mesh.
 
     """
-    if isinstance(mesh_a, pv.StructuredGrid) and isinstance(mesh_b, pv.StructuredGrid):
+    if len(dataset) < 2:
+        return dataset[0]
+
+    if all(isinstance(mesh, pv.StructuredGrid) for mesh in dataset):
         if axis is None:
             raise ValueError("could not merge structured grids with None axis")
 
-        if axis == 0:
-            if not (
-                np.allclose(mesh_a.x[-1], mesh_b.x[0])
-                and np.allclose(mesh_a.y[-1], mesh_b.y[0])
-                and np.allclose(mesh_a.z[-1], mesh_b.z[0])
-            ):
-                raise ValueError(
-                    "could not merge structured grids with non-matching east and west interfaces"
+        mesh_a = dataset[0]
+
+        for mesh_b in dataset[1:]:
+            if axis == 0:
+                if not (
+                    np.allclose(mesh_a.x[-1], mesh_b.x[0])
+                    and np.allclose(mesh_a.y[-1], mesh_b.y[0])
+                    and np.allclose(mesh_a.z[-1], mesh_b.z[0])
+                ):
+                    raise ValueError(
+                        "could not merge structured grids with non-matching east and west interfaces"
+                    )
+
+                slice_ = (slice(1, None),)
+
+            elif axis == 1:
+                if not (
+                    np.allclose(mesh_a.x[:, -1], mesh_b.x[:, 0])
+                    and np.allclose(mesh_a.y[:, -1], mesh_b.y[:, 0])
+                    and np.allclose(mesh_a.z[:, -1], mesh_b.z[:, 0])
+                ):
+                    raise ValueError(
+                        "could not merge structured grids with non-matching north and south interfaces"
+                    )
+
+                slice_ = (slice(None), slice(1, None))
+
+            else:
+                if not (
+                    np.allclose(mesh_a.x[..., -1], mesh_b.x[..., 0])
+                    and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
+                    and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
+                ):
+                    raise ValueError(
+                        "could not merge structured grids with non-matching top and bottom interfaces"
+                    )
+
+                slice_ = (slice(None), slice(None), slice(1, None))
+
+            X = np.concatenate((mesh_a.x, mesh_b.x[slice_]), axis=axis)
+            Y = np.concatenate((mesh_a.y, mesh_b.y[slice_]), axis=axis)
+            Z = np.concatenate((mesh_a.z, mesh_b.z[slice_]), axis=axis)
+            mesh = pv.StructuredGrid(X, Y, Z)
+
+            if mesh_a.cell_data:
+                shape_a = [max(1, n - 1) for n in mesh_a.dimensions]
+                shape_b = [max(1, n - 1) for n in mesh_b.dimensions]
+                mesh.cell_data.update(
+                    {
+                        k: np.concatenate(
+                            (
+                                v.reshape(shape_a, order="F"),
+                                mesh_b.cell_data[k].reshape(shape_b, order="F"),
+                            ),
+                            axis=axis,
+                        ).ravel(order="F")
+                        for k, v in mesh_a.cell_data.items()
+                        if k in mesh_b.cell_data
+                    }
                 )
 
-            slice_ = (slice(1, None),)
-
-        elif axis == 1:
-            if not (
-                np.allclose(mesh_a.x[:, -1], mesh_b.x[:, 0])
-                and np.allclose(mesh_a.y[:, -1], mesh_b.y[:, 0])
-                and np.allclose(mesh_a.z[:, -1], mesh_b.z[:, 0])
-            ):
-                raise ValueError(
-                    "could not merge structured grids with non-matching north and south interfaces"
-                )
-
-            slice_ = (slice(None), slice(1, None))
-
-        else:
-            if not (
-                np.allclose(mesh_a.x[..., -1], mesh_b.x[..., 0])
-                and np.allclose(mesh_a.y[..., -1], mesh_b.y[..., 0])
-                and np.allclose(mesh_a.z[..., -1], mesh_b.z[..., 0])
-            ):
-                raise ValueError(
-                    "could not merge structured grids with non-matching top and bottom interfaces"
-                )
-
-            slice_ = (slice(None), slice(None), slice(1, None))
-
-        X = np.concatenate((mesh_a.x, mesh_b.x[slice_]), axis=axis)
-        Y = np.concatenate((mesh_a.y, mesh_b.y[slice_]), axis=axis)
-        Z = np.concatenate((mesh_a.z, mesh_b.z[slice_]), axis=axis)
-        mesh = pv.StructuredGrid(X, Y, Z)
-
-        if mesh_a.cell_data:
-            shape_a = [max(1, n - 1) for n in mesh_a.dimensions]
-            shape_b = [max(1, n - 1) for n in mesh_b.dimensions]
-            mesh.cell_data.update(
-                {
-                    k: np.concatenate(
-                        (
-                            v.reshape(shape_a, order="F"),
-                            mesh_b.cell_data[k].reshape(shape_b, order="F"),
-                        ),
-                        axis=axis,
-                    ).ravel(order="F")
-                    for k, v in mesh_a.cell_data.items()
-                    if k in mesh_b.cell_data
-                }
-            )
+            mesh_a = mesh
 
     else:
         mesh = pv.merge(
-            (mesh_a, mesh_b), merge_points=merge_points, main_has_priority=True
+            dataset, merge_points=merge_points, main_has_priority=True
         )
 
     return mesh

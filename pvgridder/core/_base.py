@@ -420,6 +420,9 @@ class MeshStackBase(MeshBase):
                     item1.mesh.points[:, self.axis],
                 )
 
+        # Generate submeshes
+        meshes = []
+
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
             mesh_a.cell_data["CellGroup"] = self._initialize_group_array(
@@ -442,13 +445,10 @@ class MeshStackBase(MeshBase):
 
             mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
             mesh_b.cell_data["StackSubItem"] = np.repeat(np.arange(nsub), repeats)
+            meshes.append(mesh_b)
 
-            if i > 0:
-                mesh = merge(mesh, mesh_b, self.axis, merge_points=False)
-
-            else:
-                mesh = mesh_b
-
+        # Merge submeshes
+        mesh = merge(meshes, axis=self.axis, merge_points=False)
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
