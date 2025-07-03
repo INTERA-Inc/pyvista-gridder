@@ -653,6 +653,83 @@ def Rectangle(
     return Quadrilateral(points, x_resolution, y_resolution, x_method, y_method, center)
 
 
+def RectangleSector(
+    dx: float = 0.5,
+    dy: float = 0.5,
+    radius: float = 1.0,
+    x_resolution: Optional[int | ArrayLike] = None,
+    y_resolution: Optional[int | ArrayLike] = None,
+    r_resolution: Optional[int | ArrayLike] = None,
+    x_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    y_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.UnstructuredGrid:
+    """
+    Generate a sector mesh with rectangle removed at the center.
+
+    Parameters
+    ----------
+    dx : scalar, default 0.5
+        Size of rectangle along X axis.
+    dy : scalar, default 0.5
+        Size of rectangle along Y axis.
+    radius : scalar, default 1.0
+        Sector radius.
+    x_resolution : int | ArrayLike, optional
+        Number of subdivisions along the X axis or relative position of subdivisions
+        (in percentage) with respect to the corner of the rectangle.
+    y_resolution : int | ArrayLike, optional
+        Number of subdivisions along the Y axis or relative position of subdivisions
+        (in percentage) with respect to the corner of the rectangle.
+    r_resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the corner of the rectangle.
+    x_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *x_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    y_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *y_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    r_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *r_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the rectangle sector.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Rectangle mesh with sector removed at the center.
+
+    """
+    if 0.0 < radius < (dx**2 + dy**2) ** 0.5:
+        raise ValueError("invalid sector radius")
+
+    line_x = generate_line_from_two_points([dx, dy], [0.0, dy], x_resolution, x_method)
+    line_y = generate_line_from_two_points([dx, dy], [dx, 0.0], y_resolution, y_method)
+    line_45 = generate_arc(radius, 45.0, 0.0, y_resolution, y_method)
+    line_90 = generate_arc(radius, 45.0, 90.0, x_resolution, x_method)
+    mesh_y45 = StructuredSurface(line_y, line_45, "xy", r_resolution, r_method)
+    mesh_x90 = StructuredSurface(line_x, line_90, "xy", r_resolution, r_method)
+    mesh = mesh_y45.cast_to_unstructured_grid() + mesh_x90.cast_to_unstructured_grid()
+    mesh = translate(mesh, center)
+
+    return mesh
+
+
 def RegularLine(points: ArrayLike, resolution: Optional[int] = None) -> pv.PolyData:
     """
     Generate a polyline with regularly spaced points.
@@ -680,8 +757,10 @@ def RegularLine(points: ArrayLike, resolution: Optional[int] = None) -> pv.PolyD
     ).cumsum()
     x = np.linspace(0.0, xp.max(), resolution + 1)
     points = np.column_stack([np.interp(x, xp, fp) for fp in points.T])
+    mesh = pv.MultipleLines(points)
+    mesh.clear_data()
 
-    return pv.MultipleLines(points)
+    return mesh
 
 
 def Sector(
@@ -752,7 +831,7 @@ def SectorRectangle(
     center: Optional[ArrayLike] = None,
 ) -> pv.UnstructuredGrid:
     """
-    Generate a rectangle mesh with removed sector.
+    Generate a rectangle mesh with sector removed at the center.
 
     Parameters
     ----------
@@ -787,8 +866,8 @@ def SectorRectangle(
 
     Returns
     -------
-    pyvista.StructuredGrid
-        Rectangle mesh with removed sector.
+    pyvista.UnstructuredGrid
+        Rectangle mesh with sector removed at the center
 
     """
     if not 0.0 < radius < min(dx, dy):
@@ -798,9 +877,9 @@ def SectorRectangle(
         [dx, dy], [0.0, dy], theta_resolution, theta_method
     )
     line_y = generate_line_from_two_points(
-        [dx, 0.0], [dx, dy], theta_resolution, theta_method
+        [dx, dy], [dx, 0.0], theta_resolution, theta_method
     )
-    line_45 = generate_arc(radius, 0.0, 45.0, theta_resolution)
+    line_45 = generate_arc(radius, 45.0, 0.0, theta_resolution)
     line_90 = generate_arc(radius, 45.0, 90.0, theta_resolution)
     mesh_y45 = StructuredSurface(line_45, line_y, "xy", r_resolution, r_method)
     mesh_x90 = StructuredSurface(line_90, line_x, "xy", r_resolution, r_method)
@@ -808,6 +887,169 @@ def SectorRectangle(
     mesh = translate(mesh, center)
 
     return mesh
+
+
+def SectorSquare(
+    radius: float = 0.5,
+    dx: float = 1.0,
+    r_resolution: Optional[int | ArrayLike] = None,
+    theta_resolution: Optional[int | ArrayLike] = None,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.UnstructuredGrid:
+    """
+    Generate a square mesh with sector removed at the center.
+
+    Parameters
+    ----------
+    radius : scalar, default 0.5
+        Sector radius.
+    dx : scalar, default 1.0
+        Size of square along X axis.
+    r_resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the sector radius.
+    theta_resolution : int | ArrayLike, optional
+        Number of subdivisions along the azimuthal axis or relative position of
+        subdivisions (in percentage) between 0 and 45 degrees (and 45 and 90 degrees).
+    r_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *r_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    theta_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *theta_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the sector.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Square mesh with sector removed at the center.
+
+    """
+    return SectorRectangle(
+        radius=radius,
+        dx=dx,
+        dy=dx,
+        r_resolution=r_resolution,
+        theta_resolution=theta_resolution,
+        r_method=r_method,
+        theta_method=theta_method,
+        center=center,
+    )
+
+
+def Square(
+    dx: float = 1.0,
+    resolution: Optional[int | ArrayLike] = None,
+    method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.StructuredGrid:
+    """
+    Generate a square mesh of a given size.
+
+    Parameters
+    ----------
+    dx : scalar, default 1.0
+        Size of square along X and Y axes.
+    resolution : int | ArrayLike, optional
+        Number of subdivisions along the X and Y axes or relative position of
+        subdivisions (in percentage) with respect to the X coordinate of the first point.
+    method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the square.
+
+    Returns
+    -------
+    pyvista.StructuredGrid
+        Square mesh.
+
+    """
+    return Rectangle(
+        dx=dx,
+        dy=dx,
+        x_resolution=resolution,
+        y_resolution=resolution,
+        x_method=method,
+        y_method=method,
+        center=center,
+    )
+
+
+def SquareSector(
+    dx: float = 0.5,
+    radius: float = 1.0,
+    x_resolution: Optional[int | ArrayLike] = None,
+    r_resolution: Optional[int | ArrayLike] = None,
+    x_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    center: Optional[ArrayLike] = None,
+) -> pv.UnstructuredGrid:
+    """
+    Generate a sector mesh with square removed at the center.
+
+    Parameters
+    ----------
+    dx : scalar, default 0.5
+        Size of square along X axis.
+    radius : scalar, default 1.0
+        Sector radius.
+    x_resolution : int | ArrayLike, optional
+        Number of subdivisions along the X axis or relative position of subdivisions
+        (in percentage) with respect to the corner of the square.
+    r_resolution : int | ArrayLike, optional
+        Number of subdivisions along the radial axis or relative position of
+        subdivisions (in percentage) with respect to the corner of the square.
+    x_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *x_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    r_method : {'constant', 'log', 'log_r'}, optional
+        Subdivision method if *r_resolution* is an integer:
+
+         - if 'constant', subdivisions are equally spaced.
+         - if 'log', subdivisions are logarithmically spaced (from small to large).
+         - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    center : ArrayLike, optional
+        Center of the sector.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Sector mesh with square removed at the center.
+
+    """
+    return RectangleSector(
+        dx=dx,
+        dy=dx,
+        radius=radius,
+        x_resolution=x_resolution,
+        y_resolution=x_resolution,
+        r_resolution=r_resolution,
+        x_method=x_method,
+        y_method=x_method,
+        r_method=r_method,
+        center=center,
+    )
 
 
 def StructuredSurface(
