@@ -691,7 +691,7 @@ def RectangleSector(
          - if 'constant', subdivisions are equally spaced.
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
-    
+
     y_method : {'constant', 'log', 'log_r'}, optional
         Subdivision method if *y_resolution* is an integer:
 
@@ -715,15 +715,11 @@ def RectangleSector(
         Rectangle mesh with sector removed at the center.
 
     """
-    if 0.0 < radius < (dx ** 2 + dy ** 2) ** 0.5:
+    if 0.0 < radius < (dx**2 + dy**2) ** 0.5:
         raise ValueError("invalid sector radius")
 
-    line_x = generate_line_from_two_points(
-        [dx, dy], [0.0, dy], x_resolution, x_method
-    )
-    line_y = generate_line_from_two_points(
-        [dx, dy], [dx, 0.0], y_resolution, y_method
-    )
+    line_x = generate_line_from_two_points([dx, dy], [0.0, dy], x_resolution, x_method)
+    line_y = generate_line_from_two_points([dx, dy], [dx, 0.0], y_resolution, y_method)
     line_45 = generate_arc(radius, 45.0, 0.0, y_resolution, y_method)
     line_90 = generate_arc(radius, 45.0, 90.0, x_resolution, x_method)
     mesh_y45 = StructuredSurface(line_y, line_45, "xy", r_resolution, r_method)
@@ -898,7 +894,7 @@ def SectorSquare(
     dx: float = 1.0,
     r_resolution: Optional[int | ArrayLike] = None,
     theta_resolution: Optional[int | ArrayLike] = None,
-    r_method: Optional[Literal["constant", "log", "log_r"]] = None  ,
+    r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
     center: Optional[ArrayLike] = None,
 ) -> pv.UnstructuredGrid:
@@ -1054,7 +1050,7 @@ def SquareSector(
         r_method=r_method,
         center=center,
     )
-    
+
 
 def StructuredSurface(
     line_a: Optional[pv.PolyData | ArrayLike] = None,
