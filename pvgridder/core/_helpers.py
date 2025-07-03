@@ -47,8 +47,10 @@ def generate_arc(
     points = radius * np.column_stack(
         (np.cos(angles), np.sin(angles), np.zeros(len(angles)))
     )
+    mesh = pv.MultipleLines(points)
+    mesh.clear_data()
 
-    return pv.MultipleLines(points)
+    return mesh
 
 
 def generate_line_from_two_points(
@@ -95,8 +97,10 @@ def generate_line_from_two_points(
         if points.shape[1] == 3
         else np.column_stack((points, np.zeros(len(points))))
     )
+    mesh = pv.MultipleLines(points)
+    mesh.clear_data()
 
-    return pv.MultipleLines(points)
+    return mesh
 
 
 def generate_surface_from_two_lines(

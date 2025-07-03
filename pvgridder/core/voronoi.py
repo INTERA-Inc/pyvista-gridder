@@ -467,7 +467,7 @@ class VoronoiMesh2D(MeshBase):
             indices = [func(points) for func in self.fuse_cells]
             mesh = fuse_cells(mesh, indices)
 
-        return mesh.clean(tolerance=tolerance, produce_merge_map=False)
+        return self._clean(mesh, tolerance)
 
     def _generate_voronoi_tesselation(
         self,

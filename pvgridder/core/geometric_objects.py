@@ -761,8 +761,10 @@ def RegularLine(points: ArrayLike, resolution: Optional[int] = None) -> pv.PolyD
     ).cumsum()
     x = np.linspace(0.0, xp.max(), resolution + 1)
     points = np.column_stack([np.interp(x, xp, fp) for fp in points.T])
+    mesh = pv.MultipleLines(points)
+    mesh.clear_data()
 
-    return pv.MultipleLines(points)
+    return mesh
 
 
 def Sector(

@@ -97,4 +97,4 @@ class MeshMerge(MeshBase):
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        return mesh.clean(tolerance=tolerance, produce_merge_map=False)
+        return self._clean(mesh, tolerance)
