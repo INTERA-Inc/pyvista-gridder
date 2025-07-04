@@ -127,7 +127,6 @@ def interactive_lasso_selection(
 def interactive_selection(
     mesh: pv.DataSet,
     plotter: Optional[pv.Plotter] = None,
-    scalars: Optional[str | ArrayLike] = None,
     view: Optional[str] = None,
     parallel_projection: bool = False,
     preference: Literal["cell", "point"] = "cell",
@@ -144,8 +143,6 @@ def interactive_selection(
         Input mesh.
     plotter : pyvista.Plotter, optional
         PyVista plotter.
-    scalars : str | ArrayLike, optional
-        Scalars used to “color” the mesh.
     view : str, optional
         Isometric view.
     parallel_projection : bool, default False
@@ -157,7 +154,7 @@ def interactive_selection(
     tolerance : float, default 0.0
         Picking tolerance. Ignored if *picker* is 'hardware'.
     **kwargs : dict, optional
-        Additional keyword arguments if *plotter* is None. See ``pyvista.Plotter`` for more details.
+        Additional keyword arguments. See ``pyvista.Plotter.add_mesh()`` for more details.
 
     Returns
     -------
@@ -165,7 +162,18 @@ def interactive_selection(
         Indice(s) of selected cell(s) or point(s).
 
     """
-    p = plotter if plotter is not None else pv.Plotter(**kwargs)
+    kwargs_ = {
+        "scalar_bar_args": {
+            "vertical": True,
+            "position_y": 0.1,
+            "height": 0.8,
+        },
+    }
+    kwargs_.update(kwargs)
+    kwargs_["show_edges"] = True
+    kwargs_["pickable"] = True
+
+    p = plotter if plotter is not None else pv.Plotter()
     p.theme.allow_empty_mesh = True  # Hide warning
     actors = {}
 
@@ -187,7 +195,7 @@ def interactive_selection(
             actor = actors.pop(id_)
             p.remove_actor(actor, reset_camera=False, render=True)
 
-    p.add_mesh(mesh, scalars=scalars, show_edges=True)
+    p.add_mesh(mesh, **kwargs_)
     p.enable_element_picking(
         mode=preference,
         callback=callback,
