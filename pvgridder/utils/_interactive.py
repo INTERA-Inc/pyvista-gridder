@@ -5,8 +5,7 @@ from typing import Literal, Optional
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
-
-from shapely import contains_xy, Polygon
+from shapely import Polygon, contains_xy
 
 
 def interactive_lasso_selection(
@@ -37,7 +36,7 @@ def interactive_lasso_selection(
         If True, return the polygon used for selection.
     **kwargs : dict, optional
         Additional keyword arguments if *plotter* is None. See ``pyvista.Plotter`` for more details.
-    
+
     Returns
     -------
     ArrayLike
@@ -132,6 +131,7 @@ def interactive_selection(
     view: Optional[str] = None,
     parallel_projection: bool = False,
     preference: Literal["cell", "point"] = "cell",
+    picker: Optional[Literal["cell", "hardware", "point"]] = None,
     tolerance: float = 0.0,
     **kwargs,
 ) -> ArrayLike:
@@ -152,8 +152,10 @@ def interactive_selection(
         If True, enable parallel projection.
     preference : {'cell', 'point'}, default 'cell'
         Picking mode.
+    picker : {'cell', 'hardware', 'point'}, optional
+        Picker type.
     tolerance : float, default 0.0
-        Picking tolerance.
+        Picking tolerance. Ignored if *picker* is 'hardware'.
     **kwargs : dict, optional
         Additional keyword arguments if *plotter* is None. See ``pyvista.Plotter`` for more details.
 
@@ -164,7 +166,11 @@ def interactive_selection(
 
     """
     p = plotter if plotter is not None else pv.Plotter(**kwargs)
+    p.theme.allow_empty_mesh = True  # Hide warning
     actors = {}
+
+    if picker is None:
+        picker = "cell" if preference == "cell" else "point"
 
     def callback(mesh: pv.DataSet) -> None:
         id_ = (
@@ -186,7 +192,7 @@ def interactive_selection(
         mode=preference,
         callback=callback,
         show_message=False,
-        picker=preference,
+        picker=picker,
         tolerance=tolerance,
     )
 
