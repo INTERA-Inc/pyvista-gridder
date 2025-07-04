@@ -185,6 +185,18 @@ class MeshBase(ABC):
         return arr
 
     @staticmethod
+    def _clean(mesh: pv.DataSet, tolerance: Optional[float] = None) -> pv.DataSet:
+        """Clean generated mesh."""
+        if isinstance(mesh, pv.UnstructuredGrid):
+            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
+
+        if "vtkGhostType" in mesh.cell_data:
+            if (mesh.cell_data["vtkGhostType"] == 0).all():
+                mesh.cell_data.pop("vtkGhostType", None)
+
+        return mesh
+
+    @staticmethod
     def _get_group_number(group: str, groups: dict) -> int:
         """Get group number."""
         return groups.setdefault(group, len(groups))
@@ -452,10 +464,7 @@ class MeshStackBase(MeshBase):
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        if isinstance(mesh, pv.UnstructuredGrid):
-            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
-
-        return mesh
+        return self._clean(mesh, tolerance)
 
     @abstractmethod
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:

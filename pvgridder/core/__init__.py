@@ -10,9 +10,13 @@ from .geometric_objects import (
     Polygon,
     Quadrilateral,
     Rectangle,
+    RectangleSector,
     RegularLine,
     Sector,
     SectorRectangle,
+    SectorSquare,
+    Square,
+    SquareSector,
     StructuredSurface,
     Volume,
 )

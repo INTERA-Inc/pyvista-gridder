@@ -186,10 +186,7 @@ class MeshExtrude(MeshBase):
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        if isinstance(mesh, pv.UnstructuredGrid):
-            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
-
-        return mesh
+        return self._clean(mesh, tolerance)
 
     @property
     def mesh(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
