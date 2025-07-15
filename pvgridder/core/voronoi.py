@@ -6,15 +6,15 @@ from typing import Literal, Optional
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
+from pyrequire import require_package
 from scipy.spatial import Voronoi
 from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
 from ._helpers import generate_surface_from_two_lines, resolution_to_perc
-from .._common import require_package
 
 
-@require_package("shapely", (2, 0))
+@require_package("shapely>=2.0")
 class VoronoiMesh2D(MeshBase):
     """
     2D Voronoi mesh class.
