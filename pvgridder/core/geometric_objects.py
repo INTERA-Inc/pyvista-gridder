@@ -6,6 +6,7 @@ from typing import Literal, Optional
 import numpy as np
 import pyvista as pv
 from numpy.typing import ArrayLike
+from pyrequire import require_package
 
 from ._helpers import (
     generate_arc,
@@ -14,7 +15,6 @@ from ._helpers import (
     generate_volume_from_two_surfaces,
     translate,
 )
-from .._common import require_package
 
 
 def AnnularSector(
