@@ -434,6 +434,7 @@ class MeshStackBase(MeshBase):
 
         # Generate submeshes
         meshes = []
+        n_layers = 0
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
@@ -444,20 +445,23 @@ class MeshStackBase(MeshBase):
             if item2.transition:
                 mesh_b = self._transition(mesh_a, item2.mesh, groups, item2.group)
                 nsub, repeats = 1, mesh_b.n_cells
-                mesh_b.cell_data["vtkOriginalCellIds"] = np.full(mesh_b.n_cells, -1)
+                mesh_b.cell_data["ColumnId"] = np.full(mesh_b.n_cells, -1)
 
             else:
                 mesh_b = self._extrude(
                     mesh_a, item2.mesh, item2.resolution, item2.method
                 )
                 nsub, repeats = mesh_b.n_cells // mesh_a.n_cells, mesh_a.n_cells
-                mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
+                mesh_b.cell_data["ColumnId"] = np.tile(
                     np.arange(mesh_a.n_cells), nsub
                 ).copy()
 
+            mesh_b.cell_data["LayerId"] = np.repeat(
+                np.arange(nsub) + n_layers, repeats
+            ).copy()
             mesh_b.cell_data["StackItem"] = np.full(mesh_b.n_cells, i)
-            mesh_b.cell_data["StackSubItem"] = np.repeat(np.arange(nsub), repeats)
             meshes.append(mesh_b)
+            n_layers += nsub
 
         # Merge submeshes
         mesh = merge(meshes, axis=self.axis, merge_points=False)

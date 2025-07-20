@@ -155,6 +155,7 @@ class MeshExtrude(MeshBase):
 
         # Generate submeshes
         meshes = []
+        n_layers = 0
 
         for i, (item1, item2) in enumerate(zip(self.items[:-1], self.items[1:])):
             mesh_a = item1.mesh.copy()
@@ -167,14 +168,15 @@ class MeshExtrude(MeshBase):
             )
 
             nsub = mesh_b.n_cells // mesh_a.n_cells
-            mesh_b.cell_data["vtkOriginalCellIds"] = np.tile(
+            mesh_b.cell_data["ColumnId"] = np.tile(
                 np.arange(mesh_a.n_cells), nsub
             ).copy()
-            mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
-            mesh_b.cell_data["ExtrudeSubItem"] = np.repeat(
-                np.arange(nsub), mesh_a.n_cells
+            mesh_b.cell_data["LayerId"] = np.repeat(
+                np.arange(nsub) + n_layers, mesh_a.n_cells
             ).copy()
+            mesh_b.cell_data["ExtrudeItem"] = np.full(mesh_b.n_cells, i)
             meshes.append(mesh_b)
+            n_layers += nsub
 
         # Merge submeshes
         axis = (
