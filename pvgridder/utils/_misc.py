@@ -503,9 +503,13 @@ def fuse_cells(
                 raise ValueError("could not fuse not fully connected cells together")
 
             # Find original point IDs of polygon
+            # Select first instance found for each point
             cell = poly[0].cast_to_unstructured_grid()
-            ids = np.flatnonzero(
-                (cell.points[:, None] == mesh.points).all(axis=-1).any(axis=0)
+            ids = np.array(
+                [
+                    np.flatnonzero(mask)[0]
+                    for mask in (cell.points[:, None] == mesh.points).all(axis=-1)
+                ]
             )
             mesh_points = mesh.points[ids]
             sorted_ids = ids[
