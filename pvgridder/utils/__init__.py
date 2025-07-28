@@ -10,6 +10,7 @@ from ._misc import (
     extract_cells_by_dimension,
     find_faces_intersecting_line,
     fuse_cells,
+    intersect_polyline,
     merge,
     merge_lines,
     offset_polygon,
