@@ -463,6 +463,83 @@ def extract_cells_by_dimension(
     return mesh
 
 
+def find_faces_intersecting_line(
+    mesh: pv.DataSet,
+    pointa: ArrayLike,
+    pointb: ArrayLike,
+    tolerance: float = 1.0e-8,
+    max_angle: Optional[float] = None,
+    return_points: bool = False,
+) -> pv.PolyData | None:
+    """
+    Find faces in a mesh that are intersecting a line defined by two points.
+    
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        The input mesh to search for intersected faces.
+    pointa : ArrayLike
+        Length 3 coordinate of the start of the line.
+    pointb : ArrayLike
+        Length 3 coordinate of the end of the line.
+    tolerance : float, default 1.0e-8
+        The absolute tolerance to use to find cells along line.
+    max_angle : float, optional
+        The maximum angle between face normals and the line direction.
+    return_points : bool, default False
+        If True, return the intersection points on the faces in cell data array "IntersectionPoints".
+
+    Returns
+    -------
+    pyvista.PolyData | None
+        A polydata object containing the intersected faces, or None if no faces were
+        found.
+
+    """
+    mesh = (
+        mesh
+        if isinstance(mesh, pv.PolyData)
+        else extract_cell_geometry(mesh)
+    )
+    max_angle = max_angle if max_angle is not None else 90.0 - tolerance
+
+    # Find faces intersected by the line
+    ids = mesh.find_cells_intersecting_line(pointa, pointb, tolerance=tolerance)
+
+    if ids.size == 0:
+        return None
+    
+    # Filter faces based on angle with line direction
+    ids = np.sort(ids)
+    vec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
+    normals = mesh.compute_normals(cell_normals=True, point_normals=False)["Normals"]
+    angles = np.rad2deg(np.acos(np.abs(normals[ids] @ vec)))
+    mask = ids[angles < max_angle]
+
+    if mask.size == 0:
+        return None
+
+    faces = mesh.extract_cells(mask).extract_geometry()
+
+    # Clean up data
+    faces.clear_data()
+    
+    for k, v in mesh.cell_data.items():
+        faces.cell_data[k] = v[mask]
+
+    # Calculate intersection points
+    if return_points:
+        centers = faces.cell_centers().points
+        points = pointa + vec * np.expand_dims(
+            ((centers - pointa) * normals[mask]).sum(axis=1)
+            / (vec * normals[mask]).sum(axis=1),
+            axis=1,
+        )
+        faces.cell_data["IntersectionPoints"] = points
+
+    return faces
+
+
 def fuse_cells(
     mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]
 ) -> pv.UnstructuredGrid:
