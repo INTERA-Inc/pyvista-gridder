@@ -473,7 +473,7 @@ def find_faces_intersecting_line(
 ) -> pv.PolyData | None:
     """
     Find faces in a mesh that are intersecting a line defined by two points.
-    
+
     Parameters
     ----------
     mesh : pyvista.DataSet
@@ -496,11 +496,7 @@ def find_faces_intersecting_line(
         found.
 
     """
-    mesh = (
-        mesh
-        if isinstance(mesh, pv.PolyData)
-        else extract_cell_geometry(mesh)
-    )
+    mesh = mesh if isinstance(mesh, pv.PolyData) else extract_cell_geometry(mesh)
     max_angle = max_angle if max_angle is not None else 90.0 - tolerance
 
     # Find faces intersected by the line
@@ -508,7 +504,7 @@ def find_faces_intersecting_line(
 
     if ids.size == 0:
         return None
-    
+
     # Filter faces based on angle with line direction
     ids = np.sort(ids)
     vec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
@@ -523,7 +519,7 @@ def find_faces_intersecting_line(
 
     # Clean up data
     faces.clear_data()
-    
+
     for k, v in mesh.cell_data.items():
         faces.cell_data[k] = v[mask]
 
@@ -656,7 +652,9 @@ def intersect_polyline(
     mesh_entered, mesh_exited = False, False
     points = [lines.points[0]]
 
-    def add_point(point: ArrayLike, line_id: int, cell_id: Optional[int] = None) -> None:
+    def add_point(
+        point: ArrayLike, line_id: int, cell_id: Optional[int] = None
+    ) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
             points.append(point)
@@ -713,10 +711,16 @@ def intersect_polyline(
 
                 # The exit face is the closest to pointb
                 elif faces.n_cells == 2:
-                    dist = np.linalg.norm(faces.cell_data["IntersectionPoints"] - pointb, axis=-1)
+                    dist = np.linalg.norm(
+                        faces.cell_data["IntersectionPoints"] - pointb, axis=-1
+                    )
 
                     if not mesh_entered:
-                        add_point(faces.cell_data["IntersectionPoints"][dist.argmax()], lid, cid)
+                        add_point(
+                            faces.cell_data["IntersectionPoints"][dist.argmax()],
+                            lid,
+                            cid,
+                        )
                         mesh_entered = True
 
                     fid = dist.argmin()
@@ -734,7 +738,7 @@ def intersect_polyline(
 
                 if cid not in cells:
                     raise ValueError("could not determine exit cell")
-                
+
                 if -1 in cells:
                     add_point(pointb, lid)
                     mesh_exited = True
@@ -746,9 +750,9 @@ def intersect_polyline(
         else:
             add_point(pointb, lid, -1)
 
-    polyline = split_lines(
-        pv.MultipleLines(points)
-    )[0].compute_cell_sizes(length=True, area=False, volume=False)
+    polyline = split_lines(pv.MultipleLines(points))[0].compute_cell_sizes(
+        length=True, area=False, volume=False
+    )
     polyline.cell_data["vtkOriginalCellIds"] = line_ids
     polyline.cell_data["IntersectedCellIds"] = cell_ids
 

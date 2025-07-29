@@ -367,8 +367,13 @@ def test_intersect_polyline():
     polyline = pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=42)
     intersection_polyline = pvg.intersect_polyline(mesh, polyline)
 
-    assert np.isclose(intersection_polyline.cell_data["Length"].sum(), polyline.compute_cell_sizes()["Length"].sum())
-    assert np.isclose(intersection_polyline.cell_data["IntersectedCellIds"].sum(), 89071)
+    assert np.isclose(
+        intersection_polyline.cell_data["Length"].sum(),
+        polyline.compute_cell_sizes()["Length"].sum(),
+    )
+    assert np.isclose(
+        intersection_polyline.cell_data["IntersectedCellIds"].sum(), 89071
+    )
     assert np.isclose(intersection_polyline.cell_data["vtkOriginalCellIds"].sum(), 912)
 
 
