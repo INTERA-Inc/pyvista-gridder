@@ -361,6 +361,17 @@ def test_fuse_cells(request, mesh, cell_ids):
     )
 
 
+def test_intersect_polyline():
+    """Test polyline intersection with a mesh."""
+    mesh = pvg.examples.load_well_3d(voronoi=True)
+    polyline = pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=42)
+    intersection_polyline = pvg.intersect_polyline(mesh, polyline)
+
+    assert np.isclose(intersection_polyline.cell_data["Length"].sum(), polyline.compute_cell_sizes()["Length"].sum())
+    assert np.isclose(intersection_polyline.cell_data["IntersectedCellIds"].sum(), 89071)
+    assert np.isclose(intersection_polyline.cell_data["vtkOriginalCellIds"].sum(), 912)
+
+
 @pytest.mark.parametrize(
     "mesh_type, axes",
     [
