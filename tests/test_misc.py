@@ -367,14 +367,27 @@ def test_intersect_polyline():
     polyline = pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=42)
     intersection_polyline = pvg.intersect_polyline(mesh, polyline)
 
+    # Check that length of line is preserved
     assert np.isclose(
         intersection_polyline.cell_data["Length"].sum(),
         polyline.compute_cell_sizes()["Length"].sum(),
     )
-    assert np.isclose(
-        intersection_polyline.cell_data["IntersectedCellIds"].sum(), 89071
-    )
-    assert np.isclose(intersection_polyline.cell_data["vtkOriginalCellIds"].sum(), 912)
+
+    # Check that cells are only intersected once
+    cell_ids = intersection_polyline.cell_data["IntersectedCellIds"]
+    cell_ids = cell_ids[cell_ids > -1]
+    assert np.unique(cell_ids).size == cell_ids.size
+
+    # Check that lines are contained by intersected cells
+    for line, cell_id in zip(
+        pvg.split_lines(intersection_polyline, as_lines=True),
+        intersection_polyline.cell_data["IntersectedCellIds"],
+    ):
+        if cell_id == -1:
+            continue
+
+        cell = mesh.extract_cells(cell_id)
+        assert cell.find_containing_cell(line.cell_centers().points[0]) == 0
 
 
 @pytest.mark.parametrize(
