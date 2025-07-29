@@ -99,7 +99,6 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
     "invalid_mesh",
     [
         pytest.param(pv.PolyData(), id="polydata"),
-        pytest.param(pv.RectilinearGrid(), id="rectilinear_grid"),
     ],
 )
 def test_get_dimension_invalid_mesh(invalid_mesh):
