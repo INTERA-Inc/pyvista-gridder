@@ -646,22 +646,18 @@ def intersect_polyline(
         Polydata containing the intersection points and cell IDs.
 
     """
-    lines = split_lines(line, as_lines=True)[0]
+    lines = split_lines(line.strip(), as_lines=True)[0]
 
     line_ids, cell_ids, cell = [], [], None
     mesh_entered, mesh_exited = False, False
     points = [lines.points[0]]
 
-    def add_point(
-        point: ArrayLike, line_id: int, cell_id: Optional[int] = None
-    ) -> None:
+    def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
             points.append(point)
             line_ids.append(line_id)
-
-            if cell_id is not None:
-                cell_ids.append(cell_id)
+            cell_ids.append(cell_id)
 
     cell_geometry = extract_cell_geometry(mesh, remove_empty_cells=True)
     tree = KDTree(cell_geometry.cell_centers().points)
@@ -682,7 +678,6 @@ def intersect_polyline(
             ).argmin()
             cid = ids[id_]
             cell = mesh.extract_cells(cid)
-            cell_ids.append(cid)
 
         if not mesh_exited:
             while True:
@@ -704,26 +699,33 @@ def intersect_polyline(
                 elif faces.n_cells == 1:
                     # It's an entry face if pointb is contained in the cell
                     if cell.find_containing_cell(pointb) == 0:
-                        add_point(faces.cell_data["IntersectionPoints"][0], lid, cid)
+                        if not mesh_entered:
+                            cid_ = -1
+                            mesh_entered = True
+
+                        else:
+                            cid_ = cid
+
+                        add_point(faces.cell_data["IntersectionPoints"][0], lid, cid_)
                         break
 
                     fid = 0
 
-                # The exit face is the closest to pointb
+                # The exit face is the farthest from last point
                 elif faces.n_cells == 2:
                     dist = np.linalg.norm(
-                        faces.cell_data["IntersectionPoints"] - pointb, axis=-1
+                        faces.cell_data["IntersectionPoints"] - points[-1], axis=-1
                     )
 
                     if not mesh_entered:
                         add_point(
-                            faces.cell_data["IntersectionPoints"][dist.argmax()],
+                            faces.cell_data["IntersectionPoints"][dist.argmin()],
                             lid,
-                            cid,
+                            -1,
                         )
                         mesh_entered = True
 
-                    fid = dist.argmin()
+                    fid = dist.argmax()
 
                 # The line is hitting an edge or a corner
                 else:
@@ -740,7 +742,7 @@ def intersect_polyline(
                     raise ValueError("could not determine exit cell")
 
                 if -1 in cells:
-                    add_point(pointb, lid)
+                    add_point(pointb, lid, -1)
                     mesh_exited = True
                     break
 
