@@ -627,6 +627,8 @@ def intersect_polyline(
     mesh: pv.DataSet,
     line: pv.PolyData,
     tolerance: float = 1.0e-8,
+    ignore_points_before_entry: bool = False,
+    ignore_points_after_exit: bool = False,
 ) -> pv.PolyData:
     """
     Intersect a polyline with a mesh.
@@ -639,6 +641,10 @@ def intersect_polyline(
         Polyline to intersect with the mesh.
     tolerance : float, default 1.0e-8
         The absolute tolerance to use to find cells along line.
+    ignore_points_before_entry : bool, default False
+        If True, ignore points before the first entry point into the mesh.
+    ignore_points_after_exit : bool, default False
+        If True, ignore points after the last exit point from the mesh.
 
     Returns
     -------
@@ -651,6 +657,7 @@ def intersect_polyline(
     line_ids, cell_ids, cell = [], [], None
     mesh_entered, mesh_exited = False, False
     points = [lines.points[0]]
+    count = 0
 
     def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
@@ -705,6 +712,7 @@ def intersect_polyline(
                     ):
                         if not mesh_entered:
                             cid_ = -1
+                            count = len(points)
                             mesh_entered = True
 
                         else:
@@ -722,6 +730,7 @@ def intersect_polyline(
                     )
 
                     if not mesh_entered:
+                        count = len(points)
                         add_point(
                             faces.cell_data["IntersectionPoints"][dist.argmin()],
                             lid,
@@ -746,7 +755,9 @@ def intersect_polyline(
                     raise ValueError("could not determine exit cell")
 
                 if -1 in cells:
-                    add_point(pointb, lid, -1)
+                    if not ignore_points_after_exit:
+                        add_point(pointb, lid, -1)
+
                     mesh_exited = True
                     break
 
@@ -754,7 +765,15 @@ def intersect_polyline(
                 cell = mesh.extract_cells(cid)
 
         else:
+            if ignore_points_after_exit:
+                break
+
             add_point(pointb, lid, -1)
+
+    if ignore_points_before_entry:
+        points = points[count:]
+        line_ids = line_ids[count:]
+        cell_ids = cell_ids[count:]
 
     polyline = split_lines(pv.MultipleLines(points))[0].compute_cell_sizes(
         length=True, area=False, volume=False
