@@ -697,8 +697,12 @@ def intersect_polyline(
 
                 # Either an entry face or an exit face
                 elif faces.n_cells == 1:
-                    # It's an entry face if pointb is contained in the cell
-                    if cell.find_containing_cell(pointb) == 0:
+                    # It's an entry face if intersection point matches previous point
+                    if not mesh_entered or np.allclose(
+                        points[-1],
+                        faces.cell_data["IntersectionPoints"][0],
+                        atol=tolerance,
+                    ):
                         if not mesh_entered:
                             cid_ = -1
                             mesh_entered = True
