@@ -318,7 +318,7 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
 @pytest.mark.parametrize(
     "mesh, cell_ids",
     [
-        # # Basic mesh with adjacent quads
+        # Basic mesh with adjacent quads
         pytest.param(
             lambda: pv.ImageData(dimensions=(2, 3, 1)),
             [0, 1],
@@ -361,10 +361,39 @@ def test_fuse_cells(request, mesh, cell_ids):
     )
 
 
-def test_intersect_polyline():
+@pytest.mark.parametrize(
+    "mesh, polyline",
+    [
+        pytest.param(
+            "well_3d",
+            pv.Line([0.0, 0.0, 16.0], [0.0, 0.0, -32.0], resolution=1),
+            id="well_3d_straight_line",
+        ),
+        pytest.param(
+            "well_3d",
+            pv.Line([0.0, 0.0, 16.0], [0.0, 0.0, -32.0], resolution=42),
+            id="well_3d_straight_polyline",
+        ),
+        pytest.param(
+            "well_3d_voronoi",
+            pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=1),
+            id="well_3d_voronoi_tilted_line",
+        ),
+        pytest.param(
+            "well_3d_voronoi",
+            pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=42),
+            id="well_3d_voronoi_tilted_polyline",
+        ),
+    ],
+)
+def test_intersect_polyline(request, mesh, polyline):
     """Test polyline intersection with a mesh."""
-    mesh = pvg.examples.load_well_3d(voronoi=True)
-    polyline = pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=42)
+    if isinstance(mesh, str):
+        mesh = request.getfixturevalue(mesh)
+
+    else:
+        mesh = mesh()
+
     intersection_polyline = pvg.intersect_polyline(mesh, polyline)
 
     # Check that length of line is preserved
