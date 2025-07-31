@@ -46,12 +46,20 @@ def test_cylindrical_shell_sector():
 
 
 @pytest.mark.parametrize(
-    "shell, holes, ref_area",
+    "shell, holes, engine, ref_area",
     [
-        (pv.Polygon(radius=8.0, n_sides=42), None, 200.3128038269316),
+        (pv.Polygon(radius=8.0, n_sides=42), None, "gmsh", 200.3128038269316),
+        (pv.Polygon(radius=8.0, n_sides=42), None, "occ", 200.3128038269316),
         (
             pv.Polygon(radius=8.0, n_sides=42),
             [pv.Polygon(radius=4.0, n_sides=42)],
+            "gmsh",
+            150.2346028701987,
+        ),
+        (
+            pv.Polygon(radius=8.0, n_sides=42),
+            [pv.Polygon(radius=4.0, n_sides=42)],
+            "occ",
             150.2346028701987,
         ),
         (
@@ -60,17 +68,20 @@ def test_cylindrical_shell_sector():
                 pv.Polygon(radius=4.0, n_sides=21, center=(-5.0, 0.0, 0.0)),
                 pv.Polygon(radius=4.0, n_sides=21, center=(5.0, 0.0, 0.0)),
             ],
+            "occ",
             110.45831838912522,
         ),
     ],
 )
-def test_polygon(shell, holes, ref_area):
+def test_polygon(shell, holes, engine, ref_area):
     """Test polygon geometric object."""
     for celltype in ("polygon", "triangle", "quad"):
         if celltype == "polygon" and holes:
             continue
 
-        mesh = pvg.Polygon(shell.points[:, :2], holes, celltype, optimization="Netgen")
+        mesh = pvg.Polygon(
+            shell.points[:, :2], holes, celltype, optimization="Netgen", engine=engine
+        )
         mesh = mesh.compute_cell_sizes()
         assert np.allclose(np.abs(mesh.cell_data["Area"]).sum(), ref_area)
         assert getattr(pv.CellType, celltype.upper()) in mesh.celltypes

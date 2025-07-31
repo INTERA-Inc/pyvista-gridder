@@ -358,6 +358,7 @@ def Polygon(
     cellsize: Optional[float] = None,
     algorithm: int = 6,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
+    engine: Literal["gmsh", "occ"] = "gmsh",
 ) -> pv.UnstructuredGrid:
     """
     Generate a triangulated polygon with holes.
@@ -379,6 +380,11 @@ def Polygon(
         Gmsh algorithm.
     optimization : {'Netgen', 'Laplace2D', 'Relocate2D'}, optional
         Gmsh 2D optimization method.
+    engine : {'gmsh', 'occ'}, default 'gmsh'
+        Geometry engine:
+
+         - 'gmsh': Gmsh built-in engine
+         - 'occ': OpenCascade
 
     Returns
     -------
@@ -416,7 +422,13 @@ def Polygon(
 
         return points
 
-    def add_surface(points: ArrayLike, celltype: str, cellsize: float) -> int:
+    def add_surface(
+        engine: gmsh.model.geo | gmsh.model.occ,
+        points: ArrayLike,
+        celltype: str,
+        cellsize: float,
+        return_curve_loop: bool = False,
+    ) -> int | tuple[int, int]:
         """Add a plane surface."""
         # Compute mesh size
         if cellsize is None:
@@ -433,24 +445,28 @@ def Polygon(
         node_tags = []
 
         for (x, y, z), size in zip(points[:-1], sizes):
-            tag = gmsh.model.occ.add_point(x, y, z, size)
+            tag = engine.add_point(x, y, z, size)
             node_tags.append(tag)
 
         # Add lines
         line_tags = []
 
         for tag1, tag2 in zip(node_tags[:-1], node_tags[1:]):
-            tag = gmsh.model.occ.add_line(tag1, tag2)
+            tag = engine.add_line(tag1, tag2)
             line_tags.append(tag)
 
         # Close loop
-        tag = gmsh.model.occ.add_line(node_tags[-1], node_tags[0])
+        tag = engine.add_line(node_tags[-1], node_tags[0])
         line_tags.append(tag)
+        tag = engine.add_curve_loop(line_tags)
 
-        tag = gmsh.model.occ.add_curve_loop(line_tags)
-        tag = gmsh.model.occ.add_plane_surface([tag])
+        if return_curve_loop:
+            return tag
 
-        return (2, tag)
+        else:
+            tag = engine.add_plane_surface([tag])
+
+            return (2, tag)
 
     shell = shell if shell is not None else pv.Polygon()
     shell = to_points(shell)
@@ -473,19 +489,37 @@ def Polygon(
             gmsh.initialize()
 
             # Generate plane surfaces from points
-            shell_tags = [add_surface(shell, celltype, cellsize)]
+            if engine == "gmsh":
+                engine_ = gmsh.model.geo
+                curve_tags = [
+                    add_surface(
+                        engine_, points, celltype, cellsize, return_curve_loop=True
+                    )
+                    for points in [shell, *holes]
+                ]
+                tag = engine_.add_plane_surface(curve_tags)
+                dim_tags = [(2, tag)]
 
-            if holes:
-                hole_tags = [add_surface(hole, celltype, cellsize) for hole in holes]
-                dim_tags, _ = gmsh.model.occ.cut(
-                    shell_tags,
-                    hole_tags,
-                    removeObject=True,
-                    removeTool=True,
-                )
+            elif engine == "occ":
+                engine_ = gmsh.model.occ
+                shell_tags = [add_surface(engine_, shell, celltype, cellsize)]
+
+                if holes:
+                    hole_tags = [
+                        add_surface(engine_, hole, celltype, cellsize) for hole in holes
+                    ]
+                    dim_tags, _ = engine_.cut(
+                        shell_tags,
+                        hole_tags,
+                        removeObject=True,
+                        removeTool=True,
+                    )
+
+                else:
+                    dim_tags = shell_tags
 
             else:
-                dim_tags = shell_tags
+                raise ValueError(f"invalid engine '{engine}'")
 
             # Generate mesh
             if cellsize is not None:
@@ -497,7 +531,7 @@ def Polygon(
                 gmsh.option.set_number("Mesh.MeshSizeFromCurvature", 0)
 
             gmsh.option.set_number("Mesh.Algorithm", algorithm)
-            gmsh.model.occ.synchronize()
+            engine_.synchronize()
 
             if celltype == "quad":
                 for dim_tag in dim_tags:
