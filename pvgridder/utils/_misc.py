@@ -463,79 +463,6 @@ def extract_cells_by_dimension(
     return mesh
 
 
-def find_faces_intersecting_line(
-    mesh: pv.DataSet,
-    pointa: ArrayLike,
-    pointb: ArrayLike,
-    tolerance: float = 1.0e-8,
-    max_angle: Optional[float] = None,
-    return_points: bool = False,
-) -> pv.PolyData | None:
-    """
-    Find faces in a mesh that are intersecting a line defined by two points.
-
-    Parameters
-    ----------
-    mesh : pyvista.DataSet
-        The input mesh to search for intersected faces.
-    pointa : ArrayLike
-        Length 3 coordinate of the start of the line.
-    pointb : ArrayLike
-        Length 3 coordinate of the end of the line.
-    tolerance : float, default 1.0e-8
-        The absolute tolerance to use to find cells along line.
-    max_angle : float, optional
-        The maximum angle between face normals and the line direction.
-    return_points : bool, default False
-        If True, return the intersection points on the faces in cell data array "IntersectionPoints".
-
-    Returns
-    -------
-    pyvista.PolyData | None
-        A polydata object containing the intersected faces, or None if no faces were
-        found.
-
-    """
-    mesh = mesh if isinstance(mesh, pv.PolyData) else extract_cell_geometry(mesh)
-    max_angle = max_angle if max_angle is not None else 90.0 - tolerance
-
-    # Find faces intersected by the line
-    ids = mesh.find_cells_intersecting_line(pointa, pointb, tolerance=tolerance)
-
-    if ids.size == 0:
-        return None
-
-    # Filter faces based on angle with line direction
-    ids = np.sort(ids)
-    vec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
-    normals = mesh.compute_normals(cell_normals=True, point_normals=False)["Normals"]
-    angles = np.rad2deg(np.acos(np.abs(normals[ids] @ vec)))
-    mask = ids[angles < max_angle]
-
-    if mask.size == 0:
-        return None
-
-    faces = mesh.extract_cells(mask).extract_geometry()
-
-    # Clean up data
-    faces.clear_data()
-
-    for k, v in mesh.cell_data.items():
-        faces.cell_data[k] = v[mask]
-
-    # Calculate intersection points
-    if return_points:
-        centers = faces.cell_centers().points
-        points = pointa + vec * np.expand_dims(
-            ((centers - pointa) * normals[mask]).sum(axis=1)
-            / (vec * normals[mask]).sum(axis=1),
-            axis=1,
-        )
-        faces.cell_data["IntersectionPoints"] = points
-
-    return faces
-
-
 def fuse_cells(
     mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]
 ) -> pv.UnstructuredGrid:
@@ -640,7 +567,7 @@ def intersect_polyline(
     line : pyvista.PolyData
         Polyline to intersect with the mesh.
     tolerance : float, default 1.0e-8
-        The absolute tolerance to use to find cells along line.
+        The absolute tolerance to use to find cells along the line.
     ignore_points_before_entry : bool, default False
         If True, ignore points before the first entry point into the mesh.
     ignore_points_after_exit : bool, default False
@@ -688,26 +615,25 @@ def intersect_polyline(
 
         if not mesh_exited:
             while True:
-                # Find cell faces intersected by the line
-                faces = find_faces_intersecting_line(
+                # Find cell edges or faces intersected by the line
+                intersections = ray_cast(
                     cell,
                     pointa,
                     pointb,
                     tolerance=tolerance,
-                    return_points=True,
                 )
 
-                # Find the exit face, if any
+                # Find the exit, if any
                 # Line is fully contained in the cell
-                if faces is None:
+                if intersections is None:
                     break
 
-                # Either an entry face or an exit face
-                elif faces.n_cells == 1:
-                    # It's an entry face if intersection point matches previous point
+                # Either an entrance or an exit
+                elif intersections.n_cells == 1:
+                    # It's an entrance if intersection point matches previous point
                     if not mesh_entered or np.allclose(
                         points[-1],
-                        faces.cell_data["IntersectionPoints"][0],
+                        intersections.cell_data["IntersectionPoints"][0],
                         atol=tolerance,
                     ):
                         if not mesh_entered:
@@ -718,21 +644,21 @@ def intersect_polyline(
                         else:
                             cid_ = cid
 
-                        add_point(faces.cell_data["IntersectionPoints"][0], lid, cid_)
+                        add_point(intersections.cell_data["IntersectionPoints"][0], lid, cid_)
                         break
 
                     fid = 0
 
-                # The exit face is the farthest from last point
-                elif faces.n_cells == 2:
+                # The exit is the farthest from last point
+                elif intersections.n_cells == 2:
                     dist = np.linalg.norm(
-                        faces.cell_data["IntersectionPoints"] - points[-1], axis=-1
+                        intersections.cell_data["IntersectionPoints"] - points[-1], axis=-1
                     )
 
                     if not mesh_entered:
                         count = len(points)
                         add_point(
-                            faces.cell_data["IntersectionPoints"][dist.argmin()],
+                            intersections.cell_data["IntersectionPoints"][dist.argmin()],
                             lid,
                             -1,
                         )
@@ -744,8 +670,8 @@ def intersect_polyline(
                 else:
                     raise ValueError("could not find the exit face")
 
-                add_point(faces.cell_data["IntersectionPoints"][fid], lid, cid)
-                exit_face = faces.get_cell(fid)
+                add_point(intersections.cell_data["IntersectionPoints"][fid], lid, cid)
+                exit_face = intersections.get_cell(fid)
 
                 # Determine the exit cell
                 _, id_ = tree.query(exit_face.center)
@@ -1013,6 +939,95 @@ def offset_polygon(
         points_ += np.insert(points, axis, 0.0, axis=1).tolist()
 
     return pv.PolyData(points_, faces=faces)
+
+
+def ray_cast(
+    mesh: pv.DataSet,
+    pointa: ArrayLike,
+    pointb: ArrayLike,
+    tolerance: float = 1.0e-8,
+    max_angle: Optional[float] = None,
+) -> pv.PolyData | None:
+    """
+    Perform a single ray casting calculation.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        The input mesh to perform ray casting on.
+    pointa : ArrayLike
+        Length 3 coordinate of the start of the ray.
+    pointb : ArrayLike
+        Length 3 coordinate of the end of the ray.
+    tolerance : float, default 1.0e-8
+        The absolute tolerance to use to find cells along the ray.
+    max_angle : float, optional
+        The maximum angle between face normals and the ray direction. Ignored if *mesh* is 2-dimensional.
+
+    Returns
+    -------
+    pyvista.PolyData | None
+        A polydata with the intersected cells and points. None if no intersections.
+
+    """
+    if isinstance(mesh, pv.PolyData):
+        if mesh.n_faces_strict and mesh.n_lines:
+            raise ValueError("could not ray cast on a polydata with both faces and lines")
+        
+        ids_ = None
+        
+    else:
+        mesh = extract_cell_geometry(mesh, remove_empty_cells=False)
+        ids_ = mesh.cell_data["vtkOriginalCellIds"]
+
+    # Find cells intersected by the line
+    ids = mesh.find_cells_intersecting_line(pointa, pointb, tolerance=tolerance)
+
+    if ids.size == 0:
+        return None
+    
+    ids = np.sort(ids)
+    dvec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
+    
+    # Filter faces based on angle with line direction
+    if mesh.n_faces_strict:
+        max_angle = max_angle if max_angle is not None else 90.0 - tolerance
+        normals = mesh.compute_normals(cell_normals=True, point_normals=False).cell_data["Normals"]
+        angles = np.rad2deg(np.acos(np.abs(normals[ids] @ dvec)))
+        ids = ids[angles < max_angle]
+
+        if ids.size == 0:
+            return None
+
+    # Calculate intersection points
+    cells = mesh.extract_cells(ids).extract_geometry()
+    
+    if mesh.n_faces_strict:
+        centers = cells.cell_centers().points
+        intersection = pointa + dvec * np.expand_dims(
+            ((centers - pointa) * normals[ids]).sum(axis=1)
+            / (dvec * normals[ids]).sum(axis=1),
+            axis=1,
+        )
+
+    else:
+        points = np.array(
+            [edge.points for edge in split_lines(cells, as_lines=True)]
+        )
+        vecs = np.diff(points, axis=1).squeeze()
+        vecs = np.atleast_2d(vecs)
+        vecs /= np.linalg.norm(vecs, axis=1)[:, None]
+        cross = np.cross(vecs, dvec)
+        denom = np.linalg.norm(cross, axis=1)
+        t = (np.cross((points[:, 0] - pointa), dvec) * cross).sum(axis=1) / denom ** 2
+        intersection = points[:, 0] - t[:, None] * vecs
+
+    # Add data
+    cells.clear_data()
+    cells.cell_data["IntersectionPoints"] = intersection
+    cells.cell_data["vtkOriginalCellIds"] = ids_[ids] if ids_ is not None else ids
+
+    return cells
 
 
 def reconstruct_line(
