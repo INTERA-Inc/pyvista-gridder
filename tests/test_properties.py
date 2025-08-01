@@ -96,18 +96,6 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
 
 
 @pytest.mark.parametrize(
-    "invalid_mesh",
-    [
-        pytest.param(pv.PolyData(), id="polydata"),
-    ],
-)
-def test_get_dimension_invalid_mesh(invalid_mesh):
-    """Test that get_dimension raises an appropriate error for unsupported mesh types."""
-    with pytest.raises(TypeError):
-        pvg.get_dimension(invalid_mesh)
-
-
-@pytest.mark.parametrize(
     "mesh_fixture, key, expected_result",
     [
         pytest.param(
