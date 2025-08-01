@@ -365,6 +365,26 @@ def test_fuse_cells(request, mesh, cell_ids):
     "mesh, polyline",
     [
         pytest.param(
+            "anticline_2d",
+            pv.Line([0.0, 0.0, 0.0], [0.0, 0.0, 3.4], resolution=1),
+            id="anticline_2d_straight_line",
+        ),
+        pytest.param(
+            "anticline_2d",
+            pv.Line([0.0, 0.0, 0.0], [0.0, 0.0, 3.4], resolution=16),
+            id="anticline_2d_straight_polyline",
+        ),
+        pytest.param(
+            "anticline_2d",
+            pv.Line([-2.0, 0.0, 5.0], [-3.14, 0.0, -1.0], resolution=1),
+            id="anticline_2d_titled_line",
+        ),
+        pytest.param(
+            "anticline_2d",
+            pv.Line([-2.0, 0.0, 5.0], [-3.14, 0.0, -1.0], resolution=16),
+            id="anticline_2d_titled_polyline",
+        ),
+        pytest.param(
             "well_3d",
             pv.Line([0.0, 0.0, 16.0], [0.0, 0.0, -32.0], resolution=1),
             id="well_3d_straight_line",
