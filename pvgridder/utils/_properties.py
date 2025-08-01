@@ -111,6 +111,7 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | s
 def get_dimension(
     mesh: pv.ExplicitStructuredGrid
     | pv.ImageData
+    | pv.PolyData
     | pv.RectilinearGrid
     | pv.StructuredGrid
     | pv.UnstructuredGrid,
@@ -120,7 +121,7 @@ def get_dimension(
 
     Parameters
     ----------
-    mesh : pyvista.ExplicitStructuredGrid | pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.ExplicitStructuredGrid | pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Input mesh.
 
     Returns
@@ -140,7 +141,9 @@ def get_dimension(
     ):
         return 3 - sum(n == 1 for n in mesh.dimensions)
 
-    elif isinstance(mesh, pv.UnstructuredGrid):
+    elif isinstance(mesh, (pv.PolyData, pv.UnstructuredGrid)):
+        mesh = mesh.cast_to_unstructured_grid()
+        
         return _dimension_map[mesh.celltypes].max()
 
     else:
