@@ -318,7 +318,7 @@ def test_extract_cells_by_dimension(request, mesh, ndim, method, expected_result
 @pytest.mark.parametrize(
     "mesh, cell_ids",
     [
-        # # Basic mesh with adjacent quads
+        # Basic mesh with adjacent quads
         pytest.param(
             lambda: pv.ImageData(dimensions=(2, 3, 1)),
             [0, 1],
@@ -359,6 +359,84 @@ def test_fuse_cells(request, mesh, cell_ids):
         results.compute_cell_sizes()["Area"].sum(),
         actual_mesh.compute_cell_sizes()["Area"].sum(),
     )
+
+
+@pytest.mark.parametrize(
+    "mesh, polyline",
+    [
+        pytest.param(
+            "anticline_2d",
+            pv.Line([0.0, 0.0, 0.0], [0.0, 0.0, 3.4], resolution=1),
+            id="anticline_2d_straight_line",
+        ),
+        pytest.param(
+            "anticline_2d",
+            pv.Line([0.0, 0.0, 0.0], [0.0, 0.0, 3.4], resolution=16),
+            id="anticline_2d_straight_polyline",
+        ),
+        pytest.param(
+            "anticline_2d",
+            pv.Line([-2.0, 0.0, 5.0], [-3.14, 0.0, -1.0], resolution=1),
+            id="anticline_2d_titled_line",
+        ),
+        pytest.param(
+            "anticline_2d",
+            pv.Line([-2.0, 0.0, 5.0], [-3.14, 0.0, -1.0], resolution=16),
+            id="anticline_2d_titled_polyline",
+        ),
+        pytest.param(
+            "well_3d",
+            pv.Line([0.0, 0.0, 16.0], [0.0, 0.0, -32.0], resolution=1),
+            id="well_3d_straight_line",
+        ),
+        pytest.param(
+            "well_3d",
+            pv.Line([0.0, 0.0, 16.0], [0.0, 0.0, -32.0], resolution=42),
+            id="well_3d_straight_polyline",
+        ),
+        pytest.param(
+            "well_3d_voronoi",
+            pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=1),
+            id="well_3d_voronoi_tilted_line",
+        ),
+        pytest.param(
+            "well_3d_voronoi",
+            pv.Line([-14.0, -9.0, 16.0], [0.0, 0.0, -32.0], resolution=42),
+            id="well_3d_voronoi_tilted_polyline",
+        ),
+    ],
+)
+def test_intersect_polyline(request, mesh, polyline):
+    """Test polyline intersection with a mesh."""
+    if isinstance(mesh, str):
+        mesh = request.getfixturevalue(mesh)
+
+    else:
+        mesh = mesh()
+
+    intersection_polyline = pvg.intersect_polyline(mesh, polyline)
+
+    # Check that length of line is preserved
+    assert np.isclose(
+        intersection_polyline.cell_data["Length"].sum(),
+        polyline.compute_cell_sizes()["Length"].sum(),
+    )
+
+    # Check that cells are only intersected once
+    cell_ids = intersection_polyline.cell_data["IntersectedCellIds"]
+    cell_ids = cell_ids[cell_ids > -1]
+    assert np.unique(cell_ids).size == cell_ids.size
+
+    # Check that lines are contained by intersected cells
+    for line, cell_id in zip(
+        pvg.split_lines(intersection_polyline, as_lines=True),
+        intersection_polyline.cell_data["IntersectedCellIds"],
+    ):
+        if cell_id == -1:
+            continue
+
+        cell = mesh.extract_cells(cell_id)
+        assert cell.find_containing_cell(line.cell_centers().points[0]) == 0
 
 
 @pytest.mark.parametrize(
@@ -512,6 +590,58 @@ def test_offset_polygon(request, mesh_or_points, distance, expected_area_change)
 
         else:  # "same"
             assert np.isclose(result_area, original_area)
+
+
+@pytest.mark.parametrize(
+    "mesh, pointa, pointb, sum_ref",
+    [
+        pytest.param(
+            "anticline_2d",
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 3.4],
+            (37.35896372795105, 18.679481863975525, 3700),
+            id="anticline_2d_straight_line",
+        ),
+        pytest.param(
+            "anticline_2d",
+            [-2.0, 0.0, 5.0],
+            [-3.14, 0.0, -1.0],
+            (-48.52959907054901, -27.38255562059453, 10740),
+            id="anticline_2d_titled_line",
+        ),
+        pytest.param(
+            "well_3d",
+            [0.0, 0.0, 16.0],
+            [0.0, 0.0, -32.0],
+            (-5247.0, -5088.0, 2519584),
+            id="well_3d_straight_line",
+        ),
+        pytest.param(
+            "well_3d_voronoi",
+            [-14.0, -9.0, 16.0],
+            [0.0, 0.0, -32.0],
+            (-2026.437576638541, -660.8263429263645, 160348),
+            id="well_3d_voronoi_tilted_line",
+        ),
+    ],
+)
+def test_ray_cast(request, mesh, pointa, pointb, sum_ref):
+    """Test ray casting."""
+    if isinstance(mesh, str):
+        mesh = request.getfixturevalue(mesh)
+
+    else:
+        mesh = mesh()
+
+    intersection = pvg.ray_cast(mesh, pointa, pointb)
+
+    # Compare against reference sum
+    sum_ = (
+        intersection.points.sum(),
+        intersection.cell_data["IntersectionPoints"].sum(),
+        intersection.cell_data["vtkOriginalCellIds"].sum(),
+    )
+    assert np.allclose(sum_, sum_ref)
 
 
 @pytest.mark.parametrize(

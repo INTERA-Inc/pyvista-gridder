@@ -550,6 +550,171 @@ def fuse_cells(
     return fused_mesh
 
 
+def intersect_polyline(
+    mesh: pv.DataSet,
+    line: pv.PolyData,
+    tolerance: float = 1.0e-8,
+    ignore_points_before_entry: bool = False,
+    ignore_points_after_exit: bool = False,
+) -> pv.PolyData:
+    """
+    Intersect a polyline with a mesh.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        Mesh to intersect with.
+    line : pyvista.PolyData
+        Polyline to intersect with the mesh.
+    tolerance : float, default 1.0e-8
+        The absolute tolerance to use to find cells along the line.
+    ignore_points_before_entry : bool, default False
+        If True, ignore points before the first entry point into the mesh.
+    ignore_points_after_exit : bool, default False
+        If True, ignore points after the last exit point from the mesh.
+
+    Returns
+    -------
+    pyvista.PolyData
+        Polydata containing the intersection points and cell IDs.
+
+    """
+    lines = split_lines(line.strip(), as_lines=True)[0]
+
+    line_ids, cell_ids, cell = [], [], None
+    mesh_entered, mesh_exited = False, False
+    points = [lines.points[0]]
+    count = 0
+
+    def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
+        """Add a point to the intersection results."""
+        if not np.allclose(points[-1], point, atol=tolerance):
+            points.append(point)
+            line_ids.append(line_id)
+            cell_ids.append(cell_id)
+
+    cell_geometry = extract_cell_geometry(mesh, remove_empty_cells=True)
+    tree = KDTree(cell_geometry.cell_centers().points)
+
+    for lid, (pointa, pointb) in enumerate(zip(lines.points[:-1], lines.points[1:])):
+        # Find the first cell intersected by the line
+        if cell is None:
+            ids = mesh.find_cells_intersecting_line(pointa, pointb, tolerance=tolerance)
+
+            if ids.size == 0:
+                add_point(pointb, lid, -1)
+                continue
+
+            ids = np.sort(ids)
+            id_ = np.linalg.norm(
+                mesh.extract_cells(ids).cell_centers().points - pointa,
+                axis=-1,
+            ).argmin()
+            cid = ids[id_]
+            cell = mesh.extract_cells(cid)
+
+        if not mesh_exited:
+            while True:
+                # Find cell edges or faces intersected by the line
+                intersections = ray_cast(
+                    cell,
+                    pointa,
+                    pointb,
+                    tolerance=tolerance,
+                )
+
+                # Find the exit, if any
+                # Line is fully contained in the cell
+                if intersections is None:
+                    break
+
+                # Either an entrance or an exit
+                elif intersections.n_cells == 1:
+                    # It's an entrance if intersection point matches previous point
+                    if not mesh_entered or np.allclose(
+                        points[-1],
+                        intersections.cell_data["IntersectionPoints"][0],
+                        atol=tolerance,
+                    ):
+                        if not mesh_entered:
+                            cid_ = -1
+                            count = len(points)
+                            mesh_entered = True
+
+                        else:
+                            cid_ = cid
+
+                        add_point(
+                            intersections.cell_data["IntersectionPoints"][0], lid, cid_
+                        )
+                        break
+
+                    fid = 0
+
+                # The exit is the farthest from last point
+                elif intersections.n_cells == 2:
+                    dist = np.linalg.norm(
+                        intersections.cell_data["IntersectionPoints"] - points[-1],
+                        axis=-1,
+                    )
+
+                    if not mesh_entered:
+                        count = len(points)
+                        add_point(
+                            intersections.cell_data["IntersectionPoints"][
+                                dist.argmin()
+                            ],
+                            lid,
+                            -1,
+                        )
+                        mesh_entered = True
+
+                    fid = dist.argmax()
+
+                # The line is hitting an edge or a corner
+                else:
+                    raise ValueError("could not find the exit face")
+
+                add_point(intersections.cell_data["IntersectionPoints"][fid], lid, cid)
+                exit_face = intersections.get_cell(fid)
+
+                # Determine the exit cell
+                _, id_ = tree.query(exit_face.center)
+                cells = cell_geometry.cell_data["vtkOriginalCellIds"][id_]
+
+                if cid not in cells:
+                    raise ValueError("could not determine exit cell")
+
+                if -1 in cells:
+                    if not ignore_points_after_exit:
+                        add_point(pointb, lid, -1)
+
+                    mesh_exited = True
+                    break
+
+                cid = [id_ for id_ in cells if id_ != cid][0]
+                cell = mesh.extract_cells(cid)
+
+        else:
+            if ignore_points_after_exit:
+                break
+
+            add_point(pointb, lid, -1)
+
+    if ignore_points_before_entry:
+        points = points[count:]
+        line_ids = line_ids[count:]
+        cell_ids = cell_ids[count:]
+
+    polyline = split_lines(pv.MultipleLines(points))[0].compute_cell_sizes(
+        length=True, area=False, volume=False
+    )
+    polyline.cell_data["vtkOriginalCellIds"] = line_ids
+    polyline.cell_data["IntersectedCellIds"] = cell_ids
+
+    return polyline
+
+
 def merge(
     dataset: Sequence[pv.StructuredGrid | pv.UnstructuredGrid],
     axis: Optional[int] = None,
@@ -779,6 +944,100 @@ def offset_polygon(
         points_ += np.insert(points, axis, 0.0, axis=1).tolist()
 
     return pv.PolyData(points_, faces=faces)
+
+
+def ray_cast(
+    mesh: pv.DataSet,
+    pointa: ArrayLike,
+    pointb: ArrayLike,
+    tolerance: float = 1.0e-8,
+    max_angle: Optional[float] = None,
+) -> pv.PolyData | None:
+    """
+    Perform a single ray casting calculation.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        The input mesh to perform ray casting on.
+    pointa : ArrayLike
+        Length 3 coordinate of the start of the ray.
+    pointb : ArrayLike
+        Length 3 coordinate of the end of the ray.
+    tolerance : float, default 1.0e-8
+        The absolute tolerance to use to find cells along the ray.
+    max_angle : float, optional
+        The maximum angle between face normals and the ray direction. Ignored if *mesh* is 2-dimensional.
+
+    Returns
+    -------
+    pyvista.PolyData | None
+        A polydata with the intersected cells and points. None if no intersections.
+
+    """
+    if isinstance(mesh, pv.PolyData):
+        if mesh.n_faces_strict and mesh.n_lines:
+            raise ValueError(
+                "could not ray cast on a polydata with both faces and lines"
+            )
+
+        ids_ = None
+
+    else:
+        mesh = extract_cell_geometry(mesh, remove_empty_cells=False)
+        ids_ = mesh.cell_data["vtkOriginalCellIds"]
+
+    pointa = np.asanyarray(pointa)
+    pointb = np.asanyarray(pointb)
+
+    # Find cells intersected by the line
+    ids = mesh.find_cells_intersecting_line(pointa, pointb, tolerance=tolerance)
+
+    if ids.size == 0:
+        return None
+
+    ids = np.sort(ids)
+    dvec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
+
+    # Filter faces based on angle with line direction
+    if mesh.n_faces_strict:
+        max_angle = max_angle if max_angle is not None else 90.0 - tolerance
+        normals = mesh.compute_normals(
+            cell_normals=True, point_normals=False
+        ).cell_data["Normals"]
+        angles = np.rad2deg(np.acos(np.abs(normals[ids] @ dvec)))
+        ids = ids[angles < max_angle]
+
+        if ids.size == 0:
+            return None
+
+    # Calculate intersection points
+    cells = mesh.extract_cells(ids).extract_geometry()
+
+    if mesh.n_faces_strict:
+        centers = cells.cell_centers().points
+        intersection = pointa + dvec * np.expand_dims(
+            ((centers - pointa) * normals[ids]).sum(axis=1)
+            / (dvec * normals[ids]).sum(axis=1),
+            axis=1,
+        )
+
+    else:
+        points = np.array([edge.points for edge in split_lines(cells, as_lines=True)])
+        vecs = np.diff(points, axis=1).squeeze()
+        vecs = np.atleast_2d(vecs)
+        vecs /= np.linalg.norm(vecs, axis=1)[:, None]
+        cross = np.cross(vecs, dvec)
+        denom = np.linalg.norm(cross, axis=1)
+        t = (np.cross((points[:, 0] - pointa), dvec) * cross).sum(axis=1) / denom**2
+        intersection = points[:, 0] - t[:, None] * vecs
+
+    # Add data
+    cells.clear_data()
+    cells.cell_data["IntersectionPoints"] = intersection
+    cells.cell_data["vtkOriginalCellIds"] = ids_[ids] if ids_ is not None else ids
+
+    return cells
 
 
 def reconstruct_line(
