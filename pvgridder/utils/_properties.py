@@ -143,7 +143,7 @@ def get_dimension(
 
     elif isinstance(mesh, (pv.PolyData, pv.UnstructuredGrid)):
         mesh = mesh.cast_to_unstructured_grid()
-        
+
         return _dimension_map[mesh.celltypes].max()
 
     else:

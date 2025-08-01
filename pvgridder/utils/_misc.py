@@ -644,7 +644,9 @@ def intersect_polyline(
                         else:
                             cid_ = cid
 
-                        add_point(intersections.cell_data["IntersectionPoints"][0], lid, cid_)
+                        add_point(
+                            intersections.cell_data["IntersectionPoints"][0], lid, cid_
+                        )
                         break
 
                     fid = 0
@@ -652,13 +654,16 @@ def intersect_polyline(
                 # The exit is the farthest from last point
                 elif intersections.n_cells == 2:
                     dist = np.linalg.norm(
-                        intersections.cell_data["IntersectionPoints"] - points[-1], axis=-1
+                        intersections.cell_data["IntersectionPoints"] - points[-1],
+                        axis=-1,
                     )
 
                     if not mesh_entered:
                         count = len(points)
                         add_point(
-                            intersections.cell_data["IntersectionPoints"][dist.argmin()],
+                            intersections.cell_data["IntersectionPoints"][
+                                dist.argmin()
+                            ],
                             lid,
                             -1,
                         )
@@ -972,27 +977,34 @@ def ray_cast(
     """
     if isinstance(mesh, pv.PolyData):
         if mesh.n_faces_strict and mesh.n_lines:
-            raise ValueError("could not ray cast on a polydata with both faces and lines")
-        
+            raise ValueError(
+                "could not ray cast on a polydata with both faces and lines"
+            )
+
         ids_ = None
-        
+
     else:
         mesh = extract_cell_geometry(mesh, remove_empty_cells=False)
         ids_ = mesh.cell_data["vtkOriginalCellIds"]
+
+    pointa = np.asanyarray(pointa)
+    pointb = np.asanyarray(pointb)
 
     # Find cells intersected by the line
     ids = mesh.find_cells_intersecting_line(pointa, pointb, tolerance=tolerance)
 
     if ids.size == 0:
         return None
-    
+
     ids = np.sort(ids)
     dvec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
-    
+
     # Filter faces based on angle with line direction
     if mesh.n_faces_strict:
         max_angle = max_angle if max_angle is not None else 90.0 - tolerance
-        normals = mesh.compute_normals(cell_normals=True, point_normals=False).cell_data["Normals"]
+        normals = mesh.compute_normals(
+            cell_normals=True, point_normals=False
+        ).cell_data["Normals"]
         angles = np.rad2deg(np.acos(np.abs(normals[ids] @ dvec)))
         ids = ids[angles < max_angle]
 
@@ -1001,7 +1013,7 @@ def ray_cast(
 
     # Calculate intersection points
     cells = mesh.extract_cells(ids).extract_geometry()
-    
+
     if mesh.n_faces_strict:
         centers = cells.cell_centers().points
         intersection = pointa + dvec * np.expand_dims(
@@ -1011,15 +1023,13 @@ def ray_cast(
         )
 
     else:
-        points = np.array(
-            [edge.points for edge in split_lines(cells, as_lines=True)]
-        )
+        points = np.array([edge.points for edge in split_lines(cells, as_lines=True)])
         vecs = np.diff(points, axis=1).squeeze()
         vecs = np.atleast_2d(vecs)
         vecs /= np.linalg.norm(vecs, axis=1)[:, None]
         cross = np.cross(vecs, dvec)
         denom = np.linalg.norm(cross, axis=1)
-        t = (np.cross((points[:, 0] - pointa), dvec) * cross).sum(axis=1) / denom ** 2
+        t = (np.cross((points[:, 0] - pointa), dvec) * cross).sum(axis=1) / denom**2
         intersection = points[:, 0] - t[:, None] * vecs
 
     # Add data
