@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import ArrayLike
 
 
 def get_cell_connectivity(
@@ -76,6 +77,41 @@ def get_cell_connectivity(
 
     else:
         return tuple(cells)
+    
+
+def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
+    """
+    Get the cell centers of a mesh.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        Input mesh.
+
+    Returns
+    -------
+    ArrayLike
+        Cell centers.
+
+    """
+    centers = np.full((mesh.n_cells, 3), np.nan)
+    ghost_cells = (
+        mesh.cell_data.pop("vtkGhostType")
+        if "vtkGhostType" in mesh.cell_data
+        else None
+    )
+
+    if not isinstance(mesh, pv.UnstructuredGrid):
+        centers[:] = mesh.cell_centers().points
+
+    else:
+        mask = mesh.celltypes != pv.CellType.EMPTY_CELL
+        centers[mask] = mesh.cell_centers().points
+
+    if ghost_cells is not None:
+        mesh.cell_data["vtkGhostType"] = ghost_cells
+
+    return centers
 
 
 def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | str]:
