@@ -7,6 +7,7 @@ from ._misc import (
     decimate_rdp,
     extract_boundary_polygons,
     extract_cell_geometry,
+    extract_cells,
     extract_cells_by_dimension,
     fuse_cells,
     intersect_polyline,
@@ -19,4 +20,9 @@ from ._misc import (
     remap_categorical_data,
     split_lines,
 )
-from ._properties import get_cell_connectivity, get_cell_group, get_dimension
+from ._properties import (
+    get_cell_centers,
+    get_cell_connectivity,
+    get_cell_group,
+    get_dimension,
+)

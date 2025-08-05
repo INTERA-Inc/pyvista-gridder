@@ -23,7 +23,7 @@ def test_get_neighborhood(mesh_fixture, request):
     mesh = request.getfixturevalue(mesh_fixture)
 
     ndim = pvg.get_dimension(mesh)
-    neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=True)
+    neighbors = pvg.get_neighborhood(mesh, remove_ghost_cells=True)
     neighbors_ref = [
         mesh.cell_neighbors(i, "edges" if ndim == 2 else "faces")
         for i in range(mesh.n_cells)
@@ -63,12 +63,12 @@ def test_get_neighborhood_empty_cells(mesh_fixture, cell_ids, empty_cell_ids, re
 
     assert len(cell_ids) == len(empty_cell_ids)
 
-    neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=False)
+    neighbors = pvg.get_neighborhood(mesh, remove_ghost_cells=False)
     for cell_id, empty_cell_id in zip(cell_ids, empty_cell_ids):
         for cid in empty_cell_id:
             assert cid in neighbors[cell_id]
 
-    neighbors = pvg.get_neighborhood(mesh, remove_empty_cells=True)
+    neighbors = pvg.get_neighborhood(mesh, remove_ghost_cells=True)
     for cell_id, empty_cell_id in zip(cell_ids, empty_cell_ids):
         for cid in empty_cell_id:
             assert cid not in neighbors[cell_id]
@@ -99,15 +99,15 @@ def test_get_connectivity(mesh_fixture, test_custom_centers, request):
 
     # Test with custom cell centers only for specified meshes
     if test_custom_centers:
-        cell_centers = mesh.cell_centers().points
+        cell_centers = pvg.get_cell_centers(mesh)
         connectivity_custom = pvg.get_connectivity(mesh, cell_centers=cell_centers)
 
         assert isinstance(connectivity_custom, pv.PolyData)
         assert connectivity_custom.n_points == mesh.n_cells
         assert connectivity_custom.n_lines > 0
 
-    # Test with remove_empty_cells=False
-    connectivity_with_empty = pvg.get_connectivity(mesh, remove_empty_cells=False)
+    # Test with remove_ghost_cells=False
+    connectivity_with_empty = pvg.get_connectivity(mesh, remove_ghost_cells=False)
     assert isinstance(connectivity_with_empty, pv.PolyData)
 
 

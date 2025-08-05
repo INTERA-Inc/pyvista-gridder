@@ -96,6 +96,39 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
 
 
 @pytest.mark.parametrize(
+    "mesh",
+    [
+        pytest.param("structured_grid_2d", id="structured-2d"),
+        pytest.param("structured_grid_3d", id="structured-3d"),
+        pytest.param("well_2d_voronoi", id="unstructured-2d"),
+        pytest.param("well_3d_voronoi", id="unstructured-3d"),
+    ],
+)
+def test_get_cell_centers(request, mesh):
+    """Test retrieving cell centers for different mesh types."""
+    # No ghost cells nor empty cells
+    mesh = request.getfixturevalue(mesh)
+    centers = pvg.get_cell_centers(mesh)
+    assert centers.shape == (mesh.n_cells, 3)
+
+    # With ghost cells and empty cells
+    if isinstance(mesh, pv.UnstructuredGrid):
+        empty_mesh = pv.UnstructuredGrid([0], [pv.CellType.EMPTY_CELL], [])
+        mesh = mesh + empty_mesh
+
+    mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
+    mesh.cell_data["vtkGhostType"][-1] = 32
+    ghost_cells = mesh.cell_data["vtkGhostType"].copy()
+    centers = pvg.get_cell_centers(mesh)
+    assert centers.shape == (mesh.n_cells, 3)
+    assert not (np.isnan(centers[-1]).all())
+    assert np.allclose(mesh.cell_data["vtkGhostType"], ghost_cells)
+
+    if isinstance(mesh, pv.UnstructuredGrid):
+        assert np.isnan(centers[0]).all()
+
+
+@pytest.mark.parametrize(
     "mesh_fixture, key, expected_result",
     [
         pytest.param(

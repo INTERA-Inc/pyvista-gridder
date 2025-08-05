@@ -222,7 +222,7 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
 
 
 @pytest.mark.parametrize(
-    "mesh, remove_empty_cells, reference_point_sum",
+    "mesh, remove_ghost_cells, reference_point_sum",
     [
         # Basic meshes
         pytest.param(
@@ -261,14 +261,14 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
         pytest.param(pvg.examples.load_well_2d, True, 0.0, id="well_2d"),
     ],
 )
-def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
+def test_extract_cell_geometry(mesh, remove_ghost_cells, reference_point_sum):
     """Test cell geometry extraction with different meshes and empty cell options."""
     # Get the actual mesh (calling the function if it's callable)
     actual_mesh = mesh() if callable(mesh) else mesh
 
     # Extract cell geometry
     result = pvg.extract_cell_geometry(
-        actual_mesh, remove_empty_cells=remove_empty_cells
+        actual_mesh, remove_ghost_cells=remove_ghost_cells
     )
 
     # Should be a polydata with cell outlines
@@ -280,6 +280,25 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
 
     # Should have the original cell IDs
     assert "vtkOriginalCellIds" in result.cell_data
+
+
+@pytest.mark.parametrize(
+    "mesh",
+    [
+        pytest.param("anticline_2d", id="mesh-with-ghost-cells"),
+        pytest.param("well_3d", id="mesh-without-ghost-cells"),
+    ],
+)
+def test_extract_cells(request, mesh):
+    mesh = request.getfixturevalue(mesh)
+    ids = np.arange(0, mesh.n_cells, 2)
+    cells = pvg.extract_cells(mesh, ids)
+    assert cells.n_cells == len(ids)
+
+    if "vtkGhostType" in mesh.cell_data:
+        mask = mesh.cell_data["vtkGhostType"] > 0
+        cells = pvg.extract_cells(mesh, mask)
+        assert cells.n_cells == mask.sum()
 
 
 @pytest.mark.parametrize(
@@ -436,7 +455,7 @@ def test_intersect_polyline(request, mesh, polyline):
             continue
 
         cell = mesh.extract_cells(cell_id)
-        assert cell.find_containing_cell(line.cell_centers().points[0]) == 0
+        assert cell.find_containing_cell(pvg.get_cell_centers(line)[0]) == 0
 
 
 @pytest.mark.parametrize(

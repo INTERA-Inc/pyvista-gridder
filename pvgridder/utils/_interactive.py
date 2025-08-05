@@ -42,6 +42,8 @@ def interactive_lasso_selection(
         Polygon used for selection if *return_polygon* is True.
 
     """
+    from .. import get_cell_centers
+
     kwargs_ = {
         "scalar_bar_args": {
             "vertical": True,
@@ -117,7 +119,7 @@ def interactive_lasso_selection(
     polygon = Polygon(points)
 
     if preference == "cell":
-        centers = mesh.cell_centers().points
+        centers = get_cell_centers(mesh)
         mask = contains_xy(polygon, centers)
 
     else:
