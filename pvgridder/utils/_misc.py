@@ -233,7 +233,7 @@ def extract_boundary_polygons(
 
 def extract_cell_geometry(
     mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
-    remove_empty_cells: bool = True,
+    remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
     """
     Extract the geometry of individual cells.
@@ -242,8 +242,8 @@ def extract_cell_geometry(
     ----------
     mesh : pyvista.ExplicitStructuredGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to extract cell geometry from.
-    remove_empty_cells : bool, default True
-        If True, remove empty cells.
+    remove_ghost_cells : bool, default True
+        If True, remove ghost cells.
 
     Returns
     -------
@@ -290,7 +290,7 @@ def extract_cell_geometry(
 
     from .. import get_cell_connectivity, get_dimension
 
-    if not remove_empty_cells and "vtkGhostType" in mesh.cell_data:
+    if not remove_ghost_cells and "vtkGhostType" in mesh.cell_data:
         mesh = mesh.copy(deep=False)
         mesh.clear_data()
 
@@ -328,7 +328,7 @@ def extract_cell_geometry(
             )
             if celltype == pv.CellType.PIXEL
             else np.column_stack((cell, np.roll(cell, -1)))
-            if not remove_empty_cells or celltype != pv.CellType.EMPTY_CELL
+            if not remove_ghost_cells or celltype != pv.CellType.EMPTY_CELL
             else []
             for cell, celltype in zip(connectivity, celltypes)
         ]
@@ -336,7 +336,7 @@ def extract_cell_geometry(
         poly = get_polydata_from_points_cells(mesh.points, cell_edges, "lines")
 
         # Handle collapsed cells
-        if remove_empty_cells:
+        if remove_ghost_cells:
             lengths = poly.compute_cell_sizes(length=True, area=False, volume=False)[
                 "Length"
             ]
@@ -394,7 +394,7 @@ def extract_cell_geometry(
         poly = get_polydata_from_points_cells(mesh.points, cell_faces, "faces")
 
         # Handle collapsed cells
-        if remove_empty_cells:
+        if remove_ghost_cells:
             areas = poly.compute_cell_sizes(length=False, area=True, volume=False)[
                 "Area"
             ]
@@ -643,7 +643,7 @@ def intersect_polyline(
             line_ids.append(line_id)
             cell_ids.append(cell_id)
 
-    cell_geometry = extract_cell_geometry(mesh, remove_empty_cells=True)
+    cell_geometry = extract_cell_geometry(mesh, remove_ghost_cells=True)
     tree = KDTree(get_cell_centers(cell_geometry))
 
     for lid, (pointa, pointb) in enumerate(zip(lines.points[:-1], lines.points[1:])):
@@ -1036,7 +1036,7 @@ def ray_cast(
         ids_ = None
 
     else:
-        mesh = extract_cell_geometry(mesh, remove_empty_cells=False)
+        mesh = extract_cell_geometry(mesh, remove_ghost_cells=False)
         ids_ = mesh.cell_data["vtkOriginalCellIds"]
 
     pointa = np.asanyarray(pointa)

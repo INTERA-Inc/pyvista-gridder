@@ -222,7 +222,7 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
 
 
 @pytest.mark.parametrize(
-    "mesh, remove_empty_cells, reference_point_sum",
+    "mesh, remove_ghost_cells, reference_point_sum",
     [
         # Basic meshes
         pytest.param(
@@ -261,14 +261,14 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
         pytest.param(pvg.examples.load_well_2d, True, 0.0, id="well_2d"),
     ],
 )
-def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
+def test_extract_cell_geometry(mesh, remove_ghost_cells, reference_point_sum):
     """Test cell geometry extraction with different meshes and empty cell options."""
     # Get the actual mesh (calling the function if it's callable)
     actual_mesh = mesh() if callable(mesh) else mesh
 
     # Extract cell geometry
     result = pvg.extract_cell_geometry(
-        actual_mesh, remove_empty_cells=remove_empty_cells
+        actual_mesh, remove_ghost_cells=remove_ghost_cells
     )
 
     # Should be a polydata with cell outlines

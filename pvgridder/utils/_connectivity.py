@@ -10,7 +10,7 @@ from numpy.typing import ArrayLike
 
 def get_neighborhood(
     mesh: pv.UnstructuredGrid,
-    remove_empty_cells: bool = True,
+    remove_ghost_cells: bool = True,
 ) -> Sequence[ArrayLike]:
     """
     Get mesh neighborhood.
@@ -19,8 +19,8 @@ def get_neighborhood(
     ----------
     mesh : pyvista.UnstructuredGrid
         Input mesh.
-    remove_empty_cells : bool, optional
-        If True, remove empty cells.
+    remove_ghost_cells : bool, optional
+        If True, remove ghost cells.
 
     Returns
     -------
@@ -31,7 +31,7 @@ def get_neighborhood(
     from .. import extract_cell_geometry
 
     neighbors = [[] for _ in range(mesh.n_cells)]
-    mesh = extract_cell_geometry(mesh, remove_empty_cells)
+    mesh = extract_cell_geometry(mesh, remove_ghost_cells)
 
     for i1, i2 in mesh["vtkOriginalCellIds"]:
         if i1 == -1 or i2 == -1:
@@ -46,7 +46,7 @@ def get_neighborhood(
 def get_connectivity(
     mesh: pv.UnstructuredGrid,
     cell_centers: Optional[ArrayLike] = None,
-    remove_empty_cells: bool = True,
+    remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
     """
     Get mesh connectivity.
@@ -57,8 +57,8 @@ def get_connectivity(
         Input mesh.
     cell_centers : ArrayLike, optional
         Cell centers used for connectivity lines.
-    remove_empty_cells : bool, optional
-        If True, remove empty cells.
+    remove_ghost_cells : bool, optional
+        If True, remove ghost cells.
 
     Returns
     -------
@@ -75,7 +75,7 @@ def get_connectivity(
             f"invalid cell centers (expected 2D array of shape ({mesh.n_cells}, 3)"
         )
 
-    mesh = extract_cell_geometry(mesh, remove_empty_cells)
+    mesh = extract_cell_geometry(mesh, remove_ghost_cells)
     lines = [(i1, i2) for i1, i2 in mesh["vtkOriginalCellIds"] if i1 != -1 and i2 != -1]
     lines = np.column_stack((np.full(len(lines), 2), lines)).ravel()
 
