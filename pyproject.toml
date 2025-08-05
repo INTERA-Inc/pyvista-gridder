@@ -35,7 +35,7 @@ dependencies = [
     "pyrequire",
     "pyvista >= 0.45",
     "scipy >= 0.9",
-    "vtk < 9.4",
+    "vtk",
 ]
 
 [project.optional-dependencies]
