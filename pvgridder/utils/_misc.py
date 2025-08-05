@@ -418,7 +418,7 @@ def extract_cells(
     ind: ArrayLike,
     invert: bool = False,
     progress_bar: bool = False,
-) ->  pv.UnstructuredGrid:
+) -> pv.UnstructuredGrid:
     """
     Return a subset of the grid.
 
@@ -443,16 +443,16 @@ def extract_cells(
 
     """
     ghost_cells = (
-        mesh.cell_data.pop("vtkGhostType")
-        if "vtkGhostType" in mesh.cell_data
-        else None
+        mesh.cell_data.pop("vtkGhostType") if "vtkGhostType" in mesh.cell_data else None
     )
 
     try:
         cells = mesh.extract_cells(ind, invert=invert, progress_bar=progress_bar)
 
         if ghost_cells is not None:
-            cells.cell_data["vtkGhostType"] = ghost_cells[cells.cell_data["vtkOriginalCellIds"]]
+            cells.cell_data["vtkGhostType"] = ghost_cells[
+                cells.cell_data["vtkOriginalCellIds"]
+            ]
 
     finally:
         if ghost_cells is not None:
@@ -1026,7 +1026,7 @@ def ray_cast(
 
     """
     from .. import get_cell_centers
-    
+
     if isinstance(mesh, pv.PolyData):
         if mesh.n_faces_strict and mesh.n_lines:
             raise ValueError(

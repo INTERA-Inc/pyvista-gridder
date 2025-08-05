@@ -20,4 +20,9 @@ from ._misc import (
     remap_categorical_data,
     split_lines,
 )
-from ._properties import get_cell_connectivity, get_cell_centers, get_cell_group, get_dimension
+from ._properties import (
+    get_cell_centers,
+    get_cell_connectivity,
+    get_cell_group,
+    get_dimension,
+)

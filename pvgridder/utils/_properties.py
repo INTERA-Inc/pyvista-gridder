@@ -77,7 +77,7 @@ def get_cell_connectivity(
 
     else:
         return tuple(cells)
-    
+
 
 def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
     """
@@ -96,9 +96,7 @@ def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
     """
     centers = np.full((mesh.n_cells, 3), np.nan)
     ghost_cells = (
-        mesh.cell_data.pop("vtkGhostType")
-        if "vtkGhostType" in mesh.cell_data
-        else None
+        mesh.cell_data.pop("vtkGhostType") if "vtkGhostType" in mesh.cell_data else None
     )
 
     if not isinstance(mesh, pv.UnstructuredGrid):

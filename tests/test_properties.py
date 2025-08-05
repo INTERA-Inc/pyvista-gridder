@@ -102,7 +102,7 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
         pytest.param("structured_grid_3d", id="structured-3d"),
         pytest.param("well_2d_voronoi", id="unstructured-2d"),
         pytest.param("well_3d_voronoi", id="unstructured-3d"),
-    ]
+    ],
 )
 def test_get_cell_centers(request, mesh):
     """Test retrieving cell centers for different mesh types."""
