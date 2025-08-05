@@ -413,6 +413,54 @@ def extract_cell_geometry(
     return poly
 
 
+def extract_cells(
+    mesh: pv.DataSet,
+    ind: ArrayLike,
+    invert: bool = False,
+    progress_bar: bool = False,
+) ->  pv.UnstructuredGrid:
+    """
+    Return a subset of the grid.
+
+    Parameters
+    ----------
+    ind : ArrayLike
+        Indices of cells to extract.
+    invert : bool, default False
+        If True, invert the selection.
+    progress_bar : bool, default False
+        If True, display a progress bar.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Extracted cells.
+
+    Note
+    ----
+    This function wraps `pyvista.DataSet.extract_cells()` with consistent handling of
+    ghost cells across different versions of VTK.
+
+    """
+    ghost_cells = (
+        mesh.cell_data.pop("vtkGhostType")
+        if "vtkGhostType" in mesh.cell_data
+        else None
+    )
+
+    try:
+        cells = mesh.extract_cells(ind, invert=invert, progress_bar=progress_bar)
+
+        if ghost_cells is not None:
+            cells.cell_data["vtkGhostType"] = ghost_cells[cells.cell_data["vtkOriginalCellIds"]]
+
+    finally:
+        if ghost_cells is not None:
+            mesh.cell_data["vtkGhostType"] = ghost_cells
+
+    return cells
+
+
 def extract_cells_by_dimension(
     mesh: pv.UnstructuredGrid,
     ndim: Optional[int] = None,

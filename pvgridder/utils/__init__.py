@@ -7,6 +7,7 @@ from ._misc import (
     decimate_rdp,
     extract_boundary_polygons,
     extract_cell_geometry,
+    extract_cells,
     extract_cells_by_dimension,
     fuse_cells,
     intersect_polyline,
