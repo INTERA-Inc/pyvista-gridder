@@ -344,13 +344,14 @@ class VoronoiMesh2D(MeshBase):
             extract_boundary_polygons,
             extract_cells,
             fuse_cells,
+            get_cell_centers,
         )
 
         groups = {}
         items = sorted(self.items, key=lambda item: abs(item.priority))
 
         if self.preference == "cell":
-            points = self.mesh.cell_centers().points.tolist()
+            points = get_cell_centers(self.mesh).tolist()
             group_array = self._initialize_group_array(self.mesh, groups)
             priority_array = np.full(self.mesh.n_cells, -np.inf)
 
@@ -363,11 +364,10 @@ class VoronoiMesh2D(MeshBase):
 
         for i, item in enumerate(items):
             mesh_a = item.mesh
-            group = item.group if item.group else self.default_group
-            points_ = mesh_a.cell_centers().points
+            points_ = get_cell_centers(mesh_a)
 
             # Remove out of bound points from item mesh
-            mask = self.mesh.find_containing_cell(mesh_a.cell_centers().points) != -1
+            mask = self.mesh.find_containing_cell(get_cell_centers(mesh_a)) != -1
 
             if mask.any():
                 mesh_a = extract_cells(mesh_a, mask)
@@ -464,7 +464,7 @@ class VoronoiMesh2D(MeshBase):
 
         # Fuse cells, if any
         if self.fuse_cells:
-            points = mesh.cell_centers().points
+            points = get_cell_centers(mesh)
             indices = [func(points) for func in self.fuse_cells]
             mesh = fuse_cells(mesh, indices)
 

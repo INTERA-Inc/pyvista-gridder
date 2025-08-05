@@ -455,7 +455,7 @@ def test_intersect_polyline(request, mesh, polyline):
             continue
 
         cell = mesh.extract_cells(cell_id)
-        assert cell.find_containing_cell(line.cell_centers().points[0]) == 0
+        assert cell.find_containing_cell(pvg.get_cell_centers(line)[0]) == 0
 
 
 @pytest.mark.parametrize(

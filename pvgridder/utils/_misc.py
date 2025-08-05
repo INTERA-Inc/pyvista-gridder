@@ -627,6 +627,8 @@ def intersect_polyline(
         Polydata containing the intersection points and cell IDs.
 
     """
+    from .. import get_cell_centers
+
     lines = split_lines(line.strip(), as_lines=True)[0]
 
     line_ids, cell_ids, cell = [], [], None
@@ -642,7 +644,7 @@ def intersect_polyline(
             cell_ids.append(cell_id)
 
     cell_geometry = extract_cell_geometry(mesh, remove_empty_cells=True)
-    tree = KDTree(cell_geometry.cell_centers().points)
+    tree = KDTree(get_cell_centers(cell_geometry))
 
     for lid, (pointa, pointb) in enumerate(zip(lines.points[:-1], lines.points[1:])):
         # Find the first cell intersected by the line
@@ -655,7 +657,7 @@ def intersect_polyline(
 
             ids = np.sort(ids)
             id_ = np.linalg.norm(
-                extract_cells(mesh, ids).cell_centers().points - pointa,
+                get_cell_centers(extract_cells(mesh, ids)) - pointa,
                 axis=-1,
             ).argmin()
             cid = ids[id_]
@@ -1023,6 +1025,8 @@ def ray_cast(
         A polydata with the intersected cells and points. None if no intersections.
 
     """
+    from .. import get_cell_centers
+    
     if isinstance(mesh, pv.PolyData):
         if mesh.n_faces_strict and mesh.n_lines:
             raise ValueError(
@@ -1063,7 +1067,7 @@ def ray_cast(
     cells = extract_cells(mesh, ids).extract_geometry()
 
     if mesh.n_faces_strict:
-        centers = cells.cell_centers().points
+        centers = get_cell_centers(cells)
         intersection = pointa + dvec * np.expand_dims(
             ((centers - pointa) * normals[ids]).sum(axis=1)
             / (dvec * normals[ids]).sum(axis=1),

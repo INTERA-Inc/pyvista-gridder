@@ -66,18 +66,9 @@ def get_connectivity(
         Mesh connectivity.
 
     """
-    from .. import extract_cell_geometry
+    from .. import extract_cell_geometry, get_cell_centers
 
-    if cell_centers is None:
-        # Remove empty cells before calculating cell centers
-        # See <https://github.com/pyvista/pyvista/issues/7113>
-        mesh_copy = mesh.copy(deep=False)
-        mesh_copy.clear_data()
-        mesh_copy = mesh_copy.cast_to_unstructured_grid()
-        cell_centers = np.full((mesh_copy.n_cells, 3), np.nan)
-        cell_centers[mesh_copy.celltypes != pv.CellType.EMPTY_CELL] = (
-            mesh_copy.cell_centers(vertex=False).points
-        )
+    cell_centers = get_cell_centers(mesh) if cell_centers is None else cell_centers
 
     if np.shape(cell_centers) != (mesh.n_cells, 3):
         raise ValueError(

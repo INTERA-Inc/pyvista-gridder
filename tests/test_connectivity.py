@@ -99,7 +99,7 @@ def test_get_connectivity(mesh_fixture, test_custom_centers, request):
 
     # Test with custom cell centers only for specified meshes
     if test_custom_centers:
-        cell_centers = mesh.cell_centers().points
+        cell_centers = pvg.get_cell_centers(mesh)
         connectivity_custom = pvg.get_connectivity(mesh, cell_centers=cell_centers)
 
         assert isinstance(connectivity_custom, pv.PolyData)
