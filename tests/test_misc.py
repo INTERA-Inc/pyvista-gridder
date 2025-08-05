@@ -283,6 +283,25 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
 
 
 @pytest.mark.parametrize(
+    "mesh",
+    [
+        pytest.param("anticline_2d", id="mesh_with_ghost_cells"),
+        pytest.param("well_3d", id="mesh_without_ghost_cells"),
+    ],
+)
+def test_extract_cells(request, mesh):
+    mesh = request.getfixturevalue(mesh)
+    ids = np.arange(0, mesh.n_cells, 2)
+    cells = pvg.extract_cells(mesh, ids)
+    assert cells.n_cells == len(ids)
+
+    if "vtkGhostType" in mesh.cell_data:
+        mask = mesh.cell_data["vtkGhostType"] > 0
+        cells = pvg.extract_cells(mesh, mask)
+        assert cells.n_cells == mask.sum()
+
+
+@pytest.mark.parametrize(
     "mesh, ndim, method, expected_result",
     [
         # Basic mesh with mixed dimensions
