@@ -506,7 +506,7 @@ def extract_cells_by_dimension(
         mask |= mesh.celltypes == pv.CellType.EMPTY_CELL
 
     if not mask.all():
-        mesh = mesh.extract_cells(mask)
+        mesh = extract_cells(mesh, mask)
 
     return mesh
 
@@ -541,7 +541,7 @@ def fuse_cells(
     for ind in indices:
         ind = np.asanyarray(ind)
         ind = np.flatnonzero(ind) if ind.dtype.kind == "b" else ind
-        mesh_ = mesh.extract_cells(ind)
+        mesh_ = extract_cells(mesh, ind)
         mask[ind[1:]] = False
 
         if get_dimension(mesh_) == 2:
@@ -593,7 +593,7 @@ def fuse_cells(
     fused_mesh.user_dict.update(mesh.user_dict)
 
     # Tidy up
-    fused_mesh = fused_mesh.extract_cells(mask).clean()
+    fused_mesh = extract_cells(fused_mesh, mask).clean()
 
     return fused_mesh
 
@@ -655,11 +655,11 @@ def intersect_polyline(
 
             ids = np.sort(ids)
             id_ = np.linalg.norm(
-                mesh.extract_cells(ids).cell_centers().points - pointa,
+                extract_cells(mesh, ids).cell_centers().points - pointa,
                 axis=-1,
             ).argmin()
             cid = ids[id_]
-            cell = mesh.extract_cells(cid)
+            cell = extract_cells(mesh, cid)
 
         if not mesh_exited:
             while True:
@@ -741,7 +741,7 @@ def intersect_polyline(
                     break
 
                 cid = [id_ for id_ in cells if id_ != cid][0]
-                cell = mesh.extract_cells(cid)
+                cell = extract_cells(mesh, cid)
 
         else:
             if ignore_points_after_exit:
@@ -1060,7 +1060,7 @@ def ray_cast(
             return None
 
     # Calculate intersection points
-    cells = mesh.extract_cells(ids).extract_geometry()
+    cells = extract_cells(mesh, ids).extract_geometry()
 
     if mesh.n_faces_strict:
         centers = cells.cell_centers().points

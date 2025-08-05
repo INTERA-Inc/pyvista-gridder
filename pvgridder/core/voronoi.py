@@ -301,13 +301,13 @@ class VoronoiMesh2D(MeshBase):
 
             # Add to items
             item = MeshItem(
-                mesh.extract_cells(~constraint),
+                extract_cells(mesh, ~constraint),
                 group=group,
                 priority=priority if priority else 0,
             )
             self.items.append(item)
 
-            item = MeshItem(mesh.extract_cells(constraint), group=None, priority=0)
+            item = MeshItem(extract_cells(mesh, constraint), group=None, priority=0)
             self.items.append(item)
 
         return self
@@ -342,6 +342,7 @@ class VoronoiMesh2D(MeshBase):
             average_points,
             decimate_rdp,
             extract_boundary_polygons,
+            extract_cells,
             fuse_cells,
         )
 
@@ -369,7 +370,7 @@ class VoronoiMesh2D(MeshBase):
             mask = self.mesh.find_containing_cell(mesh_a.cell_centers().points) != -1
 
             if mask.any():
-                mesh_a = mesh_a.extract_cells(mask)
+                mesh_a = extract_cells(mesh_a, mask)
                 points_ = points_[mask]
 
             # Initialize item arrays
