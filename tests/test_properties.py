@@ -98,10 +98,10 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
 @pytest.mark.parametrize(
     "mesh",
     [
-        pytest.param("structured_grid_2d", id="structured_2d"),
-        pytest.param("structured_grid_3d", id="structured_3d"),
-        pytest.param("well_2d_voronoi", id="unstructured_2d"),
-        pytest.param("well_3d_voronoi", id="unstructured_3d"),
+        pytest.param("structured_grid_2d", id="structured-2d"),
+        pytest.param("structured_grid_3d", id="structured-3d"),
+        pytest.param("well_2d_voronoi", id="unstructured-2d"),
+        pytest.param("well_3d_voronoi", id="unstructured-3d"),
     ]
 )
 def test_get_cell_centers(request, mesh):

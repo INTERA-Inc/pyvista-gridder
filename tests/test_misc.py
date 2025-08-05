@@ -285,8 +285,8 @@ def test_extract_cell_geometry(mesh, remove_empty_cells, reference_point_sum):
 @pytest.mark.parametrize(
     "mesh",
     [
-        pytest.param("anticline_2d", id="mesh_with_ghost_cells"),
-        pytest.param("well_3d", id="mesh_without_ghost_cells"),
+        pytest.param("anticline_2d", id="mesh-with-ghost-cells"),
+        pytest.param("well_3d", id="mesh-without-ghost-cells"),
     ],
 )
 def test_extract_cells(request, mesh):
