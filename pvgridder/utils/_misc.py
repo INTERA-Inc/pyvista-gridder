@@ -779,7 +779,7 @@ def merge(
     dataset : Sequence[pyvista.StructuredGrid | pyvista.UnstructuredGrid]
         Meshes to merge together. At least two meshes are required.
     axis : int, optional
-        The axis along which two structured grids are merged (if *mesh_a* and *mesh_b*
+        The axis along which two structured grids are merged (if all meshes in *dataset*
         are structured grids).
     merge_points : bool, default True
         If True, merge equivalent points for two unstructured grids.
@@ -1174,7 +1174,7 @@ def reconstruct_line(
 def remap_categorical_data(
     mesh: pv.DataSet,
     key: str,
-    mapping: dict[int, int],
+    mapping: dict[str | int, int],
     preference: Literal["cell", "point"] = "cell",
     inplace: bool = False,
 ) -> pv.DataSet | None:
