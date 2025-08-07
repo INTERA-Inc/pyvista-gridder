@@ -531,6 +531,7 @@ def Polygon(
                 gmsh.option.set_number("Mesh.MeshSizeFromCurvature", 0)
 
             gmsh.option.set_number("Mesh.Algorithm", algorithm)
+            gmsh.option.set_number("General.Verbosity", 0)
             engine_.synchronize()
 
             if celltype == "quad":
