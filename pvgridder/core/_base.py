@@ -201,9 +201,7 @@ class MeshBase(ABC):
         mask = np.isin(values, mesh.cell_data["CellGroup"])
 
         if not mask.all():
-            keys = [
-                k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_
-            ]
+            keys = [k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_]
             mapping = {k: v for v, k in enumerate(keys)}
             remap_categorical_data(
                 mesh,
@@ -263,7 +261,11 @@ class MeshStackBase(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData | pv.PolyData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData
+        | pv.PolyData
+        | pv.RectilinearGrid
+        | pv.StructuredGrid
+        | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
@@ -271,7 +273,7 @@ class MeshStackBase(MeshBase):
         """Initialize a new mesh stack."""
         if axis not in {0, 1, 2}:
             raise ValueError(f"invalid axis {axis} (expected {{0, 1, 2}}, got {axis})")
-        
+
         if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
             mesh = mesh.cast_to_structured_grid()
 

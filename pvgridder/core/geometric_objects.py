@@ -1128,8 +1128,14 @@ def StructuredSurface(
 
 
 def Volume(
-    surface_a: pv.ImageData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
-    surface_b: pv.ImageData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+    surface_a: pv.ImageData
+    | pv.RectilinearGrid
+    | pv.StructuredGrid
+    | pv.UnstructuredGrid,
+    surface_b: pv.ImageData
+    | pv.RectilinearGrid
+    | pv.StructuredGrid
+    | pv.UnstructuredGrid,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:

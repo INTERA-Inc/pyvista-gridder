@@ -121,7 +121,10 @@ class MeshStack3D(MeshStackBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData
+        | pv.RectilinearGrid
+        | pv.StructuredGrid
+        | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,

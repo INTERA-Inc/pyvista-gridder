@@ -39,7 +39,11 @@ class VoronoiMesh2D(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData | pv.PolyData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData
+        | pv.PolyData
+        | pv.RectilinearGrid
+        | pv.StructuredGrid
+        | pv.UnstructuredGrid,
         axis: int = 2,
         preference: Literal["cell", "point"] = "cell",
         default_group: Optional[str] = None,

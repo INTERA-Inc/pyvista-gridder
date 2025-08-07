@@ -117,7 +117,7 @@ def test_get_cell_centers(request, mesh):
         mesh = mesh + empty_mesh
 
     mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
-    mesh.cell_data["vtkGhostType"][1:mesh.n_cells // 2] = 32
+    mesh.cell_data["vtkGhostType"][1 : mesh.n_cells // 2] = 32
     ghost_cells = mesh.cell_data["vtkGhostType"].copy()
     centers = pvg.get_cell_centers(mesh)
 

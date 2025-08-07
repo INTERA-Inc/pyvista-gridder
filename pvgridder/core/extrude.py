@@ -38,7 +38,10 @@ class MeshExtrude(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData | pv.RectilinearGrid |pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData
+        | pv.RectilinearGrid
+        | pv.StructuredGrid
+        | pv.UnstructuredGrid,
         scale: Optional[float] = None,
         angle: Optional[float] = None,
         default_group: Optional[str] = None,
@@ -51,7 +54,7 @@ class MeshExtrude(MeshBase):
             raise ValueError(
                 "invalid mesh, input mesh should be a 2D structured grid or an unstructured grid"
             )
-        
+
         if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
             mesh = mesh.cast_to_structured_grid()
 
