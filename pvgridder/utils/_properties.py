@@ -8,15 +8,15 @@ from numpy.typing import ArrayLike
 
 
 def get_cell_connectivity(
-    mesh: pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     flatten: bool = False,
 ) -> Sequence[Sequence[int | Sequence[int]]] | Sequence[int]:
     """
-    Get the original cell connectivity of an unstructured mesh.
+    Get the cell connectivity of a mesh.
 
     Parameters
     ----------
-    mesh : pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Input mesh.
     flatten : bool, default False
         If True, flatten the cell connectivity array (e.g., as input of
@@ -142,20 +142,13 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | s
         return []
 
 
-def get_dimension(
-    mesh: pv.ExplicitStructuredGrid
-    | pv.ImageData
-    | pv.PolyData
-    | pv.RectilinearGrid
-    | pv.StructuredGrid
-    | pv.UnstructuredGrid,
-) -> int:
+def get_dimension(mesh: pv.DataSet) -> int:
     """
     Get the dimension of a mesh.
 
     Parameters
     ----------
-    mesh : pyvista.ExplicitStructuredGrid | pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Input mesh.
 
     Returns

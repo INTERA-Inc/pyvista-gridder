@@ -105,7 +105,7 @@ class MeshStack3D(MeshStackBase):
 
     Parameters
     ----------
-    mesh : pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Base mesh.
     axis : int, default 2
         Stacking axis.
@@ -121,7 +121,7 @@ class MeshStack3D(MeshStackBase):
 
     def __init__(
         self,
-        mesh: pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,

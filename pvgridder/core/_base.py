@@ -228,7 +228,7 @@ class MeshStackBase(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Base mesh.
     axis : int, default 2
         Stacking axis.
@@ -244,7 +244,7 @@ class MeshStackBase(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData | pv.PolyData | pv.RectilinearGrid | pv.StructuredGrid | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
@@ -252,6 +252,9 @@ class MeshStackBase(MeshBase):
         """Initialize a new mesh stack."""
         if axis not in {0, 1, 2}:
             raise ValueError(f"invalid axis {axis} (expected {{0, 1, 2}}, got {axis})")
+        
+        if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
+            mesh = mesh.cast_to_structured_grid()
 
         if isinstance(mesh, pv.StructuredGrid) and mesh.dimensions[axis] != 1:
             raise ValueError(
