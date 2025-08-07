@@ -117,15 +117,18 @@ def test_get_cell_centers(request, mesh):
         mesh = mesh + empty_mesh
 
     mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
-    mesh.cell_data["vtkGhostType"][-1] = 32
+    mesh.cell_data["vtkGhostType"][1 : mesh.n_cells // 2] = 32
     ghost_cells = mesh.cell_data["vtkGhostType"].copy()
     centers = pvg.get_cell_centers(mesh)
+
     assert centers.shape == (mesh.n_cells, 3)
-    assert not (np.isnan(centers[-1]).all())
     assert np.allclose(mesh.cell_data["vtkGhostType"], ghost_cells)
+    assert not np.isnan(centers[ghost_cells > 0]).any()
 
     if isinstance(mesh, pv.UnstructuredGrid):
-        assert np.isnan(centers[0]).all()
+        mask = mesh.celltypes == pv.CellType.EMPTY_CELL
+        assert np.isnan(centers[mask]).all()
+        assert not np.isnan(centers[~mask]).any()
 
 
 @pytest.mark.parametrize(

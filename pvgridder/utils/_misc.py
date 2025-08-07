@@ -232,7 +232,7 @@ def extract_boundary_polygons(
 
 
 def extract_cell_geometry(
-    mesh: pv.ExplicitStructuredGrid | pv.StructuredGrid | pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
     """
@@ -240,7 +240,7 @@ def extract_cell_geometry(
 
     Parameters
     ----------
-    mesh : pyvista.ExplicitStructuredGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Mesh to extract cell geometry from.
     remove_ghost_cells : bool, default True
         If True, remove ghost cells.
@@ -462,7 +462,7 @@ def extract_cells(
 
 
 def extract_cells_by_dimension(
-    mesh: pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     ndim: Optional[int] = None,
     method: Literal["lower", "upper"] = "upper",
     keep_empty_cells: bool = False,
@@ -472,7 +472,7 @@ def extract_cells_by_dimension(
 
     Parameters
     ----------
-    mesh : pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Mesh to extract cells from.
     ndim : int, optional
         Dimension to be used for extraction. If None, the dimension of *mesh* is used.
@@ -491,6 +491,7 @@ def extract_cells_by_dimension(
     from ._properties import _dimension_map
     from .. import get_dimension
 
+    mesh = mesh.cast_to_unstructured_grid()
     ndim = ndim if ndim is not None else get_dimension(mesh)
 
     if method == "upper":
@@ -778,7 +779,7 @@ def merge(
     dataset : Sequence[pyvista.StructuredGrid | pyvista.UnstructuredGrid]
         Meshes to merge together. At least two meshes are required.
     axis : int, optional
-        The axis along which two structured grids are merged (if *mesh_a* and *mesh_b*
+        The axis along which two structured grids are merged (if all meshes in *dataset*
         are structured grids).
     merge_points : bool, default True
         If True, merge equivalent points for two unstructured grids.
@@ -860,7 +861,7 @@ def merge(
             mesh_a = mesh
 
     else:
-        mesh = pv.merge(dataset, merge_points=merge_points, main_has_priority=True)
+        mesh = pv.merge(dataset, merge_points=merge_points)
 
     return mesh
 
@@ -1173,7 +1174,7 @@ def reconstruct_line(
 def remap_categorical_data(
     mesh: pv.DataSet,
     key: str,
-    mapping: dict[int, int],
+    mapping: dict[str | int, int],
     preference: Literal["cell", "point"] = "cell",
     inplace: bool = False,
 ) -> pv.DataSet | None:

@@ -17,12 +17,12 @@ def load_anticline_2d() -> pv.StructuredGrid:
     from .. import MeshStack2D
 
     return (
-        MeshStack2D(pv.Line([-3.14, 0.0, 0.0], [3.14, 0.0, 0.0], 41))
+        MeshStack2D(pv.Line([-3.14, 0.0, 0.0], [3.14, 0.0, 0.0], resolution=41))
         .add(0.0)
         .add(lambda x, y, z: np.cos(x) + 1.0, 4, group="Layer 1")
-        .add(lambda x, y, z: np.cos(x) + 1.5, 2, group="Layer 2")
-        .add(lambda x, y, z: np.cos(x) + 2.0, 2, group="Layer 3")
-        .add(lambda x, y, z: np.cos(x) + 2.5, 2, group="Layer 4")
+        .add(0.5, 2, group="Layer 2")
+        .add(0.5, 2, group="Layer 3")
+        .add(0.5, 2, group="Layer 4")
         .add(lambda x, y, z: np.full_like(x, 3.4), 4, group="Layer 5")
         .generate_mesh()
     )

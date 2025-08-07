@@ -187,12 +187,29 @@ class MeshBase(ABC):
     @staticmethod
     def _clean(mesh: pv.DataSet, tolerance: Optional[float] = None) -> pv.DataSet:
         """Clean generated mesh."""
+        from .. import remap_categorical_data
+
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
         if "vtkGhostType" in mesh.cell_data:
             if (mesh.cell_data["vtkGhostType"] == 0).all():
                 mesh.cell_data.pop("vtkGhostType", None)
+
+        # Remove unused cell groups
+        values = list(mesh.user_dict["CellGroup"].values())
+        mask = np.isin(values, mesh.cell_data["CellGroup"])
+
+        if not mask.all():
+            keys = [k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_]
+            mapping = {k: v for v, k in enumerate(keys)}
+            remap_categorical_data(
+                mesh,
+                key="CellGroup",
+                mapping=mapping,
+                preference="cell",
+                inplace=True,
+            )
 
         return mesh
 
@@ -228,7 +245,7 @@ class MeshStackBase(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Base mesh.
     axis : int, default 2
         Stacking axis.
@@ -244,7 +261,11 @@ class MeshStackBase(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData
+        | pv.PolyData
+        | pv.RectilinearGrid
+        | pv.StructuredGrid
+        | pv.UnstructuredGrid,
         axis: int = 2,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
@@ -252,6 +273,9 @@ class MeshStackBase(MeshBase):
         """Initialize a new mesh stack."""
         if axis not in {0, 1, 2}:
             raise ValueError(f"invalid axis {axis} (expected {{0, 1, 2}}, got {axis})")
+
+        if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
+            mesh = mesh.cast_to_structured_grid()
 
         if isinstance(mesh, pv.StructuredGrid) and mesh.dimensions[axis] != 1:
             raise ValueError(

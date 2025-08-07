@@ -8,15 +8,15 @@ from numpy.typing import ArrayLike
 
 
 def get_cell_connectivity(
-    mesh: pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     flatten: bool = False,
 ) -> Sequence[Sequence[int | Sequence[int]]] | Sequence[int]:
     """
-    Get the original cell connectivity of an unstructured mesh.
+    Get the cell connectivity of a mesh.
 
     Parameters
     ----------
-    mesh : pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Input mesh.
     flatten : bool, default False
         If True, flatten the cell connectivity array (e.g., as input of
@@ -39,24 +39,8 @@ def get_cell_connectivity(
 
     # Generate polyhedral cell faces if any
     if (mesh.celltypes == pv.CellType.POLYHEDRON).any():
-        # Use PyVista's public API while VTK < 9.4
-        # faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
-        # locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
-
-        def split(arr: Sequence[int]) -> list[Sequence[int]]:
-            i = 0
-            offsets: list[int] = [0]
-
-            while i < len(arr):
-                offsets.append(int(arr[i]) + 1)
-                i += offsets[-1]
-
-            offsets_ = np.cumsum(offsets)
-
-            return [arr[i1 + 1 : i2] for i1, i2 in zip(offsets_[:-1], offsets_[1:])]
-
-        faces = split(mesh.polyhedron_faces)
-        locations = split(mesh.polyhedron_face_locations)
+        faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
+        locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
 
         for cid, location in enumerate(locations):
             if location.size == 0:
@@ -142,20 +126,13 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | s
         return []
 
 
-def get_dimension(
-    mesh: pv.ExplicitStructuredGrid
-    | pv.ImageData
-    | pv.PolyData
-    | pv.RectilinearGrid
-    | pv.StructuredGrid
-    | pv.UnstructuredGrid,
-) -> int:
+def get_dimension(mesh: pv.DataSet) -> int:
     """
     Get the dimension of a mesh.
 
     Parameters
     ----------
-    mesh : pyvista.ExplicitStructuredGrid | pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Input mesh.
 
     Returns

@@ -35,7 +35,7 @@ class MeshMerge(MeshBase):
 
     def add(
         self,
-        mesh: pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.DataSet,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -43,7 +43,7 @@ class MeshMerge(MeshBase):
 
         Parameters
         ----------
-        mesh : pv.StructuredGrid | pv.UnstructuredGrid
+        mesh : pyvista.DataSet
             Mesh to merge.
         group : str, optional
             Group name.
@@ -73,7 +73,7 @@ class MeshMerge(MeshBase):
 
         Returns
         -------
-        pyvista.StructuredGrid | pyvista.UnstructuredGrid
+        pyvista.UnstructuredGrid
             Merged mesh.
 
         """

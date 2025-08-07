@@ -21,7 +21,7 @@ class VoronoiMesh2D(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Background mesh.
     axis : int, default 2
         Background mesh axis to discard.
@@ -39,7 +39,11 @@ class VoronoiMesh2D(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid,
+        mesh: pv.ImageData
+        | pv.PolyData
+        | pv.RectilinearGrid
+        | pv.StructuredGrid
+        | pv.UnstructuredGrid,
         axis: int = 2,
         preference: Literal["cell", "point"] = "cell",
         default_group: Optional[str] = None,
@@ -218,7 +222,7 @@ class VoronoiMesh2D(MeshBase):
             Self (for daisy chaining).
 
         """
-        from .. import split_lines
+        from .. import extract_cells, split_lines
 
         if not isinstance(mesh_or_points, pv.PolyData):
             mesh = pv.MultipleLines(mesh_or_points)

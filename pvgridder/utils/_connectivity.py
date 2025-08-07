@@ -9,7 +9,7 @@ from numpy.typing import ArrayLike
 
 
 def get_neighborhood(
-    mesh: pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     remove_ghost_cells: bool = True,
 ) -> Sequence[ArrayLike]:
     """
@@ -17,7 +17,7 @@ def get_neighborhood(
 
     Parameters
     ----------
-    mesh : pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Input mesh.
     remove_ghost_cells : bool, optional
         If True, remove ghost cells.
@@ -44,7 +44,7 @@ def get_neighborhood(
 
 
 def get_connectivity(
-    mesh: pv.UnstructuredGrid,
+    mesh: pv.DataSet,
     cell_centers: Optional[ArrayLike] = None,
     remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
@@ -53,7 +53,7 @@ def get_connectivity(
 
     Parameters
     ----------
-    mesh : pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Input mesh.
     cell_centers : ArrayLike, optional
         Cell centers used for connectivity lines.

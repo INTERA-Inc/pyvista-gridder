@@ -618,28 +618,28 @@ def test_offset_polygon(request, mesh_or_points, distance, expected_area_change)
             "anticline_2d",
             [0.0, 0.0, 0.0],
             [0.0, 0.0, 3.4],
-            (37.35896372795105, 18.679481863975525, 3700),
+            (37.35896372795105, 18.679481863975525, 44.15896391868591),
             id="anticline_2d_straight_line",
         ),
         pytest.param(
             "anticline_2d",
             [-2.0, 0.0, 5.0],
             [-3.14, 0.0, -1.0],
-            (-48.52959907054901, -27.38255562059453, 10740),
+            (-48.52959907054901, -27.38255562059453, -53.90345802903175),
             id="anticline_2d_titled_line",
         ),
         pytest.param(
             "well_3d",
             [0.0, 0.0, 16.0],
             [0.0, 0.0, -32.0],
-            (-5247.0, -5088.0, 2519584),
+            (-5247.0, -5088.0, -5247.0),
             id="well_3d_straight_line",
         ),
         pytest.param(
             "well_3d_voronoi",
             [-14.0, -9.0, 16.0],
             [0.0, 0.0, -32.0],
-            (-2026.437576638541, -660.8263429263645, 160348),
+            (-2026.437576638541, -660.8263429263645, -3951.3860940604827),
             id="well_3d_voronoi_tilted_line",
         ),
     ],
@@ -658,7 +658,11 @@ def test_ray_cast(request, mesh, pointa, pointb, sum_ref):
     sum_ = (
         intersection.points.sum(),
         intersection.cell_data["IntersectionPoints"].sum(),
-        intersection.cell_data["vtkOriginalCellIds"].sum(),
+        mesh.extract_cells(
+            intersection.cell_data["vtkOriginalCellIds"][
+                intersection.cell_data["vtkOriginalCellIds"] >= 0
+            ]
+        ).points.sum(),
     )
     assert np.allclose(sum_, sum_ref)
 
@@ -916,33 +920,21 @@ def test_split_lines_with_sinusoidal_line(sinusoidal_line):
         # Example mesh
         pytest.param(
             lambda: pvg.examples.load_well_2d()
-            .extract_cells(range(10))
             .extract_surface()
             .triangulate()
             .cast_to_unstructured_grid(),
             pv.CellType.QUADRATIC_TRIANGLE,
-            341.24999991059303,
+            0.0,
             id="well_2d_triangles",
         ),
     ],
 )
 def test_quadraticize(mesh, expected_celltype, reference_point_sum):
     """Test converting linear cells to quadratic cells."""
-    # Get the actual mesh
     actual_mesh = mesh() if callable(mesh) else mesh()
+    result = pvg.quadraticize(actual_mesh)
 
-    try:
-        # Convert to quadratic
-        result = pvg.quadraticize(actual_mesh)
-
-        # Should have quadratic cells
-        assert isinstance(result, pv.UnstructuredGrid)
-        assert result.celltypes[0] == expected_celltype
-        assert result.n_points > actual_mesh.n_points
-
-        # Verify the sum of points matches the reference value
-        assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
-
-    except NotImplementedError as e:
-        # Skip if unsupported cell types
-        pytest.skip(f"Quadraticize not supported for these cell types: {str(e)}")
+    assert isinstance(result, pv.UnstructuredGrid)
+    assert result.celltypes[0] == expected_celltype
+    assert result.n_points > actual_mesh.n_points
+    assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
