@@ -187,12 +187,31 @@ class MeshBase(ABC):
     @staticmethod
     def _clean(mesh: pv.DataSet, tolerance: Optional[float] = None) -> pv.DataSet:
         """Clean generated mesh."""
+        from .. import remap_categorical_data
+
         if isinstance(mesh, pv.UnstructuredGrid):
             mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
 
         if "vtkGhostType" in mesh.cell_data:
             if (mesh.cell_data["vtkGhostType"] == 0).all():
                 mesh.cell_data.pop("vtkGhostType", None)
+
+        # Remove unused cell groups
+        values = list(mesh.user_dict["CellGroup"].values())
+        mask = np.isin(values, mesh.cell_data["CellGroup"])
+
+        if not mask.all():
+            keys = [
+                k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_
+            ]
+            mapping = {k: v for v, k in enumerate(keys)}
+            remap_categorical_data(
+                mesh,
+                key="CellGroup",
+                mapping=mapping,
+                preference="cell",
+                inplace=True,
+            )
 
         return mesh
 
