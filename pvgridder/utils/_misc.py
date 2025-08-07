@@ -860,7 +860,7 @@ def merge(
             mesh_a = mesh
 
     else:
-        mesh = pv.merge(dataset, merge_points=merge_points, main_has_priority=True)
+        mesh = pv.merge(dataset, merge_points=merge_points)
 
     return mesh
 
