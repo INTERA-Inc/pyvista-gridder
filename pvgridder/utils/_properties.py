@@ -39,24 +39,8 @@ def get_cell_connectivity(
 
     # Generate polyhedral cell faces if any
     if (mesh.celltypes == pv.CellType.POLYHEDRON).any():
-        # Use PyVista's public API while VTK < 9.4
-        # faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
-        # locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
-
-        def split(arr: Sequence[int]) -> list[Sequence[int]]:
-            i = 0
-            offsets: list[int] = [0]
-
-            while i < len(arr):
-                offsets.append(int(arr[i]) + 1)
-                i += offsets[-1]
-
-            offsets_ = np.cumsum(offsets)
-
-            return [arr[i1 + 1 : i2] for i1, i2 in zip(offsets_[:-1], offsets_[1:])]
-
-        faces = split(mesh.polyhedron_faces)
-        locations = split(mesh.polyhedron_face_locations)
+        faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
+        locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
 
         for cid, location in enumerate(locations):
             if location.size == 0:
