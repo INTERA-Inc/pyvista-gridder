@@ -546,7 +546,7 @@ def fuse_cells(
         mask[ind[1:]] = False
 
         if get_dimension(mesh_) == 2:
-            poly = extract_boundary_polygons(mesh_, fill=True)
+            poly = extract_boundary_polygons(mesh_, fill=False)
 
             if len(poly) > 1:
                 raise ValueError("could not fuse not fully connected cells together")
@@ -557,14 +557,14 @@ def fuse_cells(
             ids = np.array(
                 [
                     np.flatnonzero(mask)[0]
-                    for mask in (cell.points[:, None] == mesh.points).all(axis=-1)
+                    for mask in (cell.points[:, None] == mesh.points.astype(cell.points.dtype)).all(axis=-1)
                 ]
             )
             mesh_points = mesh.points[ids]
             sorted_ids = ids[
                 np.ravel(
                     [
-                        np.flatnonzero((mesh_points == point).all(axis=1))
+                        np.flatnonzero((mesh_points.astype(point.dtype) == point).all(axis=1))
                         for point in cell.points
                     ]
                 )
@@ -581,7 +581,7 @@ def fuse_cells(
             # Generate new mesh with fused cells
             cells = [
                 item
-                for cell, celltype in zip(connectivity, celltypes)
+                for cell in connectivity
                 for item in [len(cell), *cell]
             ]
 
