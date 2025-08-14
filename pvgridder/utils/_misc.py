@@ -1284,24 +1284,35 @@ def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyDat
     """
     from pyvista.core.cell import _get_irregular_cells
 
-    return [
-        pv.PolyData(
-            mesh.points[line],
+    mesh = mesh.extract_cells_by_type((pv.CellType.LINE, pv.CellType.POLY_LINE))
+    lines = []
+
+    for i, line_ids in enumerate(_get_irregular_cells(mesh.GetLines())):
+        line = pv.PolyData(
+            mesh.points[line_ids],
             lines=(
                 np.insert(
                     np.column_stack(
-                        (np.arange(line.size - 1), np.arange(1, line.size))
+                        (np.arange(line_ids.size - 1), np.arange(1, line_ids.size))
                     ),
                     0,
                     2,
                     axis=-1,
                 ).ravel()
                 if as_lines
-                else [line.size, *np.arange(line.size)]
+                else [line_ids.size, *np.arange(line_ids.size)]
             ),
         )
-        for line in _get_irregular_cells(mesh.GetLines())
-    ]
+
+        for k, v in mesh.point_data.items():
+            line.point_data[k] = v[line_ids]
+
+        for k, v in mesh.cell_data.items():
+            line.cell_data[k] = np.full(line.n_cells, v[i])
+
+        lines.append(line)
+
+    return lines
 
 
 def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
