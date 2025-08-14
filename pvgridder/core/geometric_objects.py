@@ -182,6 +182,72 @@ def Circle(
     )
 
 
+def CurvedLine(
+    origin: ArrayLike,
+    length: float,
+    start: ArrayLike,
+    end: Optional[ArrayLike] = None,
+    resolution: int = 1,
+) -> pv.PolyData:
+    """
+    Generate a curved line mesh.
+
+    Parameters
+    ----------
+    origin : ArrayLike
+        Origin point of the curved line.
+    length : float
+        Length of the curved line.
+    start : ArrayLike
+        Starting direction vector of the curved line.
+    end : ArrayLike, optional
+        Ending direction vector of the curved line. If None, defaults to *start*.
+    resolution : int, default 1
+        Number of segments to divide the curved line into.
+
+    Returns
+    -------
+    pyvista.PolyData
+        Curved line mesh.
+
+    """
+    origin = np.asanyarray(origin)
+    start = np.asanyarray(start)
+    end = np.asanyarray(end) if end is not None else start
+
+    # Normalize direction vectors
+    start = start / np.linalg.norm(start)
+    end = end / np.linalg.norm(end)
+
+    # Compute the direction vectors
+    theta = np.arccos((start @ end).clip(-1.0, 1.0))
+    directions = (
+        np.tile(start, (resolution + 1, 1))
+        if theta == 0.0
+        else np.array(
+            [
+                (np.sin((1.0 - t) * theta) * start + np.sin(t * theta) * end)
+                / np.sin(theta)
+                for t in np.linspace(0.0, 1.0, resolution + 1)
+            ]
+        )
+    )
+
+    # Step size along the curve
+    points = [origin]
+    dl = length / resolution
+
+    for d1, d2 in zip(directions[:-1], directions[1:]):
+        vec = 0.5 * (d1 + d2)
+        vec /= np.linalg.norm(vec)
+        points.append(points[-1] + dl * vec)
+
+    mesh = pv.MultipleLines(points)
+    mesh.clear_data()
+
+    return mesh
+
+
 def CylindricalShell(
     inner_radius: float = 0.5,
     outer_radius: float = 1.0,

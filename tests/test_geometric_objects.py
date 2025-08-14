@@ -29,6 +29,15 @@ def test_circle():
     assert np.allclose(np.abs(mesh.cell_data["Area"]).sum(), 0.498934534707864)
 
 
+def test_curved_line():
+    """Test curved line geometric object."""
+    mesh = pvg.CurvedLine([1.0, 2.0, 3.0], 42.8, [0.0, 0.0, -1.0], [0.5, 0.5, 0.0], 16)
+    mesh = mesh.compute_cell_sizes()
+    assert np.allclose(mesh.points[0], [1.0, 2.0, 3.0])
+    assert np.allclose(mesh.points.sum(), 54.660583)
+    assert np.allclose(mesh.cell_data["Length"].sum(), 42.8)
+
+
 def test_cylindrical_shell():
     """Test cylindrical shell geometric object."""
     mesh = pvg.CylindricalShell(0.42, 8.0, 8.0, 8, 8)

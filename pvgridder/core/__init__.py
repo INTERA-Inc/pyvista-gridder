@@ -5,6 +5,7 @@ from .geometric_objects import (
     AnnularSector,
     Annulus,
     Circle,
+    CurvedLine,
     CylindricalShell,
     CylindricalShellSector,
     Polygon,
