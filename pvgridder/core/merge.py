@@ -30,7 +30,7 @@ class MeshMerge(MeshBase):
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
-        """Initialize a new mesh factory."""
+        """Initialize a new mesh merger."""
         super().__init__(default_group, ignore_groups)
 
     def add(
@@ -39,7 +39,7 @@ class MeshMerge(MeshBase):
         group: Optional[str] = None,
     ) -> Self:
         """
-        Add a new item to factory.
+        Add a new item to merge.
 
         Parameters
         ----------
@@ -55,6 +55,10 @@ class MeshMerge(MeshBase):
 
         """
         mesh = mesh.cast_to_unstructured_grid()
+
+        # Check for existing user_dict
+        if "_PYVISTA_USER_DICT" not in mesh.field_data:
+            mesh.field_data["_PYVISTA_USER_DICT"] = "{}"
 
         # Add group
         item = MeshItem(mesh, group=group)
