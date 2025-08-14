@@ -890,6 +890,18 @@ def merge_lines(
     Preserve ordering compared to pyvista.merge().
 
     """
+    # Find common point and cell data keys
+    point_data_keys = set(lines[0].point_data)
+    cell_data_keys = set(lines[0].cell_data)
+
+    for lines_ in lines[1:]:
+        point_data_keys = point_data_keys.intersection(lines_.point_data)
+        cell_data_keys = cell_data_keys.intersection(lines_.cell_data)
+
+    point_data = {k: [] for k in point_data_keys}
+    cell_data = {k: [] for k in cell_data_keys}
+
+    # Loop over lines
     points, cells, offset = [], [], 0
 
     for lines_ in lines:
@@ -905,7 +917,29 @@ def merge_lines(
             )
             offset += line.n_points
 
-    return pv.PolyData(np.concatenate(points), lines=cells).merge_points()
+            for k, v in point_data.items():
+                v.append(line.point_data[k])
+
+            for k, v in cell_data.items():
+                v.append(
+                    (
+                        np.full(ids.size - 1, line.cell_data[k])
+                        if np.ndim(line.cell_data[k]) == 0
+                        else np.tile(line.cell_data[k], (ids.size - 1, 1))
+                    )
+                    if as_lines
+                    else line.cell_data[k]
+                )
+
+    mesh = pv.PolyData(np.concatenate(points), lines=cells)
+
+    for k, v in point_data.items():
+        mesh.point_data[k] = np.concatenate(v) if v[0].ndim == 1 else np.vstack(v)
+
+    for k, v in cell_data.items():
+        mesh.cell_data[k] = np.concatenate(v) if v[0].ndim == 1 else np.vstack(v)
+
+    return mesh.merge_points()
 
 
 def offset_polygon(
@@ -1308,7 +1342,11 @@ def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyDat
             line.point_data[k] = v[line_ids]
 
         for k, v in mesh.cell_data.items():
-            line.cell_data[k] = np.full(line.n_cells, v[i])
+            line.cell_data[k] = (
+                np.full(line.n_cells, v[i])
+                if np.ndim(v[i]) == 0
+                else np.tile(v[i], (line.n_cells, 1)).copy()
+            )
 
         lines.append(line)
 
