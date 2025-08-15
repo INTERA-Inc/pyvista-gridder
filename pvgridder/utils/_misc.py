@@ -925,6 +925,7 @@ def merge_lines(
                     (
                         np.full(ids.size - 1, line.cell_data[k])
                         if np.ndim(line.cell_data[k]) == 0
+                        or line.cell_data[k].dtype.kind == "U"
                         else np.tile(line.cell_data[k], (ids.size - 1, 1))
                     )
                     if as_lines
