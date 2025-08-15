@@ -202,7 +202,9 @@ class MeshBase(ABC):
             mask = np.isin(values, mesh.cell_data["CellGroup"])
 
             if not mask.all():
-                keys = [k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_]
+                keys = [
+                    k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_
+                ]
                 mapping = {k: v for v, k in enumerate(keys)}
                 remap_categorical_data(
                     mesh,

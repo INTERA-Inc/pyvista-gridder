@@ -539,7 +539,7 @@ def test_merge_basic(mesh_type, axes):
         pytest.param("simple_line", True, id="simple-line-as-lines"),
         pytest.param("simple_line", False, id="simple-line-as-polyline"),
         pytest.param("sinusoidal_line", True, id="sinusoidal-line-as-lines"),
-        pytest.param("sinusoidal_line", False, id="sinusoidal-line-as-polyline")
+        pytest.param("sinusoidal_line", False, id="sinusoidal-line-as-polyline"),
     ],
 )
 def test_merge_lines(request, mesh, as_lines):
@@ -559,19 +559,24 @@ def test_merge_lines(request, mesh, as_lines):
     for key in ("foo", "bar"):
         np.allclose(
             line.point_data[key],
-            np.concatenate([mesha.point_data[key][:-1], meshb.point_data[key]])
+            np.concatenate([mesha.point_data[key][:-1], meshb.point_data[key]]),
         )
-        
+
         if as_lines:
             assert np.allclose(
                 line.cell_data[key].ravel(),
-                np.concatenate([np.tile(mesh_.cell_data[key], (mesh_.n_points - 1, 1)) for mesh_ in (mesha, meshb)]).ravel()
+                np.concatenate(
+                    [
+                        np.tile(mesh_.cell_data[key], (mesh_.n_points - 1, 1))
+                        for mesh_ in (mesha, meshb)
+                    ]
+                ).ravel(),
             )
 
         else:
             assert np.allclose(
                 line.cell_data[key],
-                np.concatenate((mesha.cell_data[key], meshb.cell_data[key]))
+                np.concatenate((mesha.cell_data[key], meshb.cell_data[key])),
             )
 
     assert np.allclose(
@@ -896,7 +901,7 @@ def test_remap_categorical_data(request, mesh, key, mapping, inplace, preference
         pytest.param("simple_line", True, id="simple-line-as-lines"),
         pytest.param("simple_line", False, id="simple-line-as-polyline"),
         pytest.param("sinusoidal_line", True, id="sinusoidal-line-as-lines"),
-        pytest.param("sinusoidal_line", False, id="sinusoidal-line-as-polyline")
+        pytest.param("sinusoidal_line", False, id="sinusoidal-line-as-polyline"),
     ],
 )
 def test_split_lines(request, mesh, as_lines):
@@ -906,7 +911,7 @@ def test_split_lines(request, mesh, as_lines):
     mesh.point_data["bar"] = np.random.rand(mesh.n_points, 3)
     mesh.cell_data["foo"] = np.random.rand(mesh.n_cells)
     mesh.cell_data["bar"] = np.random.rand(mesh.n_cells, 3)
-    
+
     lines = pvg.split_lines(mesh, as_lines=as_lines)
     assert len(lines) == 1
     assert lines[0].n_lines == (mesh.n_points - 1) if as_lines else 1
@@ -918,12 +923,11 @@ def test_split_lines(request, mesh, as_lines):
         )
 
     assert np.allclose(
-        lines[0].cell_data["foo"],
-        np.full(mesh.n_points - 1, mesh.cell_data["foo"])
+        lines[0].cell_data["foo"], np.full(mesh.n_points - 1, mesh.cell_data["foo"])
     )
     assert np.allclose(
         lines[0].cell_data["bar"],
-        np.tile(mesh.cell_data["bar"], (mesh.n_points - 1, 1))
+        np.tile(mesh.cell_data["bar"], (mesh.n_points - 1, 1)),
     )
 
     assert np.allclose(
