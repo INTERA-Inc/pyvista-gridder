@@ -131,7 +131,10 @@ class MeshStack3D(MeshStackBase):
     ) -> None:
         from .. import get_dimension
 
-        if isinstance(mesh, (pv.StructuredGrid, pv.UnstructuredGrid)):
+        if isinstance(
+            mesh,
+            (pv.ImageData, pv.RectilinearGrid, pv.StructuredGrid, pv.UnstructuredGrid),
+        ):
             if get_dimension(mesh) != 2:
                 raise ValueError("invalid mesh, input mesh should be 2D")
 

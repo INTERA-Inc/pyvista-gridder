@@ -132,29 +132,22 @@ def test_get_cell_centers(request, mesh):
 
 
 @pytest.mark.parametrize(
-    "mesh_fixture, key, expected_result",
+    "mesh",
     [
-        pytest.param(
-            "simple_unstructured_grid",
-            "CellGroup",
-            ["group1", "group2"],
-            id="simple_ugrid",
-        ),
-        pytest.param("structured_grid_3d", "NonExistentKey", [], id="no_key"),
+        pytest.param("simple_unstructured_grid", id="simple-ugrid"),
+        pytest.param("structured_grid_3d", id="structured-grid-3d"),
     ],
 )
-def test_get_cell_group(request, mesh_fixture, key, expected_result):
-    """Test retrieving cell group with different meshes and keys."""
-    # Get the actual mesh
-    actual_mesh = request.getfixturevalue(mesh_fixture)
+def test_get_cell_group(request, mesh):
+    """Test retrieving cell group."""
+    mesh = request.getfixturevalue(mesh)
 
-    # Add mock cell data and user_dict if necessary
-    if key == "CellGroup":
-        actual_mesh.cell_data[key] = [0, 1]
-        actual_mesh.user_dict[key] = {"group1": 0, "group2": 1}
+    cell_groups = pvg.get_cell_group(mesh)
+    assert cell_groups is None
 
-    # Get cell group
-    result = pvg.get_cell_group(actual_mesh, key=key)
-
-    # Verify the result matches the expected output
-    assert result == expected_result
+    mesh.cell_data["CellGroup"] = np.zeros(mesh.n_cells, dtype=int)
+    mesh.cell_data["CellGroup"][mesh.n_cells // 2 :] = 1
+    mesh.user_dict["CellGroup"] = {"foo": 0, "bar": 1}
+    cell_groups = pvg.get_cell_group(mesh)
+    group_map = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
+    assert cell_groups.tolist() == [group_map[i] for i in mesh.cell_data["CellGroup"]]
