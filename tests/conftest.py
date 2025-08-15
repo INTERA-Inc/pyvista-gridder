@@ -1,7 +1,5 @@
 """Pytest fixtures for pyvista-gridder tests."""
 
-from collections.abc import Sequence
-
 import numpy as np
 import pytest
 import pyvista as pv
@@ -13,35 +11,29 @@ import pvgridder as pvg
 @pytest.fixture
 def simple_polydata_with_duplicates():
     """Create a simple polydata with duplicate points."""
-    points = np.array(
+    return pv.PolyData(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],  # duplicate
             [0.0, 1.0, 0.0],
         ],
-        dtype=np.float64,
+        faces=[3, 0, 1, 3],
     )
-    faces = np.array([3, 0, 1, 3])  # triangle
-
-    return pv.PolyData(points, faces=faces)
 
 
 @pytest.fixture
 def simple_polydata_with_close_points():
     """Create a simple polydata with points that are very close."""
-    points = np.array(
+    return pv.PolyData(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
             [1.0001, 0.0, 0.0],  # very close to previous point
             [0.0, 1.0, 0.0],
         ],
-        dtype=np.float64,
+        faces=[4, 0, 1, 2, 3],
     )
-    faces = np.array([4, 0, 1, 2, 3])  # quad
-
-    return pv.PolyData(points, faces=faces)
 
 
 @pytest.fixture
@@ -53,36 +45,28 @@ def simple_line():
 @pytest.fixture
 def sinusoidal_line():
     """Create a sinusoidal line with many points."""
-    # Create a more robust sinusoidal line for testing
     x = np.linspace(0.0, 2.0 * np.pi, 100)
     y = np.sin(x)
     z = np.zeros_like(x)
-    points = np.column_stack((x, y, z)).astype(np.float64)
+    points = np.column_stack((x, y, z))
 
-    # Create polydata with lines
-    line_indices = np.arange(len(points))
-    lines = np.array([len(line_indices)] + line_indices.tolist())
-
-    return pv.PolyData(points, lines=lines)
+    return pv.PolyData(points, lines=[len(points), *list(range(len(points)))])
 
 
 @pytest.fixture
 def multiple_lines_polydata():
     """Create a polydata with multiple lines."""
-    points = np.array(
+    return pv.PolyData(
         [
             [0.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
-            [2.0, 0.0, 0.0],  # First line
+            [2.0, 0.0, 0.0],
             [0.0, 1.0, 0.0],
             [1.0, 1.0, 0.0],
-            [2.0, 1.0, 0.0],  # Second line
+            [2.0, 1.0, 0.0],
         ],
-        dtype=np.float64,
+        lines=[3, 0, 1, 2, 3, 3, 4, 5],
     )
-    lines = np.array([3, 0, 1, 2, 3, 3, 4, 5])  # Two lines with 3 points each
-
-    return pv.PolyData(points, lines=lines)
 
 
 @pytest.fixture

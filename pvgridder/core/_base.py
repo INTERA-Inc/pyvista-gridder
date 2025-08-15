@@ -197,19 +197,22 @@ class MeshBase(ABC):
                 mesh.cell_data.pop("vtkGhostType", None)
 
         # Remove unused cell groups
-        values = list(mesh.user_dict["CellGroup"].values())
-        mask = np.isin(values, mesh.cell_data["CellGroup"])
+        if "CellGroup" in mesh.cell_data and "CellGroup" in mesh.user_dict:
+            values = list(mesh.user_dict["CellGroup"].values())
+            mask = np.isin(values, mesh.cell_data["CellGroup"])
 
-        if not mask.all():
-            keys = [k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_]
-            mapping = {k: v for v, k in enumerate(keys)}
-            remap_categorical_data(
-                mesh,
-                key="CellGroup",
-                mapping=mapping,
-                preference="cell",
-                inplace=True,
-            )
+            if not mask.all():
+                keys = [
+                    k for k, mask_ in zip(mesh.user_dict["CellGroup"], mask) if mask_
+                ]
+                mapping = {k: v for v, k in enumerate(keys)}
+                remap_categorical_data(
+                    mesh,
+                    key="CellGroup",
+                    mapping=mapping,
+                    preference="cell",
+                    inplace=True,
+                )
 
         return mesh
 

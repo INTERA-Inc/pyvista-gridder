@@ -546,7 +546,7 @@ def fuse_cells(
         mask[ind[1:]] = False
 
         if get_dimension(mesh_) == 2:
-            poly = extract_boundary_polygons(mesh_, fill=True)
+            poly = extract_boundary_polygons(mesh_, fill=False)
 
             if len(poly) > 1:
                 raise ValueError("could not fuse not fully connected cells together")
@@ -557,14 +557,18 @@ def fuse_cells(
             ids = np.array(
                 [
                     np.flatnonzero(mask)[0]
-                    for mask in (cell.points[:, None] == mesh.points).all(axis=-1)
+                    for mask in (
+                        cell.points[:, None] == mesh.points.astype(cell.points.dtype)
+                    ).all(axis=-1)
                 ]
             )
             mesh_points = mesh.points[ids]
             sorted_ids = ids[
                 np.ravel(
                     [
-                        np.flatnonzero((mesh_points == point).all(axis=1))
+                        np.flatnonzero(
+                            (mesh_points.astype(point.dtype) == point).all(axis=1)
+                        )
                         for point in cell.points
                     ]
                 )
@@ -579,11 +583,7 @@ def fuse_cells(
                 celltypes[cell_id] = pv.CellType.EMPTY_CELL
 
             # Generate new mesh with fused cells
-            cells = [
-                item
-                for cell, celltype in zip(connectivity, celltypes)
-                for item in [len(cell), *cell]
-            ]
+            cells = [item for cell in connectivity for item in [len(cell), *cell]]
 
         else:
             raise NotImplementedError("could not fuse cells for non 2D mesh")
@@ -890,6 +890,18 @@ def merge_lines(
     Preserve ordering compared to pyvista.merge().
 
     """
+    # Find common point and cell data keys
+    point_data_keys = set(lines[0].point_data)
+    cell_data_keys = set(lines[0].cell_data)
+
+    for lines_ in lines[1:]:
+        point_data_keys = point_data_keys.intersection(lines_.point_data)
+        cell_data_keys = cell_data_keys.intersection(lines_.cell_data)
+
+    point_data = {k: [] for k in point_data_keys}
+    cell_data = {k: [] for k in cell_data_keys}
+
+    # Loop over lines
     points, cells, offset = [], [], 0
 
     for lines_ in lines:
@@ -905,7 +917,30 @@ def merge_lines(
             )
             offset += line.n_points
 
-    return pv.PolyData(np.concatenate(points), lines=cells).merge_points()
+            for k, v in point_data.items():
+                v.append(line.point_data[k])
+
+            for k, v in cell_data.items():
+                v.append(
+                    (
+                        np.full(ids.size - 1, line.cell_data[k])
+                        if np.ndim(line.cell_data[k]) == 0
+                        or line.cell_data[k].dtype.kind == "U"
+                        else np.tile(line.cell_data[k], (ids.size - 1, 1))
+                    )
+                    if as_lines
+                    else line.cell_data[k]
+                )
+
+    mesh = pv.PolyData(np.concatenate(points), lines=cells)
+
+    for k, v in point_data.items():
+        mesh.point_data[k] = np.concatenate(v) if v[0].ndim == 1 else np.vstack(v)
+
+    for k, v in cell_data.items():
+        mesh.cell_data[k] = np.concatenate(v) if v[0].ndim == 1 else np.vstack(v)
+
+    return mesh.merge_points()
 
 
 def offset_polygon(
@@ -1284,24 +1319,39 @@ def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyDat
     """
     from pyvista.core.cell import _get_irregular_cells
 
-    return [
-        pv.PolyData(
-            mesh.points[line],
+    mesh = mesh.extract_cells_by_type((pv.CellType.LINE, pv.CellType.POLY_LINE))
+    lines = []
+
+    for i, line_ids in enumerate(_get_irregular_cells(mesh.GetLines())):
+        line = pv.PolyData(
+            mesh.points[line_ids],
             lines=(
                 np.insert(
                     np.column_stack(
-                        (np.arange(line.size - 1), np.arange(1, line.size))
+                        (np.arange(line_ids.size - 1), np.arange(1, line_ids.size))
                     ),
                     0,
                     2,
                     axis=-1,
                 ).ravel()
                 if as_lines
-                else [line.size, *np.arange(line.size)]
+                else [line_ids.size, *np.arange(line_ids.size)]
             ),
         )
-        for line in _get_irregular_cells(mesh.GetLines())
-    ]
+
+        for k, v in mesh.point_data.items():
+            line.point_data[k] = v[line_ids]
+
+        for k, v in mesh.cell_data.items():
+            line.cell_data[k] = (
+                np.full(line.n_cells, v[i])
+                if np.ndim(v[i]) == 0
+                else np.tile(v[i], (line.n_cells, 1)).copy()
+            )
+
+        lines.append(line)
+
+    return lines
 
 
 def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:

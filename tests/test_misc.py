@@ -1,9 +1,9 @@
 from collections.abc import Sequence
-from typing import Literal, Union
 
 import numpy as np
 import pytest
 import pyvista as pv
+from vtk import __version__ as vtk_version
 
 import pvgridder as pvg
 
@@ -533,26 +533,59 @@ def test_merge_basic(mesh_type, axes):
         assert result.n_cells == grid1.n_cells + grid2.n_cells
 
 
-@pytest.mark.parametrize("as_lines, reference_point_sum", [(True, 11.0), (False, 11.0)])
-def test_merge_lines_basic(
-    multiple_lines_polydata, simple_line, as_lines, reference_point_sum
-):
-    """Test basic line merging with different output formats."""
-    # Split the multiple lines polydata
-    lines = pvg.split_lines(multiple_lines_polydata, as_lines=False)
+@pytest.mark.parametrize(
+    "mesh, as_lines",
+    [
+        pytest.param("simple_line", True, id="simple-line-as-lines"),
+        pytest.param("simple_line", False, id="simple-line-as-polyline"),
+        pytest.param("sinusoidal_line", True, id="sinusoidal-line-as-lines"),
+        pytest.param("sinusoidal_line", False, id="sinusoidal-line-as-polyline"),
+    ],
+)
+def test_merge_lines(request, mesh, as_lines):
+    mesha = request.getfixturevalue(mesh)
+    meshb = mesha.translate(mesha.points[-1] - mesha.points[0])
 
-    # Add a simple line
-    lines.append(simple_line)
+    for mesh_ in (mesha, meshb):
+        mesh_.point_data["foo"] = np.random.rand(mesh_.n_points)
+        mesh_.point_data["bar"] = np.random.rand(mesh_.n_points, 3)
+        mesh_.point_data["str"] = np.full(mesh_.n_points, "foo")
+        mesh_.cell_data["foo"] = np.random.rand(mesh_.n_cells)
+        mesh_.cell_data["bar"] = np.random.rand(mesh_.n_cells, 3)
+        mesh_.cell_data["str"] = np.full(mesh_.n_cells, "bar")
 
-    # Merge the lines
-    result = pvg.merge_lines(lines, as_lines=as_lines)
+    line = pvg.merge_lines((mesha, meshb), as_lines=as_lines)
+    assert line.n_points == 2 * mesha.n_points - 1
+    assert line.n_lines == 2 * (mesha.n_points - 1) if as_lines else 1
 
-    # Should be a polydata with lines
-    assert isinstance(result, pv.PolyData)
-    assert result.n_lines > 0
+    for key in ("foo", "bar", "str"):
+        a = line.point_data[key]
+        b = np.concatenate(
+            [mesha.point_data[key][:-1], meshb.point_data[key]]
+            if vtk_version < "9.5"
+            else [mesha.point_data[key], meshb.point_data[key][1:]]
+        )
+        assert (a == b).all() if key == "str" else np.allclose(a, b)
 
-    # Verify the sum of points matches the reference value
-    assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
+        if as_lines:
+            a = line.cell_data[key].ravel()
+            b = np.concatenate(
+                [
+                    np.tile(mesh_.cell_data[key], (mesh_.n_points - 1, 1))
+                    for mesh_ in (mesha, meshb)
+                ]
+            ).ravel()
+            assert (a == b).all() if key == "str" else np.allclose(a, b)
+
+        else:
+            a = line.cell_data[key]
+            b = np.concatenate((mesha.cell_data[key], meshb.cell_data[key]))
+            assert (a == b).all() if key == "str" else np.allclose(a, b)
+
+    assert np.allclose(
+        line.compute_cell_sizes().cell_data["Length"].sum(),
+        2.0 * mesha.compute_cell_sizes().cell_data["Length"].sum(),
+    )
 
 
 @pytest.mark.parametrize(
@@ -865,36 +898,47 @@ def test_remap_categorical_data(request, mesh, key, mapping, inplace, preference
             raise
 
 
-@pytest.mark.parametrize("as_lines, reference_point_sum", [(True, 9.0), (False, 9.0)])
-def test_split_lines_basic(multiple_lines_polydata, as_lines, reference_point_sum):
-    """Test basic line splitting with different output formats."""
-    # Split the lines
-    result = pvg.split_lines(multiple_lines_polydata, as_lines=as_lines)
+@pytest.mark.parametrize(
+    "mesh, as_lines",
+    [
+        pytest.param("simple_line", True, id="simple-line-as-lines"),
+        pytest.param("simple_line", False, id="simple-line-as-polyline"),
+        pytest.param("sinusoidal_line", True, id="sinusoidal-line-as-lines"),
+        pytest.param("sinusoidal_line", False, id="sinusoidal-line-as-polyline"),
+    ],
+)
+def test_split_lines(request, mesh, as_lines):
+    mesh = request.getfixturevalue(mesh)
 
-    # Should return a sequence of polydata objects
-    assert isinstance(result, Sequence)
-    assert len(result) == 2  # Two separate lines
-    assert all(isinstance(line, pv.PolyData) for line in result)
+    mesh.point_data["foo"] = np.random.rand(mesh.n_points)
+    mesh.point_data["bar"] = np.random.rand(mesh.n_points, 3)
+    mesh.point_data["str"] = np.full(mesh.n_points, "foo")
+    mesh.cell_data["foo"] = np.random.rand(mesh.n_cells)
+    mesh.cell_data["bar"] = np.random.rand(mesh.n_cells, 3)
+    mesh.cell_data["str"] = np.full(mesh.n_cells, "bar")
 
-    # Verify the sum of points matches the reference value
-    total_points_sum = sum(line.points.sum() for line in result)
-    assert np.allclose(total_points_sum, reference_point_sum, rtol=1e-5)
+    lines = pvg.split_lines(mesh, as_lines=as_lines)
+    assert len(lines) == 1
+    assert lines[0].n_lines == (mesh.n_points - 1) if as_lines else 1
 
+    for key in ("foo", "bar", "str"):
+        a = lines[0].point_data[key]
+        b = mesh.point_data[key]
+        assert (a == b).all() if key == "str" else np.allclose(a, b)
 
-def test_split_lines_with_sinusoidal_line(sinusoidal_line):
-    """Test splitting with sinusoidal line."""
-    # Test with sinusoidal line
-    result_sine = pvg.split_lines(sinusoidal_line)
+    assert np.allclose(
+        lines[0].cell_data["foo"], np.full(mesh.n_points - 1, mesh.cell_data["foo"])
+    )
+    assert np.allclose(
+        lines[0].cell_data["bar"],
+        np.tile(mesh.cell_data["bar"], (mesh.n_points - 1, 1)),
+    )
+    assert (lines[0].cell_data["str"] == np.full(mesh.n_points - 1, "bar")).all()
 
-    # Should return a sequence with one polydata object (the original line)
-    assert isinstance(result_sine, Sequence)
-    assert len(result_sine) == 1
-    assert isinstance(result_sine[0], pv.PolyData)
-    assert result_sine[0].n_points == sinusoidal_line.n_points
-
-    # Verify the sum of points matches the reference value
-    total_points_sum = sum(line.points.sum() for line in result_sine)
-    assert np.allclose(total_points_sum, 314.1592653589793, rtol=1e-5)
+    assert np.allclose(
+        mesh.compute_cell_sizes().cell_data["Length"].sum(),
+        lines[0].compute_cell_sizes().cell_data["Length"].sum(),
+    )
 
 
 @pytest.mark.parametrize(
