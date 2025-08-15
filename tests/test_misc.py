@@ -549,35 +549,34 @@ def test_merge_lines(request, mesh, as_lines):
     for mesh_ in (mesha, meshb):
         mesh_.point_data["foo"] = np.random.rand(mesh_.n_points)
         mesh_.point_data["bar"] = np.random.rand(mesh_.n_points, 3)
+        mesh_.point_data["str"] = np.full(mesh_.n_points, "foo")
         mesh_.cell_data["foo"] = np.random.rand(mesh_.n_cells)
         mesh_.cell_data["bar"] = np.random.rand(mesh_.n_cells, 3)
+        mesh_.cell_data["str"] = np.full(mesh_.n_cells, "bar")
 
     line = pvg.merge_lines((mesha, meshb), as_lines=as_lines)
     assert line.n_points == 2 * mesha.n_points - 1
     assert line.n_lines == 2 * (mesha.n_points - 1) if as_lines else 1
 
-    for key in ("foo", "bar"):
-        np.allclose(
-            line.point_data[key],
-            np.concatenate([mesha.point_data[key][:-1], meshb.point_data[key]]),
-        )
+    for key in ("foo", "bar", "str"):
+        a = line.point_data[key]
+        b = np.concatenate([mesha.point_data[key][:-1], meshb.point_data[key]])
+        assert (a == b).all() if key == "str" else np.allclose(a, b)
 
         if as_lines:
-            assert np.allclose(
-                line.cell_data[key].ravel(),
-                np.concatenate(
-                    [
-                        np.tile(mesh_.cell_data[key], (mesh_.n_points - 1, 1))
-                        for mesh_ in (mesha, meshb)
-                    ]
-                ).ravel(),
-            )
+            a = line.cell_data[key].ravel()
+            b = np.concatenate(
+                [
+                    np.tile(mesh_.cell_data[key], (mesh_.n_points - 1, 1))
+                    for mesh_ in (mesha, meshb)
+                ]
+            ).ravel()
+            assert (a == b).all() if key == "str" else np.allclose(a, b)
 
         else:
-            assert np.allclose(
-                line.cell_data[key],
-                np.concatenate((mesha.cell_data[key], meshb.cell_data[key])),
-            )
+            a = line.cell_data[key]
+            b = np.concatenate((mesha.cell_data[key], meshb.cell_data[key]))
+            assert (a == b).all() if key == "str" else np.allclose(a, b)
 
     assert np.allclose(
         line.compute_cell_sizes().cell_data["Length"].sum(),
@@ -909,18 +908,19 @@ def test_split_lines(request, mesh, as_lines):
 
     mesh.point_data["foo"] = np.random.rand(mesh.n_points)
     mesh.point_data["bar"] = np.random.rand(mesh.n_points, 3)
+    mesh.point_data["str"] = np.full(mesh.n_points, "foo")
     mesh.cell_data["foo"] = np.random.rand(mesh.n_cells)
     mesh.cell_data["bar"] = np.random.rand(mesh.n_cells, 3)
+    mesh.cell_data["str"] = np.full(mesh.n_cells, "bar")
 
     lines = pvg.split_lines(mesh, as_lines=as_lines)
     assert len(lines) == 1
     assert lines[0].n_lines == (mesh.n_points - 1) if as_lines else 1
 
-    for key in ("foo", "bar"):
-        assert np.allclose(
-            lines[0].point_data[key],
-            mesh.point_data[key],
-        )
+    for key in ("foo", "bar", "str"):
+        a = lines[0].point_data[key]
+        b = mesh.point_data[key]
+        assert (a == b).all() if key == "str" else np.allclose(a, b)
 
     assert np.allclose(
         lines[0].cell_data["foo"], np.full(mesh.n_points - 1, mesh.cell_data["foo"])
@@ -929,6 +929,7 @@ def test_split_lines(request, mesh, as_lines):
         lines[0].cell_data["bar"],
         np.tile(mesh.cell_data["bar"], (mesh.n_points - 1, 1)),
     )
+    assert (lines[0].cell_data["str"] == np.full(mesh.n_points - 1, "bar")).all()
 
     assert np.allclose(
         mesh.compute_cell_sizes().cell_data["Length"].sum(),
