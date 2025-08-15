@@ -96,7 +96,7 @@ def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
     return centers
 
 
-def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | str]:
+def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> ArrayLike | None:
     """
     Get the cell group of a mesh.
 
@@ -109,7 +109,7 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | s
 
     Returns
     -------
-    Sequence[int | str]
+    ArrayLike | None
         Cell group.
 
     """
@@ -120,10 +120,10 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> Sequence[int | s
             groups = {v: k for k, v in mesh.user_dict[key].items()}
             cell_groups = [groups[i] for i in cell_groups]
 
-        return cell_groups
+        return np.array(cell_groups)
 
     else:
-        return []
+        return None
 
 
 def get_dimension(mesh: pv.DataSet) -> int:
