@@ -1,9 +1,9 @@
 from collections.abc import Sequence
-from typing import Literal, Union
 
 import numpy as np
 import pytest
 import pyvista as pv
+from vtk import __version__ as vtk_version
 
 import pvgridder as pvg
 
@@ -560,7 +560,11 @@ def test_merge_lines(request, mesh, as_lines):
 
     for key in ("foo", "bar", "str"):
         a = line.point_data[key]
-        b = np.concatenate([mesha.point_data[key][:-1], meshb.point_data[key]])
+        b = np.concatenate(
+            [mesha.point_data[key][:-1], meshb.point_data[key]]
+            if vtk_version < "9.5"
+            else [mesha.point_data[key], meshb.point_data[key][1:]]
+        )
         assert (a == b).all() if key == "str" else np.allclose(a, b)
 
         if as_lines:
