@@ -602,6 +602,7 @@ def fuse_cells(
 def intersect_polyline(
     mesh: pv.DataSet,
     line: pv.PolyData,
+    min_length: float = 1.0e-4,
     tolerance: float = 1.0e-8,
     ignore_points_before_entry: bool = False,
     ignore_points_after_exit: bool = False,
@@ -615,6 +616,8 @@ def intersect_polyline(
         Mesh to intersect with.
     line : pyvista.PolyData
         Polyline to intersect with the mesh.
+    min_length : scalar, default 1.0e-4
+        Set the minimum length of a line.
     tolerance : float, default 1.0e-8
         The absolute tolerance to use to find cells along the line.
     ignore_points_before_entry : bool, default False
@@ -640,9 +643,10 @@ def intersect_polyline(
     def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
-            points.append(point)
-            line_ids.append(line_id)
-            cell_ids.append(cell_id)
+            if np.linalg.norm(point - points[-1]) > min_length:
+                points.append(point)
+                line_ids.append(line_id)
+                cell_ids.append(cell_id)
 
     cell_geometry = extract_cell_geometry(mesh, remove_ghost_cells=True)
     tree = KDTree(get_cell_centers(cell_geometry))
