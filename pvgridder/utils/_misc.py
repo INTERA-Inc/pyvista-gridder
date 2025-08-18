@@ -604,6 +604,7 @@ def intersect_polyline(
     line: pv.PolyData,
     min_length: float = 1.0e-4,
     tolerance: float = 1.0e-8,
+    pass_cell_data: bool = True,
     ignore_points_before_entry: bool = False,
     ignore_points_after_exit: bool = False,
 ) -> pv.PolyData:
@@ -620,6 +621,8 @@ def intersect_polyline(
         Set the minimum length of a line.
     tolerance : float, default 1.0e-8
         The absolute tolerance to use to find cells along the line.
+    pass_cell_data : bool, default True
+        If True, pass cell data from the line to the output.
     ignore_points_before_entry : bool, default False
         If True, ignore points before the first entry point into the mesh.
     ignore_points_after_exit : bool, default False
@@ -766,6 +769,13 @@ def intersect_polyline(
     )
     polyline.cell_data["vtkOriginalCellIds"] = line_ids
     polyline.cell_data["IntersectedCellIds"] = cell_ids
+
+    if pass_cell_data:
+        for k, v in line.cell_data.items():
+            if k in polyline.cell_data:
+                continue
+
+            polyline.cell_data[k] = v[line_ids]
 
     return polyline
 
