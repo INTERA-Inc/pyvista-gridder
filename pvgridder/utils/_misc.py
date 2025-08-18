@@ -646,7 +646,7 @@ def intersect_polyline(
     def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
-            if np.linalg.norm(point - points[-1]) > min_length:
+            if np.linalg.norm(point - points[-1]) >= min_length:
                 points.append(point)
                 line_ids.append(line_id)
                 cell_ids.append(cell_id)
@@ -735,6 +735,16 @@ def intersect_polyline(
 
                 add_point(intersections.cell_data["IntersectionPoints"][fid], lid, cid)
                 exit_face = intersections.get_cell(fid)
+
+                # Check distance to last point
+                if (
+                    np.linalg.norm(
+                        intersections.cell_data["IntersectionPoints"][fid]
+                        - lines.points[-1]
+                    )
+                    < min_length
+                ):
+                    break
 
                 # Determine the exit cell
                 _, id_ = tree.query(exit_face.center)
