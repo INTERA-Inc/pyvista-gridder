@@ -330,7 +330,7 @@ class VoronoiMesh2D(MeshBase):
         infinity : scalar, optional
             Value used for points at infinity.
         min_length : scalar, default 1.0e-4
-            Set the minumum length of polygons' edges.
+            Set the minimum length of polygons' edges.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
 
