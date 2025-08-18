@@ -602,7 +602,9 @@ def fuse_cells(
 def intersect_polyline(
     mesh: pv.DataSet,
     line: pv.PolyData,
+    min_length: float = 1.0e-4,
     tolerance: float = 1.0e-8,
+    pass_cell_data: bool = True,
     ignore_points_before_entry: bool = False,
     ignore_points_after_exit: bool = False,
 ) -> pv.PolyData:
@@ -615,8 +617,12 @@ def intersect_polyline(
         Mesh to intersect with.
     line : pyvista.PolyData
         Polyline to intersect with the mesh.
+    min_length : scalar, default 1.0e-4
+        Set the minimum length of a line.
     tolerance : float, default 1.0e-8
         The absolute tolerance to use to find cells along the line.
+    pass_cell_data : bool, default True
+        If True, pass cell data from the line to the output.
     ignore_points_before_entry : bool, default False
         If True, ignore points before the first entry point into the mesh.
     ignore_points_after_exit : bool, default False
@@ -640,9 +646,10 @@ def intersect_polyline(
     def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
-            points.append(point)
-            line_ids.append(line_id)
-            cell_ids.append(cell_id)
+            if np.linalg.norm(point - points[-1]) >= min_length:
+                points.append(point)
+                line_ids.append(line_id)
+                cell_ids.append(cell_id)
 
     cell_geometry = extract_cell_geometry(mesh, remove_ghost_cells=True)
     tree = KDTree(get_cell_centers(cell_geometry))
@@ -729,6 +736,16 @@ def intersect_polyline(
                 add_point(intersections.cell_data["IntersectionPoints"][fid], lid, cid)
                 exit_face = intersections.get_cell(fid)
 
+                # Check distance to last point
+                if (
+                    np.linalg.norm(
+                        intersections.cell_data["IntersectionPoints"][fid]
+                        - lines.points[-1]
+                    )
+                    < min_length
+                ):
+                    break
+
                 # Determine the exit cell
                 _, id_ = tree.query(exit_face.center)
                 cells = cell_geometry.cell_data["vtkOriginalCellIds"][id_]
@@ -762,6 +779,13 @@ def intersect_polyline(
     )
     polyline.cell_data["vtkOriginalCellIds"] = line_ids
     polyline.cell_data["IntersectedCellIds"] = cell_ids
+
+    if pass_cell_data:
+        for k, v in line.cell_data.items():
+            if k in polyline.cell_data:
+                continue
+
+            polyline.cell_data[k] = v[line_ids]
 
     return polyline
 
