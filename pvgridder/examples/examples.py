@@ -45,6 +45,53 @@ def load_anticline_3d() -> pv.StructuredGrid:
     return mesh
 
 
+def load_concave_polyhedron() -> pv.UnstructuredGrid:
+    """
+    Load L-shaped concave polyhedron.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        L-shaped concave unstructured grid.
+
+    """
+    from .. import Polygon, Volume
+
+    points = [
+        [0.0, 0.0, 0.0],
+        [5.0, 0.0, 0.0],
+        [5.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 7.0, 0.0],
+        [0.0, 7.0, 0.0],
+    ]
+    polygon = Polygon(points)
+
+    return Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
+
+
+def load_half_stadium(resolution=16) -> pv.UnstructuredGrid:
+    """
+    Load half stadium mesh (single convex polyhedron).
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Half stadium convex unstructured grid.
+
+    """
+    from .. import Polygon, Volume
+
+    theta = np.deg2rad(np.linspace(0.0, 180.0, resolution + 1))
+    points = np.column_stack((np.cos(theta), np.sin(theta), np.zeros_like(theta)))
+    points = np.vstack(
+        (points[0] + (0.0, -1.0, 0.0), points, points[-1] + (0.0, -1.0, 0.0))
+    )
+    polygon = Polygon(points)
+
+    return Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
+
+
 def load_topographic_terrain() -> pv.StructuredGrid:
     """
     Load 3D mesh following topographic terrain.
