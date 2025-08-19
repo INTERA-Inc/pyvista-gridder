@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import Literal, Optional
 
 import numpy as np
 import pyvista as pv
@@ -66,7 +66,7 @@ def get_cell_connectivity(
 
 def get_cell_centers(
     mesh: pv.DataSet,
-    polyhedron_method: Literal["box", "geometric", "tetra"] | None = "tetra",
+    polyhedron_method: Optional[Literal["box", "geometric", "tetra"]] = None,
 ) -> ArrayLike:
     """
     Get the cell centers of a mesh.
@@ -75,7 +75,7 @@ def get_cell_centers(
     ----------
     mesh : pyvista.DataSet
         Input mesh.
-    polyhedron_method : {'box', 'geometric', 'tetra'} | None, default 'tetra'
+    polyhedron_method : {'box', 'geometric', 'tetra'} | None, optional
         Calculation method for centers of polyhedral cells:
 
          - 'box': bounding box (as VTK < 9.5.0)
@@ -136,7 +136,9 @@ def get_cell_centers(
 
             elif polyhedron_method == "tetra" and vtk_version <= "9.5.0":
                 polyhedron_faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
-                polyhedron_face_locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
+                polyhedron_face_locations = _get_irregular_cells(
+                    mesh.GetPolyhedronFaceLocations()
+                )
 
                 for center, locations, i0, mask_ in zip(
                     centers,
@@ -167,9 +169,10 @@ def get_cell_centers(
                     tetras = np.stack((v0, v1, v2, apex), axis=1)
 
                     # Compute tetrahedral volumes
-                    volumes = np.einsum(
-                        "ij,ij->i", np.cross(v0 - apex, v1 - apex), v2 - apex
-                    ) / 6.0
+                    volumes = (
+                        np.einsum("ij,ij->i", np.cross(v0 - apex, v1 - apex), v2 - apex)
+                        / 6.0
+                    )
 
                     # Compute centroid
                     center[:] = np.average(tetras.mean(axis=1), axis=0, weights=volumes)
