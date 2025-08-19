@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal
 
 import numpy as np
 import pyvista as pv
@@ -63,7 +64,10 @@ def get_cell_connectivity(
         return tuple(cells)
 
 
-def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
+def get_cell_centers(
+    mesh: pv.DataSet,
+    polyhedron_method: Literal["box", "geometric", "tetra"] | None = "tetra",
+) -> ArrayLike:
     """
     Get the cell centers of a mesh.
 
@@ -71,6 +75,14 @@ def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
     ----------
     mesh : pyvista.DataSet
         Input mesh.
+    polyhedron_method : {'box', 'geometric', 'tetra'} | None, default 'tetra'
+        Calculation method for centers of polyhedral cells:
+
+         - 'box': bounding box (as VTK < 9.5.0)
+         - 'geometric': geometric average of points (as VTK 9.5.0)
+         - 'tetra': weighted tetrahedral decomposition (as > VTK 9.5.0)
+
+        If None, use current VTK's implementation.
 
     Returns
     -------
@@ -78,6 +90,9 @@ def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
         Cell centers.
 
     """
+    from pyvista.core.cell import _get_irregular_cells
+    from vtk import __version__ as vtk_version
+
     centers = np.full((mesh.n_cells, 3), np.nan)
     ghost_cells = (
         mesh.cell_data.pop("vtkGhostType") if "vtkGhostType" in mesh.cell_data else None
@@ -87,8 +102,77 @@ def get_cell_centers(mesh: pv.DataSet) -> ArrayLike:
         centers[:] = mesh.cell_centers().points
 
     else:
-        mask = mesh.celltypes != pv.CellType.EMPTY_CELL
-        centers[mask] = mesh.cell_centers().points
+        celltypes = mesh.celltypes
+        centers[celltypes != pv.CellType.EMPTY_CELL] = mesh.cell_centers().points
+
+        # Polyhedral cells' centers
+        mask = celltypes == pv.CellType.POLYHEDRON
+
+        if polyhedron_method is not None and mask.any():
+            offset = mesh.offset
+            connectivity = mesh.cell_connectivity
+
+            if polyhedron_method == "box" and vtk_version >= "9.5.0":
+                polyhedron_points = [
+                    mesh.points[connectivity[i1:i2]]
+                    for i1, i2, mask_ in zip(offset[:-1], offset[1:], mask)
+                    if mask_
+                ]
+                centers[mask] = 0.5 * np.array(
+                    [
+                        points.min(axis=0) + points.max(axis=0)
+                        for points in polyhedron_points
+                    ]
+                )
+
+            elif polyhedron_method == "geometric" and vtk_version != "9.5.0":
+                centers[mask] = np.array(
+                    [
+                        mesh.points[connectivity[i1:i2]].mean(axis=0)
+                        for i1, i2, mask_ in zip(offset[:-1], offset[1:], mask)
+                        if mask_
+                    ]
+                )
+
+            elif polyhedron_method == "tetra" and vtk_version <= "9.5.0":
+                polyhedron_faces = _get_irregular_cells(mesh.GetPolyhedronFaces())
+                polyhedron_face_locations = _get_irregular_cells(mesh.GetPolyhedronFaceLocations())
+
+                for center, locations, i0, mask_ in zip(
+                    centers,
+                    polyhedron_face_locations,
+                    offset[:-1],
+                    mask,
+                ):
+                    if not mask_:
+                        continue
+
+                    # Triangulate polyhedron's faces
+                    triangles = np.array(
+                        [
+                            (face[0], v1, v2)
+                            for face in [polyhedron_faces[loc] for loc in locations]
+                            for v1, v2 in zip(face[1:], face[2:])
+                        ]
+                    )
+
+                    # Use polyhedron's first vertex as apex
+                    apex = mesh.points[connectivity[i0]]
+                    apex = np.broadcast_to(apex, (len(triangles), 3))
+
+                    # Tetrahedralize polyhedron
+                    v0 = mesh.points[triangles[:, 0]]
+                    v1 = mesh.points[triangles[:, 1]]
+                    v2 = mesh.points[triangles[:, 2]]
+                    tetras = np.stack((v0, v1, v2, apex), axis=1)
+
+                    # Compute tetrahedral volumes
+                    volumes = np.einsum(
+                        "ij,ij->i", np.cross(v0 - apex, v1 - apex), v2 - apex
+                    ) / 6.0
+
+                    # Compute centroid
+                    center[:] = np.average(tetras.mean(axis=1), axis=0, weights=volumes)
 
     if ghost_cells is not None:
         mesh.cell_data["vtkGhostType"] = ghost_cells
