@@ -1117,7 +1117,7 @@ def ray_cast(
         normals = mesh.compute_normals(
             cell_normals=True, point_normals=False
         ).cell_data["Normals"]
-        angles = np.rad2deg(np.acos(np.abs(normals[ids] @ dvec)))
+        angles = np.rad2deg(np.arccos(np.abs(normals[ids] @ dvec)))
         ids = ids[angles < max_angle]
 
         if ids.size == 0:
