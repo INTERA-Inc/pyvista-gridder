@@ -84,7 +84,9 @@ def load_half_stadium(resolution=16) -> pv.UnstructuredGrid:
 
     theta = np.deg2rad(np.linspace(0.0, 180.0, resolution + 1))
     points = np.column_stack((np.cos(theta), np.sin(theta), np.zeros_like(theta)))
-    points = np.vstack((points[0] + (0.0, -1.0, 0.0), points, points[-1] + (0.0, -1.0, 0.0)))
+    points = np.vstack(
+        (points[0] + (0.0, -1.0, 0.0), points, points[-1] + (0.0, -1.0, 0.0))
+    )
     polygon = Polygon(points)
 
     return Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
