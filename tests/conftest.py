@@ -7,7 +7,6 @@ import pyvista as pv
 import pvgridder as pvg
 
 
-# Common fixtures for meshes
 @pytest.fixture
 def simple_polydata_with_duplicates():
     """Create a simple polydata with duplicate points."""
@@ -126,7 +125,6 @@ def mesh_with_categorical_data():
     return grid
 
 
-# Example data fixtures
 @pytest.fixture
 def anticline_2d():
     """Fixture for anticline 2D example mesh."""
@@ -137,6 +135,18 @@ def anticline_2d():
 def anticline_3d():
     """Fixture for anticline 3D example mesh."""
     return pvg.examples.load_anticline_3d()
+
+
+@pytest.fixture
+def concave_polyhedron():
+    """Fixture for concave polyhedron example mesh."""
+    return pvg.examples.load_concave_polyhedron()
+
+
+@pytest.fixture
+def half_stadium():
+    """Fixture for half stadium example mesh."""
+    return pvg.examples.load_half_stadium(resolution=128)
 
 
 @pytest.fixture

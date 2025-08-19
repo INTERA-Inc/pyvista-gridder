@@ -132,6 +132,38 @@ def test_get_cell_centers(request, mesh):
 
 
 @pytest.mark.parametrize(
+    "mesh, method, ref_sum",
+    [
+        pytest.param("concave_polyhedron", "box", (2.5, 3.5, 0.5), id="concave-box"),
+        pytest.param(
+            "concave_polyhedron",
+            "geometric",
+            (2.0, 2.66666667, 0.5),
+            id="concave-geometric",
+        ),
+        pytest.param(
+            "concave_polyhedron",
+            "tetra",
+            (1.40909091, 2.40909091, 0.5),
+            id="concave-tetra",
+        ),
+        pytest.param("half_stadium", "box", (0.0, 0.0, 0.5), id="convex-box"),
+        pytest.param(
+            "half_stadium", "geometric", (0.0, 0.606742292, 0.5), id="convex-geometric"
+        ),
+        pytest.param(
+            "half_stadium", "tetra", (0.0, -0.0933820983, 0.5), id="convex-tetra"
+        ),
+    ],
+)
+def test_get_cell_centers_polyhedron_method(request, mesh, method, ref_sum):
+    """Test retrieving cell centers with different polyhedron method."""
+    mesh = request.getfixturevalue(mesh)
+    centers = pvg.get_cell_centers(mesh, polyhedron_method=method)
+    assert np.allclose(centers.sum(axis=0), ref_sum)
+
+
+@pytest.mark.parametrize(
     "mesh",
     [
         pytest.param("simple_unstructured_grid", id="simple-ugrid"),
