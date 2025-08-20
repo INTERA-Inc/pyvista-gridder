@@ -151,6 +151,7 @@ def extract_boundary_polygons(
 ) -> (
     Sequence[pv.PolyData | pv.UnstructuredGrid]
     | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]
+    | None
 ):
     """
     Extract boundary edges of a mesh as continuous polylines or polygons.
@@ -166,7 +167,7 @@ def extract_boundary_polygons(
 
     Returns
     -------
-    Sequence[pyvista.PolyData | pyvista.UnstructuredGrid] | Sequence[Sequence[pyvista.PolyData | pyvista.UnstructuredGrid]]
+    Sequence[pyvista.PolyData | pyvista.UnstructuredGrid] | Sequence[Sequence[pyvista.PolyData | pyvista.UnstructuredGrid]] | None
         Extracted boundary polylines or polygons.
 
     """
@@ -174,18 +175,27 @@ def extract_boundary_polygons(
 
     from .. import Polygon
 
-    edges = (
-        mesh.cast_to_unstructured_grid()
-        .clean()
-        .extract_feature_edges(
-            boundary_edges=True,
-            non_manifold_edges=False,
-            feature_edges=False,
-            manifold_edges=False,
-            clear_data=True,
+    if isinstance(mesh, pv.PolyData) and mesh.n_faces_strict == 0 and mesh.n_lines > 0:
+        mesh = edges
+
+    else:
+        edges = (
+            mesh.cast_to_unstructured_grid()
+            .clean()
+            .extract_feature_edges(
+                boundary_edges=True,
+                non_manifold_edges=False,
+                feature_edges=False,
+                manifold_edges=False,
+                clear_data=True,
+            )
         )
-        .strip()
-    )
+
+    edges = edges.strip(max_length=mesh.n_points)
+
+    if edges.n_lines == 0:
+        return None
+
     edges = [edge.merge_points() for edge in split_lines(edges, as_lines=False)]
 
     # Identify holes
