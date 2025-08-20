@@ -21,8 +21,13 @@ class MeshStack2D(MeshStackBase):
 
     Parameters
     ----------
-    mesh : pyvista.PolyData
-        Base mesh.
+    mesh : pyvista.PolyData | ArrayLike
+        Base mesh. If ArrayLike, assume straight line depending on *axis*.
+
+         - 0: along Z axis
+         - 1: along Y axis
+         - 2: along X axis
+
     axis : int, default 2
         Stacking axis.
     default_group : str, optional
@@ -37,7 +42,7 @@ class MeshStack2D(MeshStackBase):
 
     def __init__(
         self,
-        mesh: pv.PolyData,
+        mesh: pv.PolyData | ArrayLike,
         axis: int = 2,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
@@ -45,11 +50,18 @@ class MeshStack2D(MeshStackBase):
         """Initialize a new 2D mesh stack."""
         from .. import split_lines
 
-        if not isinstance(mesh, pv.PolyData) and not mesh.n_lines:
+        if isinstance(mesh, (list, tuple, np.ndarray)) and np.asarray(mesh).ndim == 1:
+            points = np.zeros((len(mesh), 3))
+            points[:, (axis + 1) % 3] = mesh
+            lines = pv.lines_from_points(points)
+
+        elif not isinstance(mesh, pv.PolyData) and not mesh.n_lines:
             raise ValueError("invalid mesh, input mesh should be a line or a polyline")
 
-        lines = split_lines(mesh)
-        super().__init__(lines[0], axis, default_group, ignore_groups)
+        else:
+            lines = split_lines(mesh)[0]
+
+        super().__init__(lines, axis, default_group, ignore_groups)
 
     def _extrude(self, *args) -> pv.StructuredGrid:
         """Extrude a line."""
