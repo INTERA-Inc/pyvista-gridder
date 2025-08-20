@@ -411,7 +411,9 @@ class MeshStackBase(MeshBase):
         return self
 
     def generate_mesh(
-        self, tolerance: float = 1.0e-8
+        self,
+        tolerance: float = 1.0e-8,
+        bottom_up: bool = True,
     ) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """
         Generate mesh by stacking all items.
@@ -420,6 +422,8 @@ class MeshStackBase(MeshBase):
         ----------
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points (for unstructured grids).
+        bottom_up : bool, default True
+            If True, stack items are assumed to be ordered from bottom to top.
 
         Returns
         -------
@@ -444,6 +448,9 @@ class MeshStackBase(MeshBase):
                 - item1.mesh.points[:, self.axis]
                 - item2.thickness
             )
+
+            if not bottom_up:
+                shift *= -1.0
 
             if item2.priority < item1.priority:
                 item2.mesh.points[:, self.axis] = np.where(
