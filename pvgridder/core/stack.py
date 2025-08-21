@@ -30,6 +30,8 @@ class MeshStack2D(MeshStackBase):
 
     axis : int, default 2
         Stacking axis.
+    bottom_up : bool, default True
+        If True, assume items are stacked from bottom to top.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -44,6 +46,7 @@ class MeshStack2D(MeshStackBase):
         self,
         mesh: pv.PolyData | ArrayLike,
         axis: int = 2,
+        bottom_up: bool = True,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
@@ -61,7 +64,7 @@ class MeshStack2D(MeshStackBase):
         else:
             lines = split_lines(mesh)[0]
 
-        super().__init__(lines, axis, default_group, ignore_groups)
+        super().__init__(lines, axis, bottom_up, default_group, ignore_groups)
 
     def _extrude(self, *args) -> pv.StructuredGrid:
         """Extrude a line."""
@@ -121,6 +124,8 @@ class MeshStack3D(MeshStackBase):
         Base mesh.
     axis : int, default 2
         Stacking axis.
+    bottom_up : bool, default True
+        If True, assume items are stacked from bottom to top.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -138,6 +143,7 @@ class MeshStack3D(MeshStackBase):
         | pv.StructuredGrid
         | pv.UnstructuredGrid,
         axis: int = 2,
+        bottom_up: bool = True,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
@@ -155,7 +161,7 @@ class MeshStack3D(MeshStackBase):
                 "invalid mesh, input mesh should be a 2D structured grid or an unstructured grid"
             )
 
-        super().__init__(mesh, axis, default_group, ignore_groups)
+        super().__init__(mesh, axis, bottom_up, default_group, ignore_groups)
 
     def add_plane(
         self,

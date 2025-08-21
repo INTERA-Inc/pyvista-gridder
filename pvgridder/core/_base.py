@@ -252,6 +252,8 @@ class MeshStackBase(MeshBase):
         Base mesh.
     axis : int, default 2
         Stacking axis.
+    bottom_up : bool, default True
+        If True, assume items are stacked from bottom to top.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -270,6 +272,7 @@ class MeshStackBase(MeshBase):
         | pv.StructuredGrid
         | pv.UnstructuredGrid,
         axis: int = 2,
+        bottom_up: bool = True,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
@@ -288,6 +291,7 @@ class MeshStackBase(MeshBase):
         super().__init__(default_group, ignore_groups)
         self._mesh = mesh.copy()
         self._axis = axis
+        self._bottom_up = bottom_up
         self._transition_flag = False
 
     def add(
@@ -308,9 +312,10 @@ class MeshStackBase(MeshBase):
         arg : scalar | Callable | pyvista.DataSet
             New item to add to stack:
 
-             - if scalar, all points of the previous items are translated by *arg* along
-               the stacking axis. If it's the first item of the stack, set the
-               coordinates of the points of the base mesh to *arg* along stacking axis.
+             - if scalar, all points of the previous items are translated by *abs(arg)*
+               along the stacking axis in the direction given by *bottom_up*. If it's
+               the first item of the stack, set the coordinates of the points of the
+               base mesh to *arg* along stacking axis.
 
              - if Callable, must be in the form ``f(x, y, z) -> xyz`` where ``x``,
                ``y``, ``z`` are the coordinates of the points of the base mesh, and
@@ -377,6 +382,8 @@ class MeshStackBase(MeshBase):
                     mesh.points[:, self.axis] = arg
 
                 else:
+                    arg = abs(arg)
+                    arg *= 1.0 if self.bottom_up else -1.0
                     mesh = self.items[-1].mesh.copy()
                     mesh.points[:, self.axis] += arg
 
@@ -411,7 +418,8 @@ class MeshStackBase(MeshBase):
         return self
 
     def generate_mesh(
-        self, tolerance: float = 1.0e-8
+        self,
+        tolerance: float = 1.0e-8,
     ) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """
         Generate mesh by stacking all items.
@@ -444,6 +452,9 @@ class MeshStackBase(MeshBase):
                 - item1.mesh.points[:, self.axis]
                 - item2.thickness
             )
+
+            if not self.bottom_up:
+                shift *= -1.0
 
             if item2.priority < item1.priority:
                 item2.mesh.points[:, self.axis] = np.where(
@@ -564,3 +575,8 @@ class MeshStackBase(MeshBase):
     def axis(self) -> int:
         """Return stacking axis."""
         return self._axis
+
+    @property
+    def bottom_up(self) -> bool:
+        """Return whether the stacking is from bottom to top."""
+        return self._bottom_up
