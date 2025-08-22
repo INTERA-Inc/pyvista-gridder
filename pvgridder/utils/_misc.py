@@ -656,7 +656,11 @@ def intersect_polyline(
     def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
-            if np.linalg.norm(point - points[-1]) >= min_length:
+            if (
+                not mesh_entered
+                or mesh_exited
+                or np.linalg.norm(point - points[-1]) >= min_length
+            ):
                 points.append(point)
                 line_ids.append(line_id)
                 cell_ids.append(cell_id)
