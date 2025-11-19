@@ -709,17 +709,21 @@ def intersect_polyline(
                         atol=tolerance,
                     ):
                         if not mesh_entered:
-                            cid_ = -1
                             count = len(points)
                             mesh_entered = True
+                            add_point(
+                                intersections.cell_data["IntersectionPoints"][0],
+                                lid,
+                                -1,
+                            )
 
                         else:
-                            cid_ = cid
-
-                        add_point(
-                            intersections.cell_data["IntersectionPoints"][0], lid, cid_
-                        )
-                        break
+                            add_point(
+                                intersections.cell_data["IntersectionPoints"][0],
+                                lid,
+                                cid,
+                            )
+                            break
 
                     fid = 0
 
