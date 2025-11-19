@@ -95,10 +95,6 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
     assert result == expected_dimension
 
 
-@pytest.mark.skipif(
-    sys.version_info[:2] == (3, 9),
-    reason="Skipped Python 3.9 due to compatibility issues",
-)
 @pytest.mark.parametrize(
     "mesh",
     [
@@ -135,6 +131,10 @@ def test_get_cell_centers(request, mesh):
         assert not np.isnan(centers[~mask]).any()
 
 
+@pytest.mark.skipif(
+    sys.version_info[:2] == (3, 9),
+    reason="Skipped Python 3.9 due to compatibility issues",
+)
 @pytest.mark.parametrize(
     "mesh, method, ref_sum",
     [
