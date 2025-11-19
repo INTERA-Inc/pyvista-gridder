@@ -98,7 +98,8 @@ class MeshMerge(MeshBase):
             else:
                 mesh = mesh_b.cast_to_unstructured_grid()
 
-        mesh.user_dict["CellGroup"] = groups
+        mesh.user_dict = None  # make sure to reset user_dict
+        mesh.user_dict = {"CellGroup": groups}
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
         return self._clean(mesh, tolerance)
