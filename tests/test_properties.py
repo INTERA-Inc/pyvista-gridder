@@ -131,7 +131,7 @@ def test_get_cell_centers(request, mesh):
 
 
 @pytest.mark.skipif(
-    vtk.__version__[:2] == (9.5),
+    vtk.__version__.startswith("9.5"),
     reason="Skipped VTK 9.5 due to compatibility issues",
 )
 @pytest.mark.parametrize(
