@@ -1,8 +1,7 @@
-import sys
-
 import numpy as np
 import pytest
 import pyvista as pv
+import vtk
 
 import pvgridder as pvg
 
@@ -132,8 +131,8 @@ def test_get_cell_centers(request, mesh):
 
 
 @pytest.mark.skipif(
-    sys.version_info[:2] == (3, 9),
-    reason="Skipped Python 3.9 due to compatibility issues",
+    vtk.__version__[:2] == (9.5),
+    reason="Skipped VTK 9.5 due to compatibility issues",
 )
 @pytest.mark.parametrize(
     "mesh, method, ref_sum",
