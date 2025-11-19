@@ -1,8 +1,7 @@
-from collections.abc import Sequence
-
 import numpy as np
 import pytest
 import pyvista as pv
+import vtk
 
 import pvgridder as pvg
 
@@ -131,6 +130,10 @@ def test_get_cell_centers(request, mesh):
         assert not np.isnan(centers[~mask]).any()
 
 
+@pytest.mark.skipif(
+    vtk.__version__.startswith("9.5"),
+    reason="Skipped VTK 9.5 due to compatibility issues",
+)
 @pytest.mark.parametrize(
     "mesh, method, ref_sum",
     [
