@@ -717,11 +717,14 @@ def intersect_polyline(
                                 -1,
                             )
 
+                            if count > 1:
+                                break
+
                         else:
                             add_point(
                                 intersections.cell_data["IntersectionPoints"][0],
                                 lid,
-                                cid,
+                                int(cid),
                             )
                             break
 
