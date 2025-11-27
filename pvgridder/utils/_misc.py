@@ -648,6 +648,11 @@ def intersect_polyline(
 
     lines = split_lines(line.strip(), as_lines=True)[0]
 
+    # Recenter coordinates around zero to prevent accuracy issues
+    center = np.array(mesh.center)
+    mesh = mesh.translate(-center)
+    lines = lines.translate(-center)
+
     line_ids, cell_ids, cell = [], [], None
     mesh_entered, mesh_exited = False, False
     points = [lines.points[0]]
@@ -784,6 +789,11 @@ def intersect_polyline(
                 cid = [id_ for id_ in cells if id_ != cid][0]
                 cell = extract_cells(mesh, cid)
 
+                # Add last point of the polyline if it is inside the exit cell
+                if lid == lines.n_lines - 1 and cell.find_containing_cell(pointb) > -1:
+                    add_point(pointb, lid, cid)
+                    break
+
         else:
             if ignore_points_after_exit:
                 break
@@ -808,7 +818,7 @@ def intersect_polyline(
 
             polyline.cell_data[k] = v[line_ids]
 
-    return polyline
+    return polyline.translate(center)
 
 
 def merge(
