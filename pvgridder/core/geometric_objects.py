@@ -503,7 +503,7 @@ def Polygon(
             sizes = np.maximum(lengths[:-1], lengths[1:])
 
         else:
-            sizes = np.full(len(points) - 1, cellsize)
+            sizes = np.full(len(points) - 1, cellsize, dtype=float)
 
         sizes *= 1.0 if celltype == "triangle" else 2.0
 
