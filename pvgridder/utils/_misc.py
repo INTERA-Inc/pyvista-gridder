@@ -487,7 +487,7 @@ def extract_cells(
     progress_bar: bool = False,
 ) -> pv.UnstructuredGrid:
     """
-    Return a subset of the grid.
+    Get a subset of the grid.
 
     Parameters
     ----------

@@ -48,7 +48,7 @@ class MeshItem:
 
     @property
     def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
-        """Return mesh."""
+        """Get mesh."""
         return self._mesh
 
 
@@ -241,17 +241,17 @@ class MeshBase(ABC):
 
     @property
     def default_group(self) -> str:
-        """Return default group name."""
+        """Get default group name."""
         return self._default_group
 
     @property
     def ignore_groups(self) -> list[str]:
-        """Return list of groups to ignore."""
+        """Get list of groups to ignore."""
         return self._ignore_groups
 
     @property
     def items(self) -> list[MeshItem]:
-        """Return list of mesh items."""
+        """Get list of mesh items."""
         return self._items
 
 
@@ -584,15 +584,15 @@ class MeshStackBase(MeshBase):
 
     @property
     def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
-        """Return base mesh."""
+        """Get base mesh."""
         return self._mesh
 
     @property
     def axis(self) -> int:
-        """Return stacking axis."""
+        """Get stacking axis."""
         return self._axis
 
     @property
     def bottom_up(self) -> bool:
-        """Return whether the stacking is from bottom to top."""
+        """Get whether the stacking is from bottom to top."""
         return self._bottom_up

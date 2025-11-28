@@ -206,15 +206,15 @@ class MeshExtrude(MeshBase):
 
     @property
     def mesh(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
-        """Return base mesh."""
+        """Get base mesh."""
         return self._mesh
 
     @property
     def scale(self) -> float | None:
-        """Return default scaling factor."""
+        """Get default scaling factor."""
         return self._scale
 
     @property
     def angle(self) -> float | None:
-        """Return default rotation angle."""
+        """Get default rotation angle."""
         return self._angle

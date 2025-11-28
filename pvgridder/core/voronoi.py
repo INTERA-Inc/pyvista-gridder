@@ -552,20 +552,20 @@ class VoronoiMesh2D(MeshBase):
 
     @property
     def mesh(self) -> pv.DataSet:
-        """Return background mesh."""
+        """Get background mesh."""
         return self._mesh
 
     @property
     def axis(self) -> int:
-        """Return discarded axis."""
+        """Get discarded axis."""
         return self._axis
 
     @property
     def preference(self) -> Literal["cell", "point"]:
-        """Return preference."""
+        """Get preference."""
         return cast(Literal["cell", "point"], self._preference)
 
     @property
     def fuse_cells(self) -> list[Callable]:
-        """Return list of cells to fuse."""
+        """Get list of cells to fuse."""
         return self._fuse_cells
