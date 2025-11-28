@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 import pyvista as pv
@@ -520,7 +520,7 @@ class MeshStackBase(MeshBase):
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
         return cast(
-            pv.StructuredGrid | pv.UnstructuredGrid, self._clean(mesh, tolerance)
+            Union[pv.StructuredGrid, pv.UnstructuredGrid], self._clean(mesh, tolerance)
         )
 
     @abstractmethod

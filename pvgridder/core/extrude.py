@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 import pyvista as pv
@@ -135,7 +135,7 @@ class MeshExtrude(MeshBase):
         if angle is not None:
             mesh = mesh.rotate_vector(vector, angle, mesh.center)
 
-        mesh = cast(pv.StructuredGrid | pv.UnstructuredGrid, mesh)
+        mesh = cast(Union[pv.StructuredGrid, pv.UnstructuredGrid], mesh)
         item = MeshItem(mesh, resolution=resolution, method=method, group=group)
         self.items.append(item)
 
@@ -201,7 +201,7 @@ class MeshExtrude(MeshBase):
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
         return cast(
-            pv.StructuredGrid | pv.UnstructuredGrid, self._clean(mesh, tolerance)
+            Union[pv.StructuredGrid, pv.UnstructuredGrid], self._clean(mesh, tolerance)
         )
 
     @property
