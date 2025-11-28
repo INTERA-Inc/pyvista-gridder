@@ -710,8 +710,8 @@ def intersect_polyline(
     """
     from .. import get_cell_centers
 
-    line = cast(pv.PolyData, line.strip())
-    lines = split_lines(line, as_lines=True)[0]
+    line_ = cast(pv.PolyData, line.strip())
+    lines = split_lines(line_, as_lines=True)[0]
 
     # Recenter coordinates around zero to prevent accuracy issues
     center = np.array(mesh.center)
