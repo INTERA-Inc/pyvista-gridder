@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 import numpy as np
 import pyvista as pv
@@ -8,9 +8,38 @@ from shapely import Polygon, contains_xy
 
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional
+    from typing import Any, Literal, Optional
 
-    from numpy.typing import ArrayLike
+    from numpy.typing import NDArray
+
+
+@overload
+def interactive_lasso_selection(
+    mesh: pv.DataSet,
+    plotter: Optional[pv.Plotter] = None,
+    view: Literal["xy", "xz", "yz"] = "xy",
+    preference: Literal["cell", "point"] = "cell",
+    return_polygon: Literal[True] = True,
+) -> tuple[NDArray, Polygon]: ...
+
+
+@overload
+def interactive_lasso_selection(
+    mesh: pv.DataSet,
+    plotter: Optional[pv.Plotter] = None,
+    view: Literal["xy", "xz", "yz"] = "xy",
+    preference: Literal["cell", "point"] = "cell",
+    return_polygon: Literal[False] = False,
+) -> NDArray: ...
+
+
+@overload
+def interactive_lasso_selection(
+    mesh: pv.DataSet,
+    plotter: Optional[pv.Plotter] = None,
+    view: Literal["xy", "xz", "yz"] = "xy",
+    preference: Literal["cell", "point"] = "cell",
+) -> NDArray: ...
 
 
 def interactive_lasso_selection(
@@ -20,7 +49,7 @@ def interactive_lasso_selection(
     preference: Literal["cell", "point"] = "cell",
     return_polygon: bool = False,
     **kwargs,
-) -> ArrayLike | tuple[ArrayLike, Polygon]:
+) -> NDArray | tuple[NDArray, Polygon]:
     """
     Select cell(s) or point(s) interactively using a lasso selection.
 
@@ -41,15 +70,15 @@ def interactive_lasso_selection(
 
     Returns
     -------
-    ArrayLike
+    NDArray
         Indice(s) of selected cell(s) or point(s).
-    Polygon
+    shapely.Polygon
         Polygon used for selection if *return_polygon* is True.
 
     """
     from .. import get_cell_centers
 
-    kwargs_ = {
+    kwargs_: dict[str, Any] = {
         "scalar_bar_args": {
             "vertical": True,
             "position_y": 0.1,
@@ -61,8 +90,8 @@ def interactive_lasso_selection(
     kwargs_["pickable"] = True
 
     p = plotter if plotter is not None else pv.Plotter()
-    points = pv.PolyData()
-    polygon = pv.PolyData()
+    points: pv.PolyData = pv.PolyData()
+    polygon: pv.PolyData = pv.PolyData()
 
     def callback(point: tuple[float, float, float]) -> None:
         points.points = (
@@ -95,45 +124,45 @@ def interactive_lasso_selection(
         p.update()
 
     p.add_mesh(mesh, **kwargs_)
-    p.track_click_position(callback, side="right", double=False)
+    p.track_click_position(callback, side="right", double=False)  # type: ignore
 
     negative = view.startswith("-")
-    view = view[1:] if negative else view
+    view_ = view[1:] if negative else view
 
     try:
-        getattr(p, f"view_{view}")(negative=negative)
+        getattr(p, f"view_{view_}")(negative=negative)
 
     except AttributeError:
-        raise ValueError(f"invalid view '{view}'")
+        raise ValueError(f"invalid view '{view_}'")
 
-    p.enable_parallel_projection()
-    p.enable_2d_style()
-    p.add_axes()
+    p.enable_parallel_projection()  # type: ignore
+    p.enable_2d_style()  # type: ignore
+    p.add_axes()  # type: ignore
     p.show()
 
     # Select cells or points within the lasso polygon
-    if "x" not in view:
-        points = np.delete(points.points, 0, axis=1)
+    if "x" not in view_:
+        points_ = np.delete(points.points, 0, axis=1)
 
-    elif "y" not in view:
-        points = np.delete(points.points, 1, axis=1)
+    elif "y" not in view_:
+        points_ = np.delete(points.points, 1, axis=1)
 
     else:
-        points = np.delete(points.points, 2, axis=1)
+        points_ = np.delete(points.points, 2, axis=1)
 
-    polygon = Polygon(points)
+    polygon_ = Polygon(points_)
 
     if preference == "cell":
         centers = get_cell_centers(mesh)
-        mask = contains_xy(polygon, centers)
+        mask = contains_xy(polygon_, centers)
 
     else:
-        mask = contains_xy(polygon, mesh.points)
+        mask = contains_xy(polygon_, mesh.points)
 
     ind = np.flatnonzero(mask)
 
     if return_polygon:
-        return ind, polygon
+        return ind, polygon_
 
     else:
         return ind
@@ -148,7 +177,7 @@ def interactive_selection(
     picker: Optional[Literal["cell", "hardware", "point"]] = None,
     tolerance: float = 0.0,
     **kwargs,
-) -> ArrayLike:
+) -> NDArray:
     """
     Select cell(s) or point(s) interactively.
 
@@ -173,11 +202,11 @@ def interactive_selection(
 
     Returns
     -------
-    ArrayLike
+    NDArray
         Indice(s) of selected cell(s) or point(s).
 
     """
-    kwargs_ = {
+    kwargs_: dict[str, Any] = {
         "scalar_bar_args": {
             "vertical": True,
             "position_y": 0.1,
@@ -215,7 +244,7 @@ def interactive_selection(
         mode=preference,
         callback=callback,
         show_message=False,
-        picker=picker,
+        picker=picker,  # type: ignore
         tolerance=tolerance,
     )
 
@@ -230,7 +259,7 @@ def interactive_selection(
             raise ValueError(f"invalid view '{view}'")
 
     if parallel_projection:
-        p.enable_parallel_projection()
+        p.enable_parallel_projection()  # type: ignore
 
     p.show()
 
