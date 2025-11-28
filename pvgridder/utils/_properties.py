@@ -15,15 +15,21 @@ if TYPE_CHECKING:
 @overload
 def get_cell_connectivity(
     mesh: pv.DataSet,
-    flatten: bool = False,
+    flatten: Literal[False],
 ) -> tuple[NDArray | list[NDArray], ...]: ...
 
 
 @overload
 def get_cell_connectivity(
     mesh: pv.DataSet,
-    flatten: bool = True,
+    flatten: Literal[True],
 ) -> NDArray: ...
+
+
+@overload
+def get_cell_connectivity(
+    mesh: pv.DataSet,
+) -> tuple[NDArray | list[NDArray], ...]: ...
 
 
 def get_cell_connectivity(
