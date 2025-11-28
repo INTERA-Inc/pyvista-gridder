@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Optional
+from typing import TYPE_CHECKING, cast
 
 import pyvista as pv
-from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Optional
+
+    from typing_extensions import Self
 
 
 class MeshMerge(MeshBase):
@@ -87,13 +92,13 @@ class MeshMerge(MeshBase):
         groups = {}
 
         for i, item in enumerate(self.items):
-            mesh_b = item.mesh
+            mesh_b = cast(pv.UnstructuredGrid, item.mesh)
             mesh_b.cell_data["CellGroup"] = self._initialize_group_array(
                 mesh_b, groups, default_group=item.group
             )
 
             if i > 0:
-                mesh += mesh_b
+                mesh = pv.merge((mesh, mesh_b))
 
             else:
                 mesh = mesh_b.cast_to_unstructured_grid()
@@ -102,4 +107,4 @@ class MeshMerge(MeshBase):
         mesh.user_dict = {"CellGroup": groups}
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        return self._clean(mesh, tolerance)
+        return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))

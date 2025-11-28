@@ -1,17 +1,35 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, overload
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
+
+
+if TYPE_CHECKING:
+    from typing import Literal, Optional
+
+    from numpy.typing import NDArray
+
+
+@overload
+def get_cell_connectivity(
+    mesh: pv.DataSet,
+    flatten: bool = False,
+) -> tuple[NDArray | list[NDArray], ...]: ...
+
+
+@overload
+def get_cell_connectivity(
+    mesh: pv.DataSet,
+    flatten: bool = True,
+) -> NDArray: ...
 
 
 def get_cell_connectivity(
     mesh: pv.DataSet,
     flatten: bool = False,
-) -> Sequence[Sequence[int | Sequence[int]]] | Sequence[int]:
+) -> NDArray | tuple[NDArray | list[NDArray], ...]:
     """
     Get the cell connectivity of a mesh.
 
@@ -25,7 +43,7 @@ def get_cell_connectivity(
 
     Returns
     -------
-    Sequence[Sequence[int | Sequence[int]]] | Sequence[int]
+    NDArray | tuple[NDArray | list[NDArray], ...]
         Cell connectivity.
 
     """
@@ -36,7 +54,7 @@ def get_cell_connectivity(
     mesh = mesh.cast_to_unstructured_grid()
 
     # Generate cells
-    cells = list(_get_irregular_cells(mesh.GetCells()))
+    cells: list[NDArray | list[NDArray]] = list(_get_irregular_cells(mesh.GetCells()))
 
     # Generate polyhedral cell faces if any
     if (mesh.celltypes == pv.CellType.POLYHEDRON).any():
@@ -67,7 +85,7 @@ def get_cell_connectivity(
 def get_cell_centers(
     mesh: pv.DataSet,
     polyhedron_method: Optional[Literal["box", "geometric", "tetra"]] = None,
-) -> ArrayLike:
+) -> NDArray:
     """
     Get the cell centers of a mesh.
 
@@ -86,7 +104,7 @@ def get_cell_centers(
 
     Returns
     -------
-    ArrayLike
+    NDArray
         Cell centers.
 
     """
@@ -183,7 +201,7 @@ def get_cell_centers(
     return centers
 
 
-def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> ArrayLike | None:
+def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> NDArray | None:
     """
     Get the cell group of a mesh.
 
@@ -196,7 +214,7 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> ArrayLike | None
 
     Returns
     -------
-    ArrayLike | None
+    NDArray | None
         Cell group.
 
     """

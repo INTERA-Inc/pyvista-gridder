@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pyvista as pv
 
@@ -16,7 +18,7 @@ def load_anticline_2d() -> pv.StructuredGrid:
     """
     from .. import MeshStack2D
 
-    return (
+    mesh = (
         MeshStack2D(pv.Line([-3.14, 0.0, 0.0], [3.14, 0.0, 0.0], resolution=41))
         .add(0.0)
         .add(lambda x, y, z: np.cos(x) + 1.0, 4, group="Layer 1")
@@ -26,6 +28,9 @@ def load_anticline_2d() -> pv.StructuredGrid:
         .add(lambda x, y, z: np.full_like(x, 3.4), 4, group="Layer 5")
         .generate_mesh()
     )
+    mesh = cast(pv.StructuredGrid, mesh)
+
+    return mesh
 
 
 def load_anticline_3d() -> pv.StructuredGrid:
@@ -41,6 +46,7 @@ def load_anticline_3d() -> pv.StructuredGrid:
     from .. import MeshExtrude
 
     mesh = MeshExtrude(load_anticline_2d()).add([0.0, 6.28, 0.0], 10).generate_mesh()
+    mesh = cast(pv.StructuredGrid, mesh)
 
     return mesh
 
@@ -66,8 +72,10 @@ def load_concave_polyhedron() -> pv.UnstructuredGrid:
         [0.0, 7.0, 0.0],
     ]
     polygon = Polygon(points)
+    mesh = Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
+    mesh = cast(pv.UnstructuredGrid, mesh)
 
-    return Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
+    return mesh
 
 
 def load_half_stadium(resolution=16) -> pv.UnstructuredGrid:
@@ -88,8 +96,10 @@ def load_half_stadium(resolution=16) -> pv.UnstructuredGrid:
         (points[0] + (0.0, -1.0, 0.0), points, points[-1] + (0.0, -1.0, 0.0))
     )
     polygon = Polygon(points)
+    mesh = Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
+    mesh = cast(pv.UnstructuredGrid, mesh)
 
-    return Volume(polygon, polygon.translate((0.0, 0.0, 1.0)))
+    return mesh
 
 
 def load_topographic_terrain() -> pv.StructuredGrid:
@@ -104,17 +114,18 @@ def load_topographic_terrain() -> pv.StructuredGrid:
     """
     from .. import MeshStack3D
 
-    terrain = pv.examples.download_crater_topo().extract_subset(
-        (500, 900, 400, 800, 0, 0), (10, 10, 1)
-    )
+    terrain = cast(pv.ImageData, pv.examples.download_crater_topo())
+    terrain = terrain.extract_subset((500, 900, 400, 800, 0, 0), (10, 10, 1))
     terrain = terrain.cast_to_structured_grid()
-
-    return (
+    mesh = (
         MeshStack3D(terrain)
         .add(0.0)
         .add(terrain.warp_by_scalar("scalar1of1"), 10, method="log_r")
         .generate_mesh()
     )
+    mesh = cast(pv.StructuredGrid, mesh)
+
+    return mesh
 
 
 def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
@@ -183,7 +194,7 @@ def load_well_3d(voronoi: bool = False) -> pv.UnstructuredGrid:
     from .. import MeshExtrude, extract_cells
 
     mesh2d = load_well_2d(voronoi)
-    mesh2d.points[:, 2] = -30.0
+    mesh2d.points[:, 2] = -30.0  # type: ignore
     groups = mesh2d.user_dict["CellGroup"]
     inactive = lambda x: [
         group in {groups["Cement"], groups["Matrix"]} for group in x["CellGroup"]

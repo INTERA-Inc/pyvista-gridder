@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
-from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from typing import Literal, Optional
+
+    from numpy.typing import ArrayLike, NDArray
+    from typing_extensions import Self
 
 
 class MeshItem:
@@ -24,6 +29,13 @@ class MeshItem:
 
     __name__: str = "MeshItem"
     __qualname__: str = "pvgridder.MeshItem"
+
+    group: str
+    method: Literal["constant", "log", "log_r"]
+    priority: int
+    resolution: int
+    thickness: float
+    transition: bool
 
     def __init__(
         self, mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid, **kwargs
@@ -67,14 +79,15 @@ class MeshBase(ABC):
         """Initialize a new mesh."""
         self._default_group = default_group if default_group else "default"
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
-        self._items = items if items else []
+        self._items = list(items) if items else []
 
     def _check_point_array(
         self, points: ArrayLike, axis: Optional[int] = None
-    ) -> ArrayLike:
+    ) -> NDArray:
         """Check the validity of a point array."""
-        points = np.asarray(points)
-        axis = axis if axis is not None else self.axis if hasattr(self, "axis") else 2
+        points = np.asanyarray(points)
+        axis = axis if axis is not None else getattr(self, "axis", 2)
+        axis = cast(int, axis)
 
         if points.ndim == 1:
             points = np.insert(points, axis, 0.0) if points.size == 2 else points
@@ -105,11 +118,11 @@ class MeshBase(ABC):
 
     def _initialize_group_array(
         self,
-        mesh_or_size: pv.StructuredGrid | pv.UnstructuredGrid | int,
+        mesh_or_size: pv.DataSet | int,
         groups: dict,
-        group: Optional[str | dict[str, Callable]] = None,
+        group: Optional[str | dict] = None,
         default_group: Optional[str] = None,
-    ) -> ArrayLike:
+    ) -> NDArray:
         """Initialize group array."""
         if isinstance(mesh_or_size, pv.DataSet):
             mesh = mesh_or_size
@@ -190,7 +203,7 @@ class MeshBase(ABC):
         from .. import remap_categorical_data
 
         if isinstance(mesh, pv.UnstructuredGrid):
-            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)
+            mesh = mesh.clean(tolerance=tolerance, produce_merge_map=False)  # type: ignore
 
         if "vtkGhostType" in mesh.cell_data:
             if (mesh.cell_data["vtkGhostType"] == 0).all():
@@ -371,25 +384,25 @@ class MeshStackBase(MeshBase):
         if isinstance(arg, (pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid)):
             mesh = self._interpolate(arg.points, extrapolation)
 
-        elif hasattr(arg, "__call__"):
+        elif callable(arg):
             mesh = self.mesh.copy()
-            mesh.points[:, self.axis] = arg(*mesh.points.T)
+            mesh.points[:, self.axis] = np.asanyarray(arg(*mesh.points.T))  # type: ignore
 
         else:
+            arg = np.asanyarray(arg)
+
             if np.ndim(arg) == 0:
                 if not self.items:
                     mesh = self.mesh.copy()
-                    mesh.points[:, self.axis] = arg
+                    mesh.points[:, self.axis] = arg  # type: ignore
 
                 else:
                     arg = abs(arg)
                     arg *= 1.0 if self.bottom_up else -1.0
                     mesh = self.items[-1].mesh.copy()
-                    mesh.points[:, self.axis] += arg
+                    mesh.points[:, self.axis] += arg  # type: ignore
 
             else:
-                arg = np.asarray(arg)
-
                 if arg.ndim == 2:
                     if arg.shape[1] != 3:
                         raise ValueError("invalid 2D array")
@@ -457,14 +470,14 @@ class MeshStackBase(MeshBase):
                 shift *= -1.0
 
             if item2.priority < item1.priority:
-                item2.mesh.points[:, self.axis] = np.where(
+                item2.mesh.points[:, self.axis] = np.where(  # type: ignore
                     shift < 0.0,
                     item2.mesh.points[:, self.axis] - shift,
                     item2.mesh.points[:, self.axis],
                 )
 
             else:
-                item1.mesh.points[:, self.axis] = np.where(
+                item1.mesh.points[:, self.axis] = np.where(  # type: ignore
                     shift < 0.0,
                     item1.mesh.points[:, self.axis] + shift,
                     item1.mesh.points[:, self.axis],
@@ -506,7 +519,9 @@ class MeshStackBase(MeshBase):
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        return self._clean(mesh, tolerance)
+        return cast(
+            pv.StructuredGrid | pv.UnstructuredGrid, self._clean(mesh, tolerance)
+        )
 
     @abstractmethod
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
@@ -524,6 +539,7 @@ class MeshStackBase(MeshBase):
         extrapolation: Optional[Literal["nearest"]] = None,
     ) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
         """Interpolate new point coordinates."""
+        points = np.asanyarray(points)
         mesh = self.mesh.copy()
         idx = [
             i for i in range(3) if i != self.axis and np.unique(points[:, i]).size > 1
@@ -562,7 +578,7 @@ class MeshStackBase(MeshBase):
 
             tmp = np.interp(x, xp, points[:, self.axis])
 
-        mesh.points[:, self.axis] = tmp
+        mesh.points[:, self.axis] = tmp  # type: ignore
 
         return mesh
 

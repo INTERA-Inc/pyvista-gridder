@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
 from shapely import Polygon, contains_xy
+
+
+if TYPE_CHECKING:
+    from typing import Literal, Optional
+
+    from numpy.typing import ArrayLike
 
 
 def interactive_lasso_selection(

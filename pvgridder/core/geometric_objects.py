@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
 from pyrequire import require_package
 
 from ._helpers import (
@@ -15,6 +13,13 @@ from ._helpers import (
     generate_volume_from_two_surfaces,
     translate,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Literal, Optional
+
+    from numpy.typing import ArrayLike, NDArray
 
 
 def AnnularSector(
@@ -81,6 +86,7 @@ def AnnularSector(
     )
     mesh = StructuredSurface(line_a, line_b, "xy", r_resolution, r_method)
     mesh = translate(mesh, center)
+    mesh = cast(pv.StructuredGrid, mesh)
 
     return mesh
 
@@ -132,7 +138,7 @@ def Annulus(
         Annulus mesh.
 
     """
-    return AnnularSector(
+    mesh = AnnularSector(
         inner_radius,
         outer_radius,
         0.0,
@@ -143,6 +149,8 @@ def Annulus(
         theta_method,
         center,
     )
+
+    return mesh
 
 
 def Circle(
@@ -177,9 +185,12 @@ def Circle(
         Circle mesh.
 
     """
-    return Sector(radius, 0.0, 360.0, resolution, method, center).clean(
+    mesh = Sector(radius, 0.0, 360.0, resolution, method, center).clean(
         produce_merge_map=False
     )
+    mesh = cast(pv.UnstructuredGrid, mesh)
+
+    return mesh
 
 
 def CurvedLine(
@@ -242,7 +253,7 @@ def CurvedLine(
         vec /= np.linalg.norm(vec)
         points.append(points[-1] + dl * vec)
 
-    mesh = pv.MultipleLines(points)
+    mesh = pv.MultipleLines(np.asanyarray(points))
     mesh.clear_data()
 
     return mesh
@@ -394,7 +405,7 @@ def CylindricalShellSector(
         Cylindrical shell sector mesh.
 
     """
-    center = list(center) if center is not None else [0.0, 0.0, 0.0]
+    center = list(np.asanyarray(center)) if center is not None else [0.0, 0.0, 0.0]
     center[2] -= 0.5 * height
 
     surface_a = AnnularSector(
@@ -412,6 +423,7 @@ def CylindricalShellSector(
         surface_a, surface_b, z_resolution, z_method
     )
     mesh = translate(mesh, center)
+    mesh = cast(pv.StructuredGrid, mesh)
 
     return mesh
 
@@ -460,7 +472,7 @@ def Polygon(
     """
     import gmsh
 
-    def to_points(points: pv.PolyData) -> ArrayLike:
+    def to_points(points: ArrayLike | pv.DataSet) -> NDArray:
         """Convert to points array."""
         from .. import extract_boundary_polygons, split_lines
 
@@ -474,6 +486,7 @@ def Polygon(
             if not edges:
                 raise ValueError("could not extract boundary edges from input dataset")
 
+            edges = cast(list[pv.PolyData], edges)
             lines = edges[0].lines
             points = edges[0].points[lines[1 : lines[0] + 1]]
 
@@ -489,13 +502,15 @@ def Polygon(
         return points
 
     def add_surface(
-        engine: gmsh.model.geo | gmsh.model.occ,
-        points: ArrayLike,
+        engine: type[gmsh.model.geo] | type[gmsh.model.occ],
+        points: pv.DataSet | ArrayLike,
         celltype: str,
-        cellsize: float,
+        cellsize: float | None,
         return_curve_loop: bool = False,
     ) -> int | tuple[int, int]:
         """Add a plane surface."""
+        points = np.asanyarray(points)
+
         # Compute mesh size
         if cellsize is None:
             lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
@@ -582,7 +597,7 @@ def Polygon(
                     )
 
                 else:
-                    dim_tags = shell_tags
+                    dim_tags = cast(list[tuple[int, int]], shell_tags)
 
             else:
                 raise ValueError(f"invalid engine '{engine}'")
@@ -689,11 +704,13 @@ def Quadrilateral(
         if points is None
         else points
     )
+    points = np.asanyarray(points)
 
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
     mesh = StructuredSurface(line_a, line_b, "xy", y_resolution, y_method)
     mesh = translate(mesh, center)
+    mesh = cast(pv.StructuredGrid, mesh)
 
     return mesh
 
@@ -750,8 +767,9 @@ def Rectangle(
         (dx, dy),
         (0.0, dy),
     ]
+    mesh = Quadrilateral(points, x_resolution, y_resolution, x_method, y_method, center)
 
-    return Quadrilateral(points, x_resolution, y_resolution, x_method, y_method, center)
+    return mesh
 
 
 def RectangleSector(
@@ -827,6 +845,7 @@ def RectangleSector(
     mesh_x90 = StructuredSurface(line_x, line_90, "xy", r_resolution, r_method)
     mesh = mesh_y45.cast_to_unstructured_grid() + mesh_x90.cast_to_unstructured_grid()
     mesh = translate(mesh, center)
+    mesh = cast(pv.UnstructuredGrid, mesh)
 
     return mesh
 
@@ -917,6 +936,7 @@ def Sector(
     points = np.vstack((np.zeros(3), points))
     mesh = pv.UnstructuredGrid({pv.CellType.TRIANGLE: cells}, points)
     mesh = translate(mesh, center)
+    mesh = cast(pv.UnstructuredGrid, mesh)
 
     return mesh
 
@@ -986,6 +1006,7 @@ def SectorRectangle(
     mesh_x90 = StructuredSurface(line_90, line_x, "xy", r_resolution, r_method)
     mesh = mesh_y45.cast_to_unstructured_grid() + mesh_x90.cast_to_unstructured_grid()
     mesh = translate(mesh, center)
+    mesh = cast(pv.UnstructuredGrid, mesh)
 
     return mesh
 
@@ -1037,7 +1058,7 @@ def SectorSquare(
         Square mesh with sector removed at the center.
 
     """
-    return SectorRectangle(
+    mesh = SectorRectangle(
         radius=radius,
         dx=dx,
         dy=dx,
@@ -1047,6 +1068,8 @@ def SectorSquare(
         theta_method=theta_method,
         center=center,
     )
+
+    return mesh
 
 
 def Square(
@@ -1081,7 +1104,7 @@ def Square(
         Square mesh.
 
     """
-    return Rectangle(
+    mesh = Rectangle(
         dx=dx,
         dy=dx,
         x_resolution=resolution,
@@ -1090,6 +1113,8 @@ def Square(
         y_method=method,
         center=center,
     )
+
+    return mesh
 
 
 def SquareSector(
@@ -1139,7 +1164,7 @@ def SquareSector(
         Sector mesh with square removed at the center.
 
     """
-    return RectangleSector(
+    mesh = RectangleSector(
         dx=dx,
         dy=dx,
         radius=radius,
@@ -1151,6 +1176,8 @@ def SquareSector(
         r_method=r_method,
         center=center,
     )
+
+    return mesh
 
 
 def StructuredSurface(

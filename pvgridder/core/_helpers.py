@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
+
+
+if TYPE_CHECKING:
+    from typing import Literal, Optional
+
+    from numpy.typing import ArrayLike, NDArray
 
 
 def generate_arc(
@@ -138,7 +143,7 @@ def generate_surface_from_two_lines(
 
     """
 
-    def get_points(line: pv.PolyData | ArrayLike) -> ArrayLike:
+    def get_points(line: pv.PolyData | ArrayLike) -> NDArray:
         """Get line points."""
         if isinstance(line, pv.PolyData):
             # Use the first continuous polyline if available
@@ -228,10 +233,12 @@ def generate_surface_from_two_lines(
 def generate_volume_from_two_surfaces(
     surface_a: pv.ImageData
     | pv.RectilinearGrid
+    | pv.PolyData
     | pv.StructuredGrid
     | pv.UnstructuredGrid,
     surface_b: pv.ImageData
     | pv.RectilinearGrid
+    | pv.PolyData
     | pv.StructuredGrid
     | pv.UnstructuredGrid,
     resolution: Optional[int | ArrayLike] = None,
@@ -242,9 +249,9 @@ def generate_volume_from_two_surfaces(
 
     Parameters
     ----------
-    surface_a : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_a : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Starting surface mesh.
-    surface_b : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_b : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Ending surface mesh.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the extrusion axis or relative position of
@@ -267,11 +274,15 @@ def generate_volume_from_two_surfaces(
     surface_a = (
         surface_a.cast_to_structured_grid()
         if isinstance(surface_a, (pv.ImageData, pv.RectilinearGrid))
+        else surface_a.cast_to_unstructured_grid()
+        if isinstance(surface_a, pv.PolyData)
         else surface_a
     )
     surface_b = (
         surface_b.cast_to_structured_grid()
         if isinstance(surface_b, (pv.ImageData, pv.RectilinearGrid))
+        else surface_b.cast_to_unstructured_grid()
+        if isinstance(surface_b, pv.PolyData)
         else surface_b
     )
 
@@ -428,9 +439,9 @@ def generate_volume_from_two_surfaces(
 
 
 def resolution_to_perc(
-    resolution: int | ArrayLike,
+    resolution: int | ArrayLike | None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
-) -> ArrayLike:
+) -> NDArray:
     """
     Convert resolution to relative position.
 
@@ -451,8 +462,10 @@ def resolution_to_perc(
         Relative position of subdivisions (in percentage).
 
     """
-    if np.ndim(resolution) == 0:
-        resolution = resolution if resolution else 1
+    resolution = resolution if resolution is not None else 1
+
+    if isinstance(resolution, int):
+        resolution = max(1, resolution)
         method = method if method else "constant"
 
         if method == "constant":
@@ -478,7 +491,7 @@ def resolution_to_perc(
 
 def repeat_structured_data(
     shape: ArrayLike, data: ArrayLike, repeats: int, axis: int
-) -> ArrayLike:
+) -> NDArray:
     """
     Repeat structured data array.
 
@@ -499,6 +512,7 @@ def repeat_structured_data(
         Data array with repeated values.
 
     """
+    data = np.asanyarray(data)
     data = data if data.ndim == 2 else data[:, np.newaxis]
 
     return np.column_stack(
