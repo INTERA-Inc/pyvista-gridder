@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 
 import numpy as np
 import pyvista as pv
+from numpy.typing import NDArray
 from pyrequire import require_package
 from scipy.spatial import Voronoi
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from typing import Optional
 
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import ArrayLike
     from typing_extensions import Self
 
 
@@ -89,7 +90,9 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
-            mesh = cast(pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid, mesh)
+            mesh = cast(
+                Union[pv.PolyData, pv.StructuredGrid, pv.UnstructuredGrid], mesh
+            )
 
         mesh.points[:, self.axis] = 0.0  # type: ignore
         item = MeshItem(mesh, group=group, priority=priority)
@@ -313,7 +316,7 @@ class VoronoiMesh2D(MeshBase):
             )
             self.items.append(item)
 
-            item = MeshItem(extract_cells(mesh, constraint), group=None, priority=0)
+            item = MeshItem(extract_cells(mesh, constraint_), group=None, priority=0)
             self.items.append(item)
 
         return self
