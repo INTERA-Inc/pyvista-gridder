@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import itertools
 from collections.abc import Sequence
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
 from scipy.spatial import KDTree
+
+
+if TYPE_CHECKING:
+    from typing import Any, Literal, Optional
+
+    from numpy.typing import ArrayLike, NDArray
 
 
 def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
@@ -29,7 +34,8 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
 
     """
 
-    def decimate(cell: ArrayLike, close: bool) -> ArrayLike:
+    def decimate(cell: ArrayLike, close: bool) -> NDArray:
+        cell = np.asanyarray(cell)
         cell = cell[np.insert(np.diff(cell), 0, 1) != 0]
 
         return cell[:-1] if close and cell[0] == cell[-1] else cell
@@ -87,7 +93,7 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
     if mesh.n_lines:
         raise NotImplementedError()
 
-    return new_mesh.clean()
+    return cast(pv.PolyData, new_mesh.clean())
 
 
 def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
@@ -108,8 +114,9 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
 
     """
 
-    def decimate(points: ArrayLike) -> ArrayLike:
+    def decimate(points: ArrayLike) -> NDArray:
         """Ramer-Douglas-Packer algorithm."""
+        points = np.asanyarray(points)
         u = points[-1] - points[0]
         un = np.linalg.norm(u)
         dist = (
@@ -141,7 +148,46 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
             lines += [len(points_), *(np.arange(len(points_)) + len(points))]
             points += points_.tolist()
 
-    return pv.PolyData(points, lines=lines).clean()
+    return cast(pv.PolyData, pv.PolyData(points, lines=lines).clean())
+
+
+@overload
+def extract_boundary_polygons(
+    mesh: pv.DataSet,
+    fill: Literal[True],
+    with_holes: Literal[True],
+) -> tuple[pv.UnstructuredGrid, ...] | None: ...
+
+
+@overload
+def extract_boundary_polygons(
+    mesh: pv.DataSet,
+    fill: Literal[False],
+    with_holes: Literal[True],
+) -> tuple[list[pv.PolyData], ...] | None: ...
+
+
+@overload
+def extract_boundary_polygons(
+    mesh: pv.DataSet,
+    fill: Literal[True],
+    with_holes: Literal[False],
+) -> tuple[pv.PolyData, ...] | None: ...
+
+
+@overload
+def extract_boundary_polygons(
+    mesh: pv.DataSet,
+    fill: Literal[False],
+    with_holes: Literal[False],
+) -> tuple[pv.PolyData, ...] | None: ...
+
+
+@overload
+def extract_boundary_polygons(
+    mesh: pv.DataSet,
+    fill: Literal[False],
+) -> tuple[pv.PolyData, ...] | None: ...
 
 
 def extract_boundary_polygons(
@@ -149,8 +195,9 @@ def extract_boundary_polygons(
     fill: bool = False,
     with_holes: bool = False,
 ) -> (
-    Sequence[pv.PolyData | pv.UnstructuredGrid]
-    | Sequence[Sequence[pv.PolyData | pv.UnstructuredGrid]]
+    tuple[pv.UnstructuredGrid, ...]
+    | tuple[pv.PolyData, ...]
+    | tuple[list[pv.PolyData], ...]
     | None
 ):
     """
@@ -167,7 +214,7 @@ def extract_boundary_polygons(
 
     Returns
     -------
-    Sequence[pyvista.PolyData | pyvista.UnstructuredGrid] | Sequence[Sequence[pyvista.PolyData | pyvista.UnstructuredGrid]] | None
+    tuple[pyvista.PolyData | pyvista.UnstructuredGrid, ...] | tuple[list[pyvista.PolyData], ...] | None
         Extracted boundary polylines or polygons.
 
     """
@@ -176,7 +223,7 @@ def extract_boundary_polygons(
     from .. import Polygon
 
     if isinstance(mesh, pv.PolyData) and mesh.n_faces_strict == 0 and mesh.n_lines > 0:
-        mesh = edges
+        edges = mesh
 
     else:
         edges = (
@@ -192,11 +239,15 @@ def extract_boundary_polygons(
         )
 
     edges = edges.strip(max_length=mesh.n_points)
+    edges = cast(pv.PolyData, edges)
 
     if edges.n_lines == 0:
         return None
 
-    edges = [edge.merge_points() for edge in split_lines(edges, as_lines=False)]
+    edges = [
+        cast(pv.PolyData, edge.merge_points())
+        for edge in split_lines(edges, as_lines=False)
+    ]
 
     # Identify holes
     if with_holes:
@@ -230,7 +281,7 @@ def extract_boundary_polygons(
             [
                 polygon
                 + pv.PolyData().from_regular_faces(
-                    polygon.points, [np.arange(polygon.n_points)]
+                    polygon.points, np.expand_dims(np.arange(polygon.n_points), axis=0)
                 )
                 for polygon in edges
             ]
@@ -264,9 +315,10 @@ def extract_cell_geometry(
 
     def get_polydata_from_points_cells(
         points: ArrayLike,
-        cells: ArrayLike,
-        key: str,
+        cells: Sequence[NDArray] | Sequence[Sequence[int]] | Sequence[Any],
+        key: Literal["faces", "lines"],
     ) -> pv.PolyData:
+        points = np.asanyarray(points)
         cell_ids, cells_, lines_or_faces = [], [], []
         cell_map = {}
 
@@ -293,7 +345,11 @@ def extract_cell_geometry(
         for i, ids in enumerate(cell_ids):
             tmp[i, : len(ids)] = ids
 
-        poly = pv.PolyData(points, **{key: lines_or_faces})
+        poly = (
+            pv.PolyData(points, lines=lines_or_faces)
+            if key == "lines"
+            else pv.PolyData(points, faces=lines_or_faces)
+        )
         poly.cell_data["vtkOriginalCellIds"] = tmp
 
         return poly
@@ -327,13 +383,14 @@ def extract_cell_geometry(
             )
 
         # Generate edge data
+        pixel_ind = np.array([0, 1, 3, 2])
         cell_edges = [
             np.column_stack((cell[:-1], cell[1:]))
             if celltype in {pv.CellType.LINE, pv.CellType.POLY_LINE}
             else np.column_stack(
                 (
-                    cell[[0, 1, 3, 2]],
-                    np.roll(cell[[0, 1, 3, 2]], -1),
+                    cell[pixel_ind],
+                    np.roll(cell[pixel_ind], -1),
                 )
             )
             if celltype == pv.CellType.PIXEL
@@ -347,9 +404,9 @@ def extract_cell_geometry(
 
         # Handle collapsed cells
         if remove_ghost_cells:
-            lengths = poly.compute_cell_sizes(length=True, area=False, volume=False)[
-                "Length"
-            ]
+            lengths = poly.compute_cell_sizes(
+                length=True, area=False, volume=False
+            ).cell_data["Length"]
             mask = np.abs(lengths) > 0.0
 
             if not mask.all():
@@ -405,9 +462,9 @@ def extract_cell_geometry(
 
         # Handle collapsed cells
         if remove_ghost_cells:
-            areas = poly.compute_cell_sizes(length=False, area=True, volume=False)[
-                "Area"
-            ]
+            areas = poly.compute_cell_sizes(
+                length=False, area=True, volume=False
+            ).cell_data["Area"]
             mask = np.abs(areas) > 0.0
 
             if not mask.all():
@@ -430,7 +487,7 @@ def extract_cells(
     progress_bar: bool = False,
 ) -> pv.UnstructuredGrid:
     """
-    Return a subset of the grid.
+    Get a subset of the grid.
 
     Parameters
     ----------
@@ -452,6 +509,7 @@ def extract_cells(
     ghost cells across different versions of VTK.
 
     """
+    ind = np.asanyarray(ind)
     ghost_cells = (
         mesh.cell_data.pop("vtkGhostType") if "vtkGhostType" in mesh.cell_data else None
     )
@@ -468,7 +526,7 @@ def extract_cells(
         if ghost_cells is not None:
             mesh.cell_data["vtkGhostType"] = ghost_cells
 
-    return cells
+    return cast(pv.UnstructuredGrid, cells)
 
 
 def extract_cells_by_dimension(
@@ -523,7 +581,7 @@ def extract_cells_by_dimension(
 
 
 def fuse_cells(
-    mesh: pv.DataSet, ind: ArrayLike | Sequence[ArrayLike]
+    mesh: pv.DataSet, ind: Sequence[int] | Sequence[Sequence[int]]
 ) -> pv.UnstructuredGrid:
     """
     Fuse connected cells into a single cell.
@@ -532,7 +590,7 @@ def fuse_cells(
     ----------
     mesh : pyvista.DataSet
         Mesh to fuse cells from.
-    ind : ArrayLike | Sequence[ArrayLike]
+    ind : Sequence[int] | Sequence[Sequence[int]]
         Indices or sequence of indices of cells to fuse.
 
     Returns
@@ -544,19 +602,25 @@ def fuse_cells(
     from .. import extract_boundary_polygons, get_cell_connectivity, get_dimension
 
     indices = [ind] if np.ndim(ind[0]) == 0 else ind
+    indices = cast(Sequence[Sequence[int]], indices)
     mesh = mesh.cast_to_unstructured_grid()
     connectivity = list(get_cell_connectivity(mesh))
     celltypes = mesh.celltypes.copy()
     mask = np.ones(mesh.n_cells, dtype=bool)
 
-    for ind in indices:
-        ind = np.asanyarray(ind)
-        ind = np.flatnonzero(ind) if ind.dtype.kind == "b" else ind
-        mesh_ = extract_cells(mesh, ind)
-        mask[ind[1:]] = False
+    for ind_ in indices:
+        ind_ = np.asanyarray(ind_)
+        ind_ = np.flatnonzero(ind_) if ind_.dtype.kind == "b" else ind_
+        mesh_ = extract_cells(mesh, ind_)
+        mask[ind_[1:]] = False
 
         if get_dimension(mesh_) == 2:
             poly = extract_boundary_polygons(mesh_, fill=False)
+
+            if poly is None or len(poly) == 0:
+                raise ValueError(
+                    "could not extract boundary polygons for the selected cells"
+                )
 
             if len(poly) > 1:
                 raise ValueError("could not fuse not fully connected cells together")
@@ -585,10 +649,10 @@ def fuse_cells(
             ]
 
             # Update connectivity and cell type
-            connectivity[ind[0]] = sorted_ids
-            celltypes[ind[0]] = pv.CellType.POLYGON
+            connectivity[ind_[0]] = sorted_ids
+            celltypes[ind_[0]] = pv.CellType.POLYGON
 
-            for cell_id in ind[1:]:
+            for cell_id in ind_[1:]:
                 connectivity[cell_id] = []
                 celltypes[cell_id] = pv.CellType.EMPTY_CELL
 
@@ -606,7 +670,7 @@ def fuse_cells(
     # Tidy up
     fused_mesh = extract_cells(fused_mesh, mask).clean()
 
-    return fused_mesh
+    return cast(pv.UnstructuredGrid, fused_mesh)
 
 
 def intersect_polyline(
@@ -646,7 +710,13 @@ def intersect_polyline(
     """
     from .. import get_cell_centers
 
-    lines = split_lines(line.strip(), as_lines=True)[0]
+    line = cast(pv.PolyData, line.strip())
+    lines = split_lines(line, as_lines=True)[0]
+
+    # Recenter coordinates around zero to prevent accuracy issues
+    center = np.array(mesh.center)
+    mesh = mesh.translate(-center)
+    lines = lines.translate(-center)
 
     line_ids, cell_ids, cell = [], [], None
     mesh_entered, mesh_exited = False, False
@@ -754,7 +824,9 @@ def intersect_polyline(
                 else:
                     raise ValueError("could not find the exit face")
 
-                add_point(intersections.cell_data["IntersectionPoints"][fid], lid, cid)
+                add_point(
+                    intersections.cell_data["IntersectionPoints"][fid], lid, int(cid)
+                )
                 exit_face = intersections.get_cell(fid)
 
                 # Check distance to last point
@@ -784,6 +856,11 @@ def intersect_polyline(
                 cid = [id_ for id_ in cells if id_ != cid][0]
                 cell = extract_cells(mesh, cid)
 
+                # Add last point of the polyline if it is inside the exit cell
+                if lid == lines.n_lines - 1 and cell.find_containing_cell(pointb) > -1:
+                    add_point(pointb, lid, cid)
+                    break
+
         else:
             if ignore_points_after_exit:
                 break
@@ -808,7 +885,7 @@ def intersect_polyline(
 
             polyline.cell_data[k] = v[line_ids]
 
-    return polyline
+    return cast(pv.PolyData, polyline.translate(center))
 
 
 def merge(
@@ -985,7 +1062,7 @@ def merge_lines(
     for k, v in cell_data.items():
         mesh.cell_data[k] = np.concatenate(v) if v[0].ndim == 1 else np.vstack(v)
 
-    return mesh.merge_points()
+    return cast(pv.PolyData, mesh.merge_points())
 
 
 def offset_polygon(
@@ -1009,8 +1086,10 @@ def offset_polygon(
 
     """
     if not isinstance(mesh_or_points, pv.PolyData):
+        mesh_or_points = np.asanyarray(mesh_or_points)
         n_points = len(mesh_or_points)
-        mesh = pv.PolyData(mesh_or_points, faces=[n_points, *np.arange(n_points)])
+        faces = [n_points, *np.arange(n_points)]
+        mesh = pv.PolyData(mesh_or_points, faces=faces)
 
     else:
         mesh = mesh_or_points
@@ -1364,24 +1443,28 @@ def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyDat
     """
     from pyvista.core.cell import _get_irregular_cells
 
-    mesh = mesh.extract_cells_by_type((pv.CellType.LINE, pv.CellType.POLY_LINE))
+    mesh = cast(
+        pv.PolyData,
+        mesh.extract_cells_by_type((pv.CellType.LINE, pv.CellType.POLY_LINE)),
+    )
     lines = []
 
     for i, line_ids in enumerate(_get_irregular_cells(mesh.GetLines())):
+        lines_ = (
+            np.insert(
+                np.column_stack(
+                    (np.arange(line_ids.size - 1), np.arange(1, line_ids.size))
+                ),
+                0,
+                2,
+                axis=-1,
+            ).ravel()
+            if as_lines
+            else [line_ids.size, *np.arange(line_ids.size)]
+        )
         line = pv.PolyData(
             mesh.points[line_ids],
-            lines=(
-                np.insert(
-                    np.column_stack(
-                        (np.arange(line_ids.size - 1), np.arange(1, line_ids.size))
-                    ),
-                    0,
-                    2,
-                    axis=-1,
-                ).ravel()
-                if as_lines
-                else [line_ids.size, *np.arange(line_ids.size)]
-            ),
+            lines=lines_,
         )
 
         for k, v in mesh.point_data.items():

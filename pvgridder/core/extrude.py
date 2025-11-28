@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
-from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
 from ._helpers import (
     generate_volume_from_two_surfaces,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Literal, Optional
+
+    from numpy.typing import ArrayLike
+    from typing_extensions import Self
 
 
 class MeshExtrude(MeshBase):
@@ -130,6 +135,7 @@ class MeshExtrude(MeshBase):
         if angle is not None:
             mesh = mesh.rotate_vector(vector, angle, mesh.center)
 
+        mesh = cast(Union[pv.StructuredGrid, pv.UnstructuredGrid], mesh)
         item = MeshItem(mesh, resolution=resolution, method=method, group=group)
         self.items.append(item)
 
@@ -194,19 +200,21 @@ class MeshExtrude(MeshBase):
         mesh.user_dict["CellGroup"] = groups
         _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        return self._clean(mesh, tolerance)
+        return cast(
+            Union[pv.StructuredGrid, pv.UnstructuredGrid], self._clean(mesh, tolerance)
+        )
 
     @property
     def mesh(self) -> pv.StructuredGrid | pv.UnstructuredGrid:
-        """Return base mesh."""
+        """Get base mesh."""
         return self._mesh
 
     @property
     def scale(self) -> float | None:
-        """Return default scaling factor."""
+        """Get default scaling factor."""
         return self._scale
 
     @property
     def angle(self) -> float | None:
-        """Return default rotation angle."""
+        """Get default rotation angle."""
         return self._angle

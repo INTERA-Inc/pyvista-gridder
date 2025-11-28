@@ -1,18 +1,23 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
-from typing_extensions import Self
 
 from ._base import MeshStackBase
 from ._helpers import (
     generate_surface_from_two_lines,
     generate_volume_from_two_surfaces,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from typing import Optional
+
+    from numpy.typing import ArrayLike, NDArray
+    from typing_extensions import Self
 
 
 class MeshStack2D(MeshStackBase):
@@ -58,7 +63,9 @@ class MeshStack2D(MeshStackBase):
             points[:, (axis + 1) % 3] = mesh
             lines = pv.lines_from_points(points)
 
-        elif not isinstance(mesh, pv.PolyData) and not mesh.n_lines:
+        elif not isinstance(mesh, pv.PolyData) or (
+            isinstance(mesh, pv.PolyData) and not mesh.n_lines
+        ):
             raise ValueError("invalid mesh, input mesh should be a line or a polyline")
 
         else:
@@ -165,8 +172,8 @@ class MeshStack3D(MeshStackBase):
 
     def add_plane(
         self,
-        angles: Sequence[float, float, float],
-        point: Sequence[float, float, float],
+        angles: ArrayLike,
+        point: ArrayLike,
         *args,
         **kwargs,
     ) -> Self:
@@ -175,9 +182,9 @@ class MeshStack3D(MeshStackBase):
 
         Parameters
         ----------
-        angles : Sequence[float, float, float]
+        angles : ArrayLike
             Rotation angles in degrees around the X, Y, and Z axes.
-        point : Sequence[float, float, float]
+        point : ArrayLike
             Coordinates of one point on the plane.
         *args, **kwargs
             Additional arguments. See ``pvgridder.MeshStack3D.add`` for details.
@@ -190,14 +197,14 @@ class MeshStack3D(MeshStackBase):
         """
         from scipy.spatial.transform import Rotation
 
-        angles = np.array(angles)
+        angles = np.asanyarray(angles)
         point = np.asanyarray(point)
 
         angles[self.axis] = 0.0
         rot = Rotation.from_rotvec(angles, degrees=True)
         idx = np.delete(np.arange(3), self.axis)
 
-        def func(x: ArrayLike, y: ArrayLike, z: ArrayLike) -> ArrayLike:
+        def func(x: ArrayLike, y: ArrayLike, z: ArrayLike) -> NDArray:
             points = np.column_stack((x, y, z))
             points[:, idx] -= point[idx]
             points[:, self.axis] = 0.0

@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
 from pyrequire import require_package
 from scipy.spatial import Voronoi
-from typing_extensions import Self
 
 from ._base import MeshBase, MeshItem
 from ._helpers import generate_surface_from_two_lines, resolution_to_perc
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+    from typing import Optional
+
+    from numpy.typing import ArrayLike, NDArray
+    from typing_extensions import Self
 
 
 @require_package("shapely>=2.0")
@@ -21,7 +26,7 @@ class VoronoiMesh2D(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : pyvista.DataSet
         Background mesh.
     axis : int, default 2
         Background mesh axis to discard.
@@ -39,11 +44,7 @@ class VoronoiMesh2D(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData
-        | pv.PolyData
-        | pv.RectilinearGrid
-        | pv.StructuredGrid
-        | pv.UnstructuredGrid,
+        mesh: pv.DataSet,
         axis: int = 2,
         preference: Literal["cell", "point"] = "cell",
         default_group: Optional[str] = None,
@@ -55,7 +56,7 @@ class VoronoiMesh2D(MeshBase):
         self._axis = axis
         self._preference = preference
         self._fuse_cells = []
-        self.mesh.points[:, self.axis] = 0.0
+        self.mesh.points[:, self.axis] = 0.0  # type: ignore
 
     def add(
         self,
@@ -88,8 +89,9 @@ class VoronoiMesh2D(MeshBase):
 
         else:
             mesh = mesh_or_points.copy()
+            mesh = cast(pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid, mesh)
 
-        mesh.points[:, self.axis] = 0.0
+        mesh.points[:, self.axis] = 0.0  # type: ignore
         item = MeshItem(mesh, group=group, priority=priority)
         self.items.append(item)
 
@@ -167,7 +169,7 @@ class VoronoiMesh2D(MeshBase):
             raise ValueError("invalid constraint radius")
 
         if plain:
-            center = np.zeros(3) if center is None else center
+            center = np.zeros(3) if center is None else np.asanyarray(center)
             center = np.insert(center, self.axis, 0.0) if len(center) == 2 else center
             self.fuse_cells.append(
                 lambda x: np.linalg.norm(x - center, axis=1) < radius
@@ -225,7 +227,7 @@ class VoronoiMesh2D(MeshBase):
         from .. import extract_cells, split_lines
 
         if not isinstance(mesh_or_points, pv.PolyData):
-            mesh = pv.MultipleLines(mesh_or_points)
+            mesh = pv.MultipleLines(np.asanyarray(mesh_or_points))
 
         else:
             mesh = mesh_or_points.copy()
@@ -299,13 +301,13 @@ class VoronoiMesh2D(MeshBase):
 
             # Identify constraint cells
             shape = [n - 1 for n in mesh.dimensions if n != 1]
-            constraint = np.ones(shape, dtype=bool)
-            constraint[constraint_start : shape[0] - constraint_end, 1:-1] = False
-            constraint = constraint.ravel(order="F")
+            constraint_ = np.ones(shape, dtype=bool)
+            constraint_[constraint_start : shape[0] - constraint_end, 1:-1] = False
+            constraint_ = constraint_.ravel(order="F")
 
             # Add to items
             item = MeshItem(
-                extract_cells(mesh, ~constraint),
+                extract_cells(mesh, ~constraint_),
                 group=group,
                 priority=priority if priority else 0,
             )
@@ -372,6 +374,7 @@ class VoronoiMesh2D(MeshBase):
 
             # Remove out of bound points from item mesh
             mask = self.mesh.find_containing_cell(get_cell_centers(mesh_a)) != -1
+            mask = cast(NDArray, mask)
 
             if mask.any():
                 mesh_a = extract_cells(mesh_a, mask)
@@ -428,10 +431,19 @@ class VoronoiMesh2D(MeshBase):
                 voronoi_points = voronoi_points[~mask]
 
         # Generate boundary polygon
-        boundary = extract_boundary_polygons(self.mesh, with_holes=True)[0]
+        boundary_polygons = extract_boundary_polygons(
+            self.mesh, fill=False, with_holes=True
+        )
+
+        if boundary_polygons is None or len(boundary_polygons) == 0:
+            raise ValueError(
+                "could not extract boundary polygons for the background mesh"
+            )
+
+        boundary_polygon = boundary_polygons[0]
         boundary = [
             np.delete(decimate_rdp(polygon).points, self.axis, axis=1)
-            for polygon in boundary
+            for polygon in boundary_polygon
         ]
         boundary = Polygon(boundary[0], boundary[1:])
 
@@ -472,13 +484,13 @@ class VoronoiMesh2D(MeshBase):
             indices = [func(points) for func in self.fuse_cells]
             mesh = fuse_cells(mesh, indices)
 
-        return self._clean(mesh, tolerance)
+        return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
 
     def _generate_voronoi_tesselation(
         self,
         points: ArrayLike,
         infinity: Optional[float] = None,
-    ) -> tuple[list[ArrayLike], ArrayLike, ArrayLike]:
+    ) -> tuple[list[list[NDArray]], NDArray]:
         """
         Generate Voronoi tessalation.
 
@@ -539,21 +551,21 @@ class VoronoiMesh2D(MeshBase):
         return new_regions, np.array(new_vertices)
 
     @property
-    def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
-        """Return background mesh."""
+    def mesh(self) -> pv.DataSet:
+        """Get background mesh."""
         return self._mesh
 
     @property
     def axis(self) -> int:
-        """Return discarded axis."""
+        """Get discarded axis."""
         return self._axis
 
     @property
     def preference(self) -> Literal["cell", "point"]:
-        """Return preference."""
-        return self._preference
+        """Get preference."""
+        return cast(Literal["cell", "point"], self._preference)
 
     @property
-    def fuse_cells(self) -> Sequence[Callable]:
-        """Return list of cells to fuse."""
+    def fuse_cells(self) -> list[Callable]:
+        """Get list of cells to fuse."""
         return self._fuse_cells

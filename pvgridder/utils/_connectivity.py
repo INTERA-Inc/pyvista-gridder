@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import ArrayLike
+
+
+if TYPE_CHECKING:
+    from typing import Optional
+
+    from numpy.typing import ArrayLike, NDArray
 
 
 def get_neighborhood(
     mesh: pv.DataSet,
     remove_ghost_cells: bool = True,
-) -> Sequence[ArrayLike]:
+) -> tuple[NDArray, ...]:
     """
     Get mesh neighborhood.
 
@@ -24,7 +28,7 @@ def get_neighborhood(
 
     Returns
     -------
-    Sequence[ArrayLike]
+    tuple[NDArray, ...]
         List of neighbor cell IDs for all cells.
 
     """
@@ -40,7 +44,7 @@ def get_neighborhood(
         neighbors[i1].append(i2)
         neighbors[i2].append(i1)
 
-    return neighbors
+    return tuple([np.asanyarray(neighbor) for neighbor in neighbors])
 
 
 def get_connectivity(
@@ -68,7 +72,9 @@ def get_connectivity(
     """
     from .. import extract_cell_geometry, get_cell_centers
 
-    cell_centers = get_cell_centers(mesh) if cell_centers is None else cell_centers
+    cell_centers = (
+        get_cell_centers(mesh) if cell_centers is None else np.asanyarray(cell_centers)
+    )
 
     if np.shape(cell_centers) != (mesh.n_cells, 3):
         raise ValueError(
