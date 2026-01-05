@@ -7,9 +7,9 @@ import pyvista as pv
 
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional
+    from typing import Literal, Optional  # pragma: no cover
 
-    from numpy.typing import NDArray
+    from numpy.typing import NDArray  # pragma: no cover
 
 
 @overload

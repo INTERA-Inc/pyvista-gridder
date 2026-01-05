@@ -13,11 +13,11 @@ from ._helpers import generate_surface_from_two_lines, resolution_to_perc
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-    from typing import Optional
+    from collections.abc import Callable, Sequence  # pragma: no cover
+    from typing import Optional  # pragma: no cover
 
-    from numpy.typing import ArrayLike
-    from typing_extensions import Self
+    from numpy.typing import ArrayLike  # pragma: no cover
+    from typing_extensions import Self  # pragma: no cover
 
 
 @require_package("shapely>=2.0")

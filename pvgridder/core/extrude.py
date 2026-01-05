@@ -12,11 +12,11 @@ from ._helpers import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-    from typing import Literal, Optional
+    from collections.abc import Sequence  # pragma: no cover
+    from typing import Literal, Optional  # pragma: no cover
 
-    from numpy.typing import ArrayLike
-    from typing_extensions import Self
+    from numpy.typing import ArrayLike  # pragma: no cover
+    from typing_extensions import Self  # pragma: no cover
 
 
 class MeshExtrude(MeshBase):

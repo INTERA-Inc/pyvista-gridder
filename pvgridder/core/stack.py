@@ -13,11 +13,11 @@ from ._helpers import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-    from typing import Optional
+    from collections.abc import Sequence  # pragma: no cover
+    from typing import Optional  # pragma: no cover
 
-    from numpy.typing import ArrayLike, NDArray
-    from typing_extensions import Self
+    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
+    from typing_extensions import Self  # pragma: no cover
 
 
 class MeshStack2D(MeshStackBase):

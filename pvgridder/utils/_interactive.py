@@ -8,9 +8,9 @@ from shapely import Polygon, contains_xy
 
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Optional
+    from typing import Any, Literal, Optional  # pragma: no cover
 
-    from numpy.typing import NDArray
+    from numpy.typing import NDArray  # pragma: no cover
 
 
 @overload
