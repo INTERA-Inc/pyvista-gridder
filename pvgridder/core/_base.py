@@ -9,11 +9,11 @@ from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-    from typing import Literal, Optional
+    from collections.abc import Callable, Sequence  # pragma: no cover
+    from typing import Literal, Optional  # pragma: no cover
 
-    from numpy.typing import ArrayLike, NDArray
-    from typing_extensions import Self
+    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
+    from typing_extensions import Self  # pragma: no cover
 
 
 class MeshItem:

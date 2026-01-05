@@ -10,9 +10,9 @@ from scipy.spatial import KDTree
 
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Optional
+    from typing import Any, Literal, Optional  # pragma: no cover
 
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
 
 
 def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
