@@ -416,7 +416,9 @@ class VoronoiMesh2D(MeshBase):
 
         points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
-        regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity, qhull_options)
+        regions, vertices = self._generate_voronoi_tesselation(
+            voronoi_points, infinity, qhull_options
+        )
 
         # Average points within minimum distance
         if min_length > 0.0:
@@ -504,12 +506,12 @@ class VoronoiMesh2D(MeshBase):
             mesh = fuse_cells(mesh, indices)
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
-    
+
     @staticmethod
     def _compute_signed_area(points: NDArray) -> float:
         """Compute signed area of a polygon given its vertices."""
         x, y = points.T
-        
+
         return 0.5 * np.sum(x[:-1] * y[1:] - x[1:] * y[:-1])
 
     def _generate_voronoi_tesselation(
