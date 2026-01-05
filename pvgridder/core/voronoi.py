@@ -327,6 +327,7 @@ class VoronoiMesh2D(MeshBase):
         min_length: float = 1.0e-4,
         tolerance: float = 1.0e-8,
         qhull_options: Optional[str] = None,
+        orientation: Literal["CCW", "CW"] = "CCW",
     ) -> pv.UnstructuredGrid:
         """
         Generate 2D Voronoi mesh.
@@ -342,6 +343,8 @@ class VoronoiMesh2D(MeshBase):
         qhull_options: str, optional
             Additional options to pass to Qhull performing the Voronoi tessellation.
             See <http://www.qhull.org/html/qh-optq.htm#qhull> for more details.
+        orientation : {'CCW', 'CW'}, default 'CCW'
+            Orientation of the Voronoi polygons.
 
         Returns
         -------
@@ -465,10 +468,19 @@ class VoronoiMesh2D(MeshBase):
                 raise ValueError(f"region {i} is not a valid polygon")
 
             polygon = boundary.intersection(polygon)
-            points_ = list(get_coordinates(polygon)[:-1])
+            points_ = get_coordinates(polygon)[:-1]
             cells += [len(points_), *(np.arange(len(points_)) + n_points)]
 
-            points += points_
+            # Ensure correct orientation
+            signed_area = self._compute_signed_area(points_[:3])
+
+            if orientation == "CCW" and signed_area < 0.0:
+                points_ = points_[::-1]
+
+            elif orientation == "CW" and signed_area > 0.0:
+                points_ = points_[::-1]
+
+            points += list(points_)
             n_points += len(points_)
 
         points = self._check_point_array(points)
@@ -492,6 +504,13 @@ class VoronoiMesh2D(MeshBase):
             mesh = fuse_cells(mesh, indices)
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
+    
+    @staticmethod
+    def _compute_signed_area(points: NDArray) -> float:
+        """Compute signed area of a polygon given its vertices."""
+        x, y = points.T
+        
+        return 0.5 * np.sum(x[:-1] * y[1:] - x[1:] * y[:-1])
 
     def _generate_voronoi_tesselation(
         self,
