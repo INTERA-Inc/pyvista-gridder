@@ -340,7 +340,7 @@ class VoronoiMesh2D(MeshBase):
             Set the minimum length of polygons' edges.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
-        qhull_options: str, optional
+        qhull_options : str, optional
             Additional options to pass to Qhull performing the Voronoi tessellation.
             See <http://www.qhull.org/html/qh-optq.htm#qhull> for more details.
         orientation : {'CCW', 'CW'}, default 'CCW'
@@ -476,10 +476,10 @@ class VoronoiMesh2D(MeshBase):
             # Ensure correct orientation
             signed_area = self._compute_signed_area(points_[:3])
 
-            if orientation == "CCW" and signed_area < 0.0:
-                points_ = points_[::-1]
-
-            elif orientation == "CW" and signed_area > 0.0:
+            if (
+                (orientation == "CCW" and signed_area < 0.0)
+                or (orientation == "CW" and signed_area > 0.0)
+            ):
                 points_ = points_[::-1]
 
             points += list(points_)
