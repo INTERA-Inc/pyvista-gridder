@@ -326,6 +326,7 @@ class VoronoiMesh2D(MeshBase):
         infinity: Optional[float] = None,
         min_length: float = 1.0e-4,
         tolerance: float = 1.0e-8,
+        qhull_options: str = "Qz Qc Qx",
     ) -> pv.UnstructuredGrid:
         """
         Generate 2D Voronoi mesh.
@@ -338,6 +339,10 @@ class VoronoiMesh2D(MeshBase):
             Set the minimum length of polygons' edges.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
+        qhull_options: str
+            Options for Qhull which performs the Voronoi diagram.
+            See `http://www.qhull.org/html/qh-optq.htm#qhull` for more details.
+            The default is "Qz Qc Qx".
 
         Returns
         -------
@@ -493,6 +498,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         points: ArrayLike,
         infinity: Optional[float] = None,
+        qhull_options: str = "Qz Qc Qx",
     ) -> tuple[list[list[NDArray]], NDArray]:
         """
         Generate Voronoi tessalation.
@@ -502,7 +508,7 @@ class VoronoiMesh2D(MeshBase):
         See <https://stackoverflow.com/a/43023639>.
 
         """
-        voronoi = Voronoi(points, qhull_options="Qbb Qc")
+        voronoi = Voronoi(points, qhull_options=qhull_options)
 
         # Construct a map containing all ridges for a given point
         ridges = {}
