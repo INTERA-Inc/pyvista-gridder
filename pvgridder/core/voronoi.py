@@ -326,7 +326,7 @@ class VoronoiMesh2D(MeshBase):
         infinity: Optional[float] = None,
         min_length: float = 1.0e-4,
         tolerance: float = 1.0e-8,
-        qhull_options: str = "Qz Qc Qx",
+        qhull_options: Optional[str] = None,
     ) -> pv.UnstructuredGrid:
         """
         Generate 2D Voronoi mesh.
@@ -339,10 +339,9 @@ class VoronoiMesh2D(MeshBase):
             Set the minimum length of polygons' edges.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
-        qhull_options: str
-            Options for Qhull which performs the Voronoi diagram.
-            See `http://www.qhull.org/html/qh-optq.htm#qhull` for more details.
-            The default is "Qz Qc Qx".
+        qhull_options: str, optional
+            Additional options to pass to Qhull performing the Voronoi tessellation.
+            See <http://www.qhull.org/html/qh-optq.htm#qhull> for more details.
 
         Returns
         -------
@@ -414,7 +413,7 @@ class VoronoiMesh2D(MeshBase):
 
         points = np.delete(points, self.axis, axis=1)
         voronoi_points = points[active]
-        regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity)
+        regions, vertices = self._generate_voronoi_tesselation(voronoi_points, infinity, qhull_options)
 
         # Average points within minimum distance
         if min_length > 0.0:
@@ -498,7 +497,7 @@ class VoronoiMesh2D(MeshBase):
         self,
         points: ArrayLike,
         infinity: Optional[float] = None,
-        qhull_options: str = "Qz Qc Qx",
+        qhull_options: Optional[str] = None,
     ) -> tuple[list[list[NDArray]], NDArray]:
         """
         Generate Voronoi tessalation.
