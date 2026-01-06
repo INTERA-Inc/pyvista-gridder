@@ -243,6 +243,7 @@ def generate_volume_from_two_surfaces(
     | pv.UnstructuredGrid,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
+    invert_polyhedron_faces: bool = True,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
     """
     Generate a volume from two surface meshes.
@@ -262,6 +263,10 @@ def generate_volume_from_two_surfaces(
          - if 'constant', subdivisions are equally spaced.
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
+    invert_polyhedron_faces : bool, default True
+        If True, ensure that normal vectors of polyhedron faces point outwards by
+        inverting the faces of polyhedral cells if necessary.
 
     Returns
     -------
@@ -372,13 +377,15 @@ def generate_volume_from_two_surfaces(
         cells = [[] for _ in range(n)]
         inactive = [[] for _ in range(n)]
 
-        for i, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes)):
+        for ic, (i1, i2, celltype) in enumerate(
+            zip(offset[:-1], offset[1:], celltypes)
+        ):
             cell = cell_connectivity[i1:i2]
 
             # Handle pixel/voxel (convert to quad/hexahedron)
             if celltype == pv.CellType.VOXEL:
                 cell = cell[[0, 1, 3, 2]]
-                celltypes[i] = pv.CellType.HEXAHEDRON
+                celltypes[ic] = pv.CellType.HEXAHEDRON
 
             faces = [cell, cell + n_points]
 
@@ -386,13 +393,26 @@ def generate_volume_from_two_surfaces(
             is_collapsed = np.allclose(*points[faces])
 
             if celltype == pv.CellType.POLYHEDRON:
+                if invert_polyhedron_faces:
+                    # Polyhedron faces must be ordered such that normal vectors point outwards
+                    # Determine whether base face needs to be reversed
+                    p0, p1, p2 = points[faces[0][:3]]
+                    p3 = points[faces[1][0]]
+
+                    if np.cross(p1 - p0, p2 - p0) @ (p3 - p0) >= 0.0:
+                        faces[0][:] = faces[0][::-1]
+                        faces[1][:] = faces[1][::-1]
+
                 faces += [
-                    np.array([p0, p1, p2, p3])
+                    np.array([p3, p2, p1, p0])
                     for p0, p1, p2, p3 in zip(
                         faces[0], np.roll(faces[0], -1), np.roll(faces[1], -1), faces[1]
                     )
                 ]
                 n_faces = len(faces)
+
+                if invert_polyhedron_faces:
+                    faces[1][:] = faces[1][::-1]
 
                 for i, cells_ in enumerate(cells):
                     cell = np.concatenate(

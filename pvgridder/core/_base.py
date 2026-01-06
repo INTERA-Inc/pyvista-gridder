@@ -235,9 +235,7 @@ class MeshBase(ABC):
         return groups.setdefault(group, len(groups))
 
     @abstractmethod
-    def generate_mesh(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
-        """Generate mesh."""
-        pass
+    def generate_mesh(self) -> None: ...
 
     @property
     def default_group(self) -> str:
@@ -430,24 +428,15 @@ class MeshStackBase(MeshBase):
 
         return self
 
-    def generate_mesh(
+    @abstractmethod
+    def generate_mesh(self) -> None: ...
+
+    def _generate_mesh(
         self,
+        extrude: Callable,
         tolerance: float = 1.0e-8,
     ) -> pv.StructuredGrid | pv.UnstructuredGrid:
-        """
-        Generate mesh by stacking all items.
-
-        Parameters
-        ----------
-        tolerance : scalar, default 1.0e-8
-            Set merging tolerance of duplicate points (for unstructured grids).
-
-        Returns
-        -------
-        pyvista.StructuredGrid | pyvista.UnstructuredGrid
-            Stacked mesh.
-
-        """
+        """Generate mesh by stacking all items."""
         from .. import merge
 
         if len(self.items) <= 1:
@@ -499,9 +488,7 @@ class MeshStackBase(MeshBase):
                 mesh_b.cell_data["ColumnId"] = np.full(mesh_b.n_cells, -1)
 
             else:
-                mesh_b = self._extrude(
-                    mesh_a, item2.mesh, item2.resolution, item2.method
-                )
+                mesh_b = extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
                 nsub, repeats = mesh_b.n_cells // mesh_a.n_cells, mesh_a.n_cells
                 mesh_b.cell_data["ColumnId"] = np.tile(
                     np.arange(mesh_a.n_cells), nsub
@@ -522,11 +509,6 @@ class MeshStackBase(MeshBase):
         return cast(
             Union[pv.StructuredGrid, pv.UnstructuredGrid], self._clean(mesh, tolerance)
         )
-
-    @abstractmethod
-    def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
-        """Extrude a line or surface mesh."""
-        pass
 
     @abstractmethod
     def _transition(self, *args, **kwargs) -> pv.UnstructuredGrid:
