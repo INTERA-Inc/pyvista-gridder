@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyvista as pv
@@ -73,14 +73,22 @@ class MeshStack2D(MeshStackBase):
 
         super().__init__(lines, axis, bottom_up, default_group, ignore_groups)
 
-    def _extrude(self, *args) -> pv.StructuredGrid:
-        """Extrude a line."""
-        line_a, line_b, resolution, method = args
-        plane = "yx" if self.axis == 0 else "xy" if self.axis == 1 else "xz"
+    def generate_mesh(self) -> pv.StructuredGrid:
+        """
+        Generate mesh by stacking all items.
 
-        return generate_surface_from_two_lines(
-            line_a, line_b, plane, resolution, method
+        Returns
+        -------
+        pyvista.StructuredGrid
+            Stacked mesh.
+
+        """
+        plane = "yx" if self.axis == 0 else "xy" if self.axis == 1 else "xz"
+        extrude = lambda mesh_a, mesh_b, resolution, method: generate_surface_from_two_lines(
+            mesh_a, mesh_b, plane, resolution, method
         )
+
+        return cast(pv.StructuredGrid, self._generate_mesh(extrude))
 
     def _transition(self, *args) -> pv.UnstructuredGrid:
         """Generate a transition mesh."""
@@ -212,6 +220,38 @@ class MeshStack3D(MeshStackBase):
             return rot.apply(points, inverse=True)[:, self.axis] + point[self.axis]
 
         return self.add(func, *args, **kwargs)
+    
+    def generate_mesh(
+        self,
+        tolerance: float = 1.0e-8,
+        invert_polyhedron_faces: bool = True,
+    ) -> pv.StructuredGrid | pv.UnstructuredGrid:
+        """
+        Generate mesh by stacking all items.
+
+        Parameters
+        ----------
+        tolerance : scalar, default 1.0e-8
+            Set merging tolerance of duplicate points (for unstructured grids).
+        invert_polyhedron_faces : bool, default True
+            If True, ensure that normal vectors of polyhedron faces point outwards by
+            inverting the faces of polyhedral cells if necessary.
+
+        Returns
+        -------
+        pyvista.StructuredGrid | pyvista.UnstructuredGrid
+            Stacked mesh.
+
+        """
+        extrude = lambda mesh_a, mesh_b, resolution, method: generate_volume_from_two_surfaces(
+            mesh_a,
+            mesh_b,
+            resolution,
+            method,
+            invert_polyhedron_faces=invert_polyhedron_faces,
+        )
+
+        return self._generate_mesh(extrude, tolerance)
 
     def _extrude(self, *args, **kwargs) -> pv.StructuredGrid | pv.UnstructuredGrid:
         """Extrude a line."""
