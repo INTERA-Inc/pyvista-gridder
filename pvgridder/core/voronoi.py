@@ -476,9 +476,8 @@ class VoronoiMesh2D(MeshBase):
             # Ensure correct orientation
             signed_area = self._compute_signed_area(points_[:3])
 
-            if (
-                (orientation == "CCW" and signed_area < 0.0)
-                or (orientation == "CW" and signed_area > 0.0)
+            if (orientation == "CCW" and signed_area < 0.0) or (
+                orientation == "CW" and signed_area > 0.0
             ):
                 points_ = points_[::-1]
 

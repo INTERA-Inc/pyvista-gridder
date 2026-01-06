@@ -377,7 +377,9 @@ def generate_volume_from_two_surfaces(
         cells = [[] for _ in range(n)]
         inactive = [[] for _ in range(n)]
 
-        for ic, (i1, i2, celltype) in enumerate(zip(offset[:-1], offset[1:], celltypes)):
+        for ic, (i1, i2, celltype) in enumerate(
+            zip(offset[:-1], offset[1:], celltypes)
+        ):
             cell = cell_connectivity[i1:i2]
 
             # Handle pixel/voxel (convert to quad/hexahedron)

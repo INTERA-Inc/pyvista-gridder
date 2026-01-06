@@ -84,8 +84,10 @@ class MeshStack2D(MeshStackBase):
 
         """
         plane = "yx" if self.axis == 0 else "xy" if self.axis == 1 else "xz"
-        extrude = lambda mesh_a, mesh_b, resolution, method: generate_surface_from_two_lines(
-            mesh_a, mesh_b, plane, resolution, method
+        extrude = (
+            lambda mesh_a, mesh_b, resolution, method: generate_surface_from_two_lines(
+                mesh_a, mesh_b, plane, resolution, method
+            )
         )
 
         return cast(pv.StructuredGrid, self._generate_mesh(extrude))
@@ -220,7 +222,7 @@ class MeshStack3D(MeshStackBase):
             return rot.apply(points, inverse=True)[:, self.axis] + point[self.axis]
 
         return self.add(func, *args, **kwargs)
-    
+
     def generate_mesh(
         self,
         tolerance: float = 1.0e-8,
@@ -243,12 +245,17 @@ class MeshStack3D(MeshStackBase):
             Stacked mesh.
 
         """
-        extrude = lambda mesh_a, mesh_b, resolution, method: generate_volume_from_two_surfaces(
-            mesh_a,
+        extrude = (
+            lambda mesh_a,
             mesh_b,
             resolution,
-            method,
-            invert_polyhedron_faces=invert_polyhedron_faces,
+            method: generate_volume_from_two_surfaces(
+                mesh_a,
+                mesh_b,
+                resolution,
+                method,
+                invert_polyhedron_faces=invert_polyhedron_faces,
+            )
         )
 
         return self._generate_mesh(extrude, tolerance)

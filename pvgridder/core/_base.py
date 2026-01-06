@@ -427,7 +427,7 @@ class MeshStackBase(MeshBase):
         self._transition_flag = False
 
         return self
-    
+
     @abstractmethod
     def generate_mesh(self) -> None: ...
 
@@ -488,9 +488,7 @@ class MeshStackBase(MeshBase):
                 mesh_b.cell_data["ColumnId"] = np.full(mesh_b.n_cells, -1)
 
             else:
-                mesh_b = extrude(
-                    mesh_a, item2.mesh, item2.resolution, item2.method
-                )
+                mesh_b = extrude(mesh_a, item2.mesh, item2.resolution, item2.method)
                 nsub, repeats = mesh_b.n_cells // mesh_a.n_cells, mesh_a.n_cells
                 mesh_b.cell_data["ColumnId"] = np.tile(
                     np.arange(mesh_a.n_cells), nsub
