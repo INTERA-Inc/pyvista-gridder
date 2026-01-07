@@ -4,13 +4,14 @@ from typing import TYPE_CHECKING, overload
 
 import numpy as np
 import pyvista as pv
-from shapely import Polygon, contains_xy
+from pyrequire import require_package
 
 
 if TYPE_CHECKING:
     from typing import Any, Literal, Optional  # pragma: no cover
 
     from numpy.typing import NDArray  # pragma: no cover
+    from shapely import Polygon  # pragma: no cover
 
 
 @overload
@@ -42,6 +43,7 @@ def interactive_lasso_selection(
 ) -> NDArray: ...
 
 
+@require_package("shapely")
 def interactive_lasso_selection(
     mesh: pv.DataSet,
     plotter: Optional[pv.Plotter] = None,
@@ -76,6 +78,8 @@ def interactive_lasso_selection(
         Polygon used for selection if *return_polygon* is True.
 
     """
+    from shapely import Polygon, contains_xy
+
     from .. import get_cell_centers
 
     kwargs_: dict[str, Any] = {
