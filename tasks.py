@@ -3,7 +3,7 @@ import os
 import shutil
 import tarfile
 
-from invoke import task
+from invoke.tasks import task
 
 
 @task
@@ -49,7 +49,7 @@ def clean(c, bytecode=False):
 @task
 def ruff(c):
     c.run("ruff check --fix pvgridder tests")
-    c.run("ruff format --target-version py38 --line-length 88 pvgridder tests")
+    c.run("ruff format --target-version py39 --line-length 88 pvgridder tests")
 
 
 @task
