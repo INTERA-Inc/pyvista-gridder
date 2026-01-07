@@ -16,6 +16,7 @@ mesh = (
 )
 
 p = pv.Plotter(off_screen=True)
+p.theme.font.color = "#808080"
 p.add_mesh(
     mesh,
     scalars=pvg.get_cell_group(mesh),
@@ -44,6 +45,7 @@ mesh = (
 )
 
 p = pv.Plotter(off_screen=True)
+p.theme.font.color = "#808080"
 p.add_mesh(
     mesh,
     scalars=pvg.get_cell_group(mesh),
@@ -74,6 +76,7 @@ mesh = (
 )
 
 p = pv.Plotter(off_screen=True)
+p.theme.font.color = "#808080"
 p.add_mesh(
     mesh,
     scalars=pvg.get_cell_group(mesh),
