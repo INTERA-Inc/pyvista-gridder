@@ -784,7 +784,7 @@ def intersect_polyline(
                             add_point(
                                 intersections.cell_data["IntersectionPoints"][0],
                                 lid,
-                                -1,
+                                int(cid) if len(cell_ids) == 0 else -1,  # cid if first point in mesh
                             )
 
                             if count > 1:
