@@ -9,6 +9,7 @@ from ._misc import (
     extract_cell_geometry,
     extract_cells,
     extract_cells_by_dimension,
+    extract_layer,
     fuse_cells,
     intersect_polyline,
     merge,

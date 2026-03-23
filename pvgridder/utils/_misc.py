@@ -580,6 +580,87 @@ def extract_cells_by_dimension(
     return mesh
 
 
+def extract_layer(
+    mesh: pv.StructuredGrid |pv.UnstructuredGrid,
+    layer_id: int,
+    flatten: bool = True,
+) -> pv.UnstructuredGrid:
+    """
+    Extract a layer from a mesh generated with `pvgridder.MeshStack3D()` given its ID.
+
+    Parameters
+    ----------
+    mesh : pyvista.UnstructuredGrid
+        Mesh to extract a layer from.
+    layer_id : int
+        Layer ID to extract.
+    flatten : bool, default True
+        If True, flatten the extracted layer to 2D.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Mesh with extracted layer.
+
+    """
+    from .. import extract_cells, get_cell_connectivity
+
+    if "LayerId" not in mesh.cell_data:
+        raise ValueError("could not extract layer from mesh without 'LayerId' cell data")
+    
+    layer_ids = mesh.cell_data["LayerId"]
+    layer = extract_cells(mesh, layer_ids == layer_id)
+
+    if not flatten:
+        return layer
+    
+    connectivity = get_cell_connectivity(layer, flatten=False)
+    points, cells, celltypes = [], [], []
+    faces0, faces1 = [], []
+    n_points = 0
+
+    for cell, celltype in zip(connectivity, layer.celltypes):
+        if celltype == pv.CellType.HEXAHEDRON:
+            face0, face1 = cell[:4], cell[4:]
+            facetype = pv.CellType.QUAD
+
+        elif celltype == pv.CellType.WEDGE:
+            face0, face1 = cell[:3], cell[3:]
+            facetype = pv.CellType.TRIANGLE
+
+        elif celltype == pv.CellType.POLYHEDRON:
+            face0, face1 = cell[0], cell[1]
+            facetype = pv.CellType.POLYGON
+
+        else:
+            raise ValueError(f"could not flatten cell of type '{celltype.name}'")
+
+        cell_points = 0.5 * (layer.points[face0] + layer.points[face1])
+        points.append(cell_points)
+        cells += [len(cell_points), *(np.arange(len(cell_points)) + n_points)]
+        celltypes.append(facetype)
+        faces0.append(face0)
+        faces1.append(face1)
+        n_points += len(cell_points)
+
+    points = np.concatenate(points)
+    flat_layer = pv.UnstructuredGrid(cells, celltypes, points)
+
+    if layer.point_data:
+        faces0 = np.concatenate(faces0)
+        faces1 = np.concatenate(faces1)
+
+        for k, v in layer.point_data.items():
+            flat_layer.point_data[k] = 0.5 * (v[faces0] + v[faces1])
+
+    for k, v in layer.cell_data.items():
+        flat_layer.cell_data[k] = v
+
+    flat_layer.user_dict.update(layer.user_dict)
+
+    return cast(pv.UnstructuredGrid, flat_layer.clean(produce_merge_map=False))
+
+
 def fuse_cells(
     mesh: pv.DataSet, ind: Sequence[int] | Sequence[Sequence[int]]
 ) -> pv.UnstructuredGrid:
