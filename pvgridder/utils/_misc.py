@@ -618,6 +618,7 @@ def extract_layer(
     points, cells, celltypes = [], [], []
     faces0, faces1 = [], []
     n_points = 0
+    axis = None
 
     for cell, celltype in zip(connectivity, layer.celltypes):
         if celltype == pv.CellType.HEXAHEDRON:
@@ -634,13 +635,37 @@ def extract_layer(
 
         else:
             raise ValueError(f"could not flatten cell of type '{celltype.name}'")
+        
+        points0 = layer.points[face0]
+        points1 = layer.points[face1]
+        
+        if celltype == pv.CellType.POLYHEDRON:
+            # Determine stacking axis once
+            if axis is None:
+                axis = [
+                    np.isin(points0[:, 0], points1[:, 0]).all(),
+                    np.isin(points0[:, 1], points1[:, 1]).all(),
+                    np.isin(points0[:, 2], points1[:, 2]).all(),
+                ]
 
-        cell_points = 0.5 * (layer.points[face0] + layer.points[face1])
+                if np.sum(axis) != 2:
+                    raise ValueError("could not determine stacking axis")
+                
+                axis = np.flatnonzero(axis)
+
+            # Find sorting indices for face1 to match face0
+            ids = (points0[:, axis][:, None] == points1[:, axis]).all(axis=-1).argmax(axis=1)
+        
+        else:
+            ids = slice(None)
+        
+        # Average cell points along stacking axis
+        cell_points = 0.5 * (points0 + points1[ids])
         points.append(cell_points)
         cells += [len(cell_points), *(np.arange(len(cell_points)) + n_points)]
         celltypes.append(facetype)
         faces0.append(face0)
-        faces1.append(face1)
+        faces1.append(face1[ids])
         n_points += len(cell_points)
 
     points = np.concatenate(points)
