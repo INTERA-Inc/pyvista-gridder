@@ -1,7 +1,7 @@
-<p align="center">
-   <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/logo/logo.png?raw=true" width=25%>
-   <h1 align="center"><b>PyVista Gridder</b></h1>
-</p>
+<h1 align="center">
+   <img src=".github/logo/logo.png" width=160px><br>
+   PyVista Gridder
+</h1>
 
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-green)](https://github.com/INTERA-Inc/pyvista-gridder/blob/master/LICENSE)
 [![Stars](https://img.shields.io/github/stars/INTERA-Inc/pyvista-gridder?style=flat&logo=github)](https://github.com/INTERA-Inc/pyvista-gridder)
@@ -27,13 +27,13 @@ Structured and unstructured mesh generation using PyVista for the Finite-Element
 The recommended way to install **pyvista-gridder** and all its dependencies is through the Python Package Index:
 
 ```bash
-pip install pyvista-gridder --user
+pip install pyvista-gridder
 ```
 
 Otherwise, clone and extract the package, then run from the package location:
 
 ```bash
-pip install .[full] --user
+pip install .[full]
 ```
 
 To test the integrity of the installed package, check out this repository and run:
