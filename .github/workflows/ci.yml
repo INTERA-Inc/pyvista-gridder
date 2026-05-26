@@ -1,6 +1,10 @@
 name: Python package
 
-on: [pull_request]
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build:
@@ -30,16 +34,16 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install "vtk~=${{ matrix.vtk-version }}"
-        pip install .[full]
+        pip install .[test]
         
-    - name: Test with pytest
+    - name: Run tests with pytest
       run: |
-        pip install pytest
-        pip install coverage
-        xvfb-run -a coverage run -m pytest
+        pytest --cov=pymeuk --cov-report=xml
         
     - name: Submit coverage
-      if: ${{ matrix.python-version == '3.12' }}
-      run: |
-        pip install codecov
-        codecov --token=${{ secrets.CODECOV_TOKEN }}
+      if: ${{ matrix.python-version == '3.13' }}
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        fail_ci_if_error: false
