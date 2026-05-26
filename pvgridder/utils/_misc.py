@@ -1438,8 +1438,10 @@ def reconstruct_line(
         if points.shape[1] == 3
         else np.column_stack((points, np.zeros(len(points))))
     )
+    shortest_line = pv.lines_from_points(points, close=close)
+    shortest_line.point_data["vtkOriginalPointIds"] = shortest_path
 
-    return pv.lines_from_points(points, close=close)
+    return shortest_line
 
 
 def remap_categorical_data(
