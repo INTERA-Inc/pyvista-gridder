@@ -22,5 +22,8 @@ from .geometric_objects import (
     Volume as Volume,
 )
 from .merge import MeshMerge as MeshMerge
-from .stack import MeshStack2D as MeshStack2D, MeshStack3D as MeshStack3D
+from .stack import (
+    MeshStack2D as MeshStack2D,
+    MeshStack3D as MeshStack3D,
+)
 from .voronoi import VoronoiMesh2D as VoronoiMesh2D

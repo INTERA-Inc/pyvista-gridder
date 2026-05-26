@@ -1,7 +1,13 @@
 """Utility functions."""
 
-from ._connectivity import get_connectivity as get_connectivity, get_neighborhood as get_neighborhood
-from ._interactive import interactive_lasso_selection as interactive_lasso_selection, interactive_selection as interactive_selection
+from ._connectivity import (
+    get_connectivity as get_connectivity,
+    get_neighborhood as get_neighborhood,
+)
+from ._interactive import (
+    interactive_lasso_selection as interactive_lasso_selection,
+    interactive_selection as interactive_selection,
+)
 from ._misc import (
     average_points as average_points,
     decimate_rdp as decimate_rdp,
