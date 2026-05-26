@@ -1528,6 +1528,59 @@ def remap_categorical_data(
 
     if not inplace:
         return mesh
+    
+
+def slice_vertical(mesh: pv.DataSet, points: ArrayLike, clip: bool = True) -> pv.PolyData:
+    """
+    Extract a vertical slice from a 3D mesh along a polyline.
+
+    Parameters
+    ----------
+    mesh : pyvista.DataSet
+        Mesh to slice.
+    points : ArrayLike
+        Array of points defining the polyline along which to slice the mesh.
+    clip : bool, default True
+        Only used if there are exactly 2 points. If True, clip the slice to the line.
+
+    Returns
+    -------
+    pyvista.PolyData
+        Vertical slice of the mesh along the polyline.
+    
+    """
+    from .. import get_dimension
+
+    if get_dimension(mesh) != 3:
+        raise ValueError("could not slice non 3D mesh")
+    
+    points = np.atleast_2d(points)
+
+    if len(points) < 2:
+        raise ValueError("could not slice mesh with less than 2 points")
+    
+    if points.shape[1] < 3:
+        points = np.insert(points, 2, 0.0, axis=1)
+
+    slices = []
+
+    for pointa, pointb in zip(points[:-1], points[1:]):
+        if clip or len(points) > 2:
+            slice_ = cast(pv.UnstructuredGrid, mesh.clip(normal=pointa - pointb, origin=pointa))
+            slice_ = cast(pv.UnstructuredGrid, slice_.clip(normal=pointb - pointa, origin=pointb))
+
+        else:
+            slice_ = mesh
+
+        normal = pv.Line(pointa, pointb).rotate_z(90.0, point=pointa)
+        slice_ = slice_.slice(
+            normal=normal.points[1] - normal.points[0],
+            origin=pointa,
+            generate_triangles=False,
+        )
+        slices.append(slice_)
+
+    return cast(pv.PolyData, pv.merge(slices) if len(slices) > 1 else slices[0])
 
 
 def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyData]:
