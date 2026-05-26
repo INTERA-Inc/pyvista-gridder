@@ -581,7 +581,7 @@ def extract_cells_by_dimension(
 
 
 def extract_layer(
-    mesh: pv.StructuredGrid |pv.UnstructuredGrid,
+    mesh: pv.StructuredGrid | pv.UnstructuredGrid,
     layer_id: int,
     flatten: bool = True,
 ) -> pv.UnstructuredGrid:
@@ -606,14 +606,16 @@ def extract_layer(
     from .. import extract_cells, get_cell_connectivity
 
     if "LayerId" not in mesh.cell_data:
-        raise ValueError("could not extract layer from mesh without 'LayerId' cell data")
-    
+        raise ValueError(
+            "could not extract layer from mesh without 'LayerId' cell data"
+        )
+
     layer_ids = mesh.cell_data["LayerId"]
     layer = extract_cells(mesh, layer_ids == layer_id)
 
     if not flatten:
         return layer
-    
+
     connectivity = get_cell_connectivity(layer, flatten=False)
     points, cells, celltypes = [], [], []
     faces0, faces1 = [], []
@@ -635,10 +637,10 @@ def extract_layer(
 
         else:
             raise ValueError(f"could not flatten cell of type '{celltype.name}'")
-        
+
         points0 = layer.points[face0]
         points1 = layer.points[face1]
-        
+
         if celltype == pv.CellType.POLYHEDRON:
             # Determine stacking axis once
             if axis is None:
@@ -650,15 +652,19 @@ def extract_layer(
 
                 if np.sum(axis) != 2:
                     raise ValueError("could not determine stacking axis")
-                
+
                 axis = np.flatnonzero(axis)
 
             # Find sorting indices for face1 to match face0
-            ids = (points0[:, axis][:, None] == points1[:, axis]).all(axis=-1).argmax(axis=1)
-        
+            ids = (
+                (points0[:, axis][:, None] == points1[:, axis])
+                .all(axis=-1)
+                .argmax(axis=1)
+            )
+
         else:
             ids = slice(None)
-        
+
         # Average cell points along stacking axis
         cell_points = 0.5 * (points0 + points1[ids])
         points.append(cell_points)
@@ -1528,9 +1534,11 @@ def remap_categorical_data(
 
     if not inplace:
         return mesh
-    
 
-def slice_vertical(mesh: pv.DataSet, points: ArrayLike, clip: bool = True) -> pv.PolyData:
+
+def slice_vertical(
+    mesh: pv.DataSet, points: ArrayLike, clip: bool = True
+) -> pv.PolyData:
     """
     Extract a vertical slice from a 3D mesh along a polyline.
 
@@ -1547,18 +1555,18 @@ def slice_vertical(mesh: pv.DataSet, points: ArrayLike, clip: bool = True) -> pv
     -------
     pyvista.PolyData
         Vertical slice of the mesh along the polyline.
-    
+
     """
     from .. import get_dimension
 
     if get_dimension(mesh) != 3:
         raise ValueError("could not slice non 3D mesh")
-    
+
     points = np.atleast_2d(points)
 
     if len(points) < 2:
         raise ValueError("could not slice mesh with less than 2 points")
-    
+
     if points.shape[1] < 3:
         points = np.insert(points, 2, 0.0, axis=1)
 
@@ -1566,8 +1574,12 @@ def slice_vertical(mesh: pv.DataSet, points: ArrayLike, clip: bool = True) -> pv
 
     for pointa, pointb in zip(points[:-1], points[1:]):
         if clip or len(points) > 2:
-            slice_ = cast(pv.UnstructuredGrid, mesh.clip(normal=pointa - pointb, origin=pointa))
-            slice_ = cast(pv.UnstructuredGrid, slice_.clip(normal=pointb - pointa, origin=pointb))
+            slice_ = cast(
+                pv.UnstructuredGrid, mesh.clip(normal=pointa - pointb, origin=pointa)
+            )
+            slice_ = cast(
+                pv.UnstructuredGrid, slice_.clip(normal=pointb - pointa, origin=pointb)
+            )
 
         else:
             slice_ = mesh
