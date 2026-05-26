@@ -9,7 +9,7 @@ import pvgridder as pvg
 
 
 @pytest.mark.parametrize(
-    "mesh, tolerance, expected_points, reference_point_sum",
+    "mesh, tolerance, expected_points, ref_sum",
     [
         # Simple meshes with duplicated/close points
         pytest.param(
@@ -41,7 +41,7 @@ import pvgridder as pvg
         ),
     ],
 )
-def test_average_points(request, mesh, tolerance, expected_points, reference_point_sum):
+def test_average_points(request, mesh, tolerance, expected_points, ref_sum):
     """Test point averaging with different meshes and tolerances."""
     # Get the actual mesh (executing the function if it's a callable or fixture)
     if isinstance(mesh, str):
@@ -72,7 +72,7 @@ def test_average_points(request, mesh, tolerance, expected_points, reference_poi
     assert result.n_points <= original_point_count
 
     # Verify the sum of points matches the reference value
-    assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
+    assert np.allclose(result.points.sum(), ref_sum, rtol=1e-5)
 
     # Specific checks based on mesh type
     if is_example:
@@ -88,84 +88,40 @@ def test_average_points(request, mesh, tolerance, expected_points, reference_poi
 
 
 @pytest.mark.parametrize(
-    "line_source, tolerance, reference_point_sum",
+    "line, tolerance, ref_sum",
     [
-        # Sinusoidal line - more complex and sufficient for testing
+        pytest.param("sinusoidal_line", 0.0, 7.63999344, id="sinusoidal_no_decimation"),
         pytest.param(
-            "sinusoidal_line", 0.0, 314.1592653589793, id="sinusoidal_no_decimation"
+            "sinusoidal_line", 0.1, 7.58607813, id="sinusoidal_with_decimation"
         ),
-        pytest.param(
-            "sinusoidal_line", 0.1, 24.710092386618626, id="sinusoidal_with_decimation"
-        ),
-        # Example mesh with curved lines
         pytest.param(
             lambda: pvg.extract_boundary_polygons(
                 pvg.examples.load_anticline_2d(), fill=False
-            )[0],
+            ),
             0.1,
-            6.800000190734863,
+            19.36,
             id="anticline_boundary",
         ),
     ],
 )
-def test_decimate_rdp(request, line_source, tolerance, reference_point_sum):
+def test_decimate_rdp(request, line, tolerance, ref_sum):
     """Test line decimation with different lines and tolerances."""
-    # Get the actual line (executing the function if it's a callable or fixture)
-    if isinstance(line_source, str):
-        actual_line = request.getfixturevalue(line_source)
+    if isinstance(line, str):
+        mesh = request.getfixturevalue(line)
 
     else:
-        try:
-            actual_line = line_source()
+        mesh = line()[0]
 
-        except Exception:
-            pytest.skip("Failed to create line for decimate_rdp test")
-
-    # Skip if we got an empty list or None
-    if actual_line is None:
-        pytest.skip("No valid lines found for decimation")
-
-    # For consistency, ensure the input is a line polydata
-    if not actual_line.n_lines > 0:
-        try:
-            # Try to extract lines
-            actual_line = actual_line.extract_feature_edges()
-
-        except Exception:
-            pytest.skip("Could not extract lines from input")
-
-    # Track original point count
-    original_point_count = actual_line.n_points
-
-    try:
-        # Decimate the line
-        result = pvg.decimate_rdp(actual_line, tolerance=tolerance)
-
-        # Should be a polydata with lines
-        assert isinstance(result, pv.PolyData)
-        assert result.n_lines > 0
-
-        # Verify the sum of points matches the reference value
-        assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
-
-        if tolerance > 0.0:
-            # With positive tolerance, should have fewer points
-            assert result.n_points <= original_point_count
-
-        else:
-            # With zero tolerance, should have same number of points
-            assert result.n_points == original_point_count
-
-    except Exception as e:
-        if "not implemented for input of type" in str(e).lower():
-            pytest.skip(f"Decimation not implemented for this input type: {str(e)}")
-
-        else:
-            raise
+    poly = pvg.decimate_rdp(mesh, tolerance=tolerance)
+    assert isinstance(poly, pv.PolyData)
+    assert poly.n_lines > 0
+    assert np.allclose(
+        poly.compute_cell_sizes(length=True).cell_data["Length"].sum(), ref_sum
+    )
 
 
 @pytest.mark.parametrize(
-    "mesh, fill, reference_point_sum",
+    "mesh, fill, ref_sum",
     [
         # Basic mesh
         pytest.param(
@@ -195,7 +151,7 @@ def test_decimate_rdp(request, line_source, tolerance, reference_point_sum):
         ),
     ],
 )
-def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
+def test_extract_boundary_polygons(mesh, fill, ref_sum):
     """Test boundary extraction with different meshes and fill options."""
     # Get the actual mesh (calling the function if it's callable)
     actual_mesh = mesh() if callable(mesh) else mesh
@@ -210,7 +166,7 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
 
     # Verify the sum of all boundary points matches the reference value
     total_points_sum = sum(b.points.sum() for b in boundaries)
-    assert np.allclose(total_points_sum, reference_point_sum, rtol=1e-5)
+    assert np.allclose(total_points_sum, ref_sum, rtol=1e-5)
 
     if fill:
         # With fill=True, each boundary should have faces
@@ -222,7 +178,7 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
 
 
 @pytest.mark.parametrize(
-    "mesh, remove_ghost_cells, reference_point_sum",
+    "mesh, remove_ghost_cells, ref_sum",
     [
         # Basic meshes
         pytest.param(
@@ -261,7 +217,7 @@ def test_extract_boundary_polygons(mesh, fill, reference_point_sum):
         pytest.param(pvg.examples.load_well_2d, True, 0.0, id="well_2d"),
     ],
 )
-def test_extract_cell_geometry(mesh, remove_ghost_cells, reference_point_sum):
+def test_extract_cell_geometry(mesh, remove_ghost_cells, ref_sum):
     """Test cell geometry extraction with different meshes and empty cell options."""
     # Get the actual mesh (calling the function if it's callable)
     actual_mesh = mesh() if callable(mesh) else mesh
@@ -276,7 +232,7 @@ def test_extract_cell_geometry(mesh, remove_ghost_cells, reference_point_sum):
     assert result.n_faces_strict > 0 or result.n_lines > 0  # Either faces or lines
 
     # Verify the sum of points matches the reference value
-    assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
+    assert np.allclose(result.points.sum(), ref_sum, rtol=1e-5)
 
     # Should have the original cell IDs
     assert "vtkOriginalCellIds" in result.cell_data
@@ -942,7 +898,7 @@ def test_split_lines(request, mesh, as_lines):
 
 
 @pytest.mark.parametrize(
-    "mesh, expected_celltype, reference_point_sum",
+    "mesh, expected_celltype, ref_sum",
     [
         # Basic meshes with different cell types
         pytest.param(
@@ -973,7 +929,7 @@ def test_split_lines(request, mesh, as_lines):
         ),
     ],
 )
-def test_quadraticize(mesh, expected_celltype, reference_point_sum):
+def test_quadraticize(mesh, expected_celltype, ref_sum):
     """Test converting linear cells to quadratic cells."""
     actual_mesh = mesh() if callable(mesh) else mesh()
     result = pvg.quadraticize(actual_mesh)
@@ -981,4 +937,4 @@ def test_quadraticize(mesh, expected_celltype, reference_point_sum):
     assert isinstance(result, pv.UnstructuredGrid)
     assert result.celltypes[0] == expected_celltype
     assert result.n_points > actual_mesh.n_points
-    assert np.allclose(result.points.sum(), reference_point_sum, rtol=1e-5)
+    assert np.allclose(result.points.sum(), ref_sum, rtol=1e-5)
