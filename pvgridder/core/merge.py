@@ -8,10 +8,10 @@ from ._base import MeshBase, MeshItem
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence  # pragma: no cover
-    from typing import Optional  # pragma: no cover
+    from collections.abc import Sequence
+    from typing import Optional
 
-    from typing_extensions import Self  # pragma: no cover
+    from typing_extensions import Self
 
 
 class MeshMerge(MeshBase):

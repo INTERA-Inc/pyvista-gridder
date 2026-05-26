@@ -7,9 +7,9 @@ import pyvista as pv
 
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional  # pragma: no cover
+    from typing import Literal, Optional
 
-    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
+    from numpy.typing import ArrayLike, NDArray
 
 
 def generate_arc(

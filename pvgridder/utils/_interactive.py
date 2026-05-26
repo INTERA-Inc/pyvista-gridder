@@ -8,10 +8,10 @@ from pyrequire import require_package
 
 
 if TYPE_CHECKING:
-    from typing import Any, Literal, Optional  # pragma: no cover
+    from typing import Any, Literal, Optional
 
-    from numpy.typing import NDArray  # pragma: no cover
-    from shapely import Polygon  # pragma: no cover
+    from numpy.typing import NDArray
+    from shapely import Polygon
 
 
 @overload
