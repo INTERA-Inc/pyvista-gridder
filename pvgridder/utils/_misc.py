@@ -453,7 +453,7 @@ def extract_cell_geometry(
 
                 else:
                     raise NotImplementedError(
-                        f"cells of type '{celltype.name}' are not supported yet"
+                        f"cells of type '{pv.CellType(celltype).name}' are not supported yet"
                     )
 
                 cell_faces.append(cell_face)
