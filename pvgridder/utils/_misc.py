@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import itertools
-from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 import pyvista as pv
-from scipy.spatial import KDTree
 
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Any, Literal, Optional
 
     from numpy.typing import ArrayLike, NDArray
@@ -33,6 +32,7 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
         Mesh with averaged points.
 
     """
+    from scipy.spatial import KDTree
 
     def decimate(cell: ArrayLike, close: bool) -> NDArray:
         cell = np.asanyarray(cell)
@@ -711,6 +711,8 @@ def fuse_cells(
         Mesh with fused cells.
 
     """
+    from collections.abc import Sequence
+
     from .. import extract_boundary_polygons, get_cell_connectivity, get_dimension
 
     indices = [ind] if np.ndim(ind[0]) == 0 else ind
@@ -820,6 +822,8 @@ def intersect_polyline(
         Polydata containing the intersection points and cell IDs.
 
     """
+    from scipy.spatial import KDTree
+
     from .. import get_cell_centers
 
     line_ = cast(pv.PolyData, line.strip())
@@ -1444,10 +1448,30 @@ def reconstruct_line(
     return shortest_line
 
 
+@overload
 def remap_categorical_data(
     mesh: pv.DataSet,
     key: str,
-    mapping: dict[str | int, int],
+    mapping: dict[str, int] | dict[int, int] | dict[str | int, int],
+    preference: Literal["cell", "point"] = "cell",
+    inplace: Literal[False] = False,
+) -> pv.DataSet: ...
+
+
+@overload
+def remap_categorical_data(
+    mesh: pv.DataSet,
+    key: str,
+    mapping: dict[str, int] | dict[int, int] | dict[str | int, int],
+    preference: Literal["cell", "point"] = "cell",
+    inplace: Literal[True] = True,
+) -> None: ...
+
+
+def remap_categorical_data(
+    mesh: pv.DataSet,
+    key: str,
+    mapping: dict[str, int] | dict[int, int] | dict[str | int, int],
     preference: Literal["cell", "point"] = "cell",
     inplace: bool = False,
 ) -> pv.DataSet | None:
