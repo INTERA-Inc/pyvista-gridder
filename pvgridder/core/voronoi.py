@@ -216,8 +216,9 @@ class VoronoiMesh2D(MeshBase):
             Number of subdivisions along the line or relative position of subdivisions
             (in percentage) with respect to the starting point.
         priority : int, default 0
-            Priority of item. Points enclosed in a cell with (strictly) higher
-            priority are discarded.
+            Priority of item. Points enclosed in a cell with (strictly) higher priority
+            are discarded. If negative, priority of constraint cells is set to
+            `abs(priority) - 1`. Otherwise, priority of constraint cells is set to 0.
         group : str, optional
             Group name.
 
@@ -309,14 +310,19 @@ class VoronoiMesh2D(MeshBase):
             constraint_ = constraint_.ravel(order="F")
 
             # Add to items
+            priority = priority if priority is not None else 0
             item = MeshItem(
                 extract_cells(mesh, ~constraint_),
                 group=group,
-                priority=priority if priority else 0,
+                priority=priority,
             )
             self.items.append(item)
 
-            item = MeshItem(extract_cells(mesh, constraint_), group=None, priority=0)
+            item = MeshItem(
+                extract_cells(mesh, constraint_),
+                group=None,
+                priority=-priority - 1 if priority < 0 else 0,
+            )
             self.items.append(item)
 
         return self
