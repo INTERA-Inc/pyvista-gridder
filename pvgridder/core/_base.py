@@ -397,7 +397,11 @@ class MeshStackBase(MeshBase):
                 else:
                     arg = abs(arg)
                     arg *= 1.0 if self.bottom_up else -1.0
-                    mesh = self.items[-1].mesh.copy()
+                    mesh = (
+                        self._interpolate(self.items[-1].mesh.points)
+                        if self._transition_flag
+                        else self.items[-1].mesh.copy()
+                    )
                     mesh.points[:, self.axis] += arg  # type: ignore
 
             else:
