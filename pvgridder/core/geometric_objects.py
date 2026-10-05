@@ -16,10 +16,10 @@ from ._helpers import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence  # pragma: no cover
-    from typing import Literal, Optional  # pragma: no cover
+    from collections.abc import Sequence
+    from typing import Literal, Optional
 
-    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
+    from numpy.typing import ArrayLike, NDArray
 
 
 def AnnularSector(

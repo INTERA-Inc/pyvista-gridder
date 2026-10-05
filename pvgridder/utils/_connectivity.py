@@ -7,9 +7,9 @@ import pyvista as pv
 
 
 if TYPE_CHECKING:
-    from typing import Optional  # pragma: no cover
+    from typing import Optional
 
-    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
+    from numpy.typing import ArrayLike, NDArray
 
 
 def get_neighborhood(

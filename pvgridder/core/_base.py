@@ -9,11 +9,11 @@ from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence  # pragma: no cover
-    from typing import Literal, Optional  # pragma: no cover
+    from collections.abc import Callable, Sequence
+    from typing import Literal, Optional
 
-    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
-    from typing_extensions import Self  # pragma: no cover
+    from numpy.typing import ArrayLike, NDArray
+    from typing_extensions import Self
 
 
 class MeshItem:
@@ -397,7 +397,11 @@ class MeshStackBase(MeshBase):
                 else:
                     arg = abs(arg)
                     arg *= 1.0 if self.bottom_up else -1.0
-                    mesh = self.items[-1].mesh.copy()
+                    mesh = (
+                        self._interpolate(self.items[-1].mesh.points)
+                        if self._transition_flag
+                        else self.items[-1].mesh.copy()
+                    )
                     mesh.points[:, self.axis] += arg  # type: ignore
 
             else:

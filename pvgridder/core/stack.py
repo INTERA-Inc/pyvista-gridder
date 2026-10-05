@@ -13,11 +13,11 @@ from ._helpers import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence  # pragma: no cover
-    from typing import Optional  # pragma: no cover
+    from collections.abc import Sequence
+    from typing import Optional
 
-    from numpy.typing import ArrayLike, NDArray  # pragma: no cover
-    from typing_extensions import Self  # pragma: no cover
+    from numpy.typing import ArrayLike, NDArray
+    from typing_extensions import Self
 
 
 class MeshStack2D(MeshStackBase):
@@ -98,7 +98,7 @@ class MeshStack2D(MeshStackBase):
 
         mesh_a, mesh_b, groups, group = args
         points = np.vstack((mesh_a.points, mesh_b.points[::-1]))
-        mesh = Polygon(points, celltype="triangle")
+        mesh = Polygon(points, celltype="triangle", algorithm=8, optimization="Netgen")
         mesh.cell_data["CellGroup"] = self._initialize_group_array(mesh, groups, group)
 
         return mesh
