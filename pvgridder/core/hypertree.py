@@ -166,6 +166,19 @@ class QuadNode:
 
 
 class QuadTree:
+    """
+    QuadTree class.
+
+    Parameters
+    ----------
+    x : ArrayLike
+        X coordinates of the base grid.
+    y : ArrayLike
+        Y coordinates of the base grid.
+    max_depth : int, default 4
+        Maximum depth of the quadtree.
+    
+    """
     def __init__(
         self,
         x: ArrayLike,
@@ -223,32 +236,7 @@ class QuadTree:
         
         """
         if balance:
-            # Iteratively subdivides coarse cells until max level difference between
-            # adjacent leaves is <= 1
-            while True:
-                leaves: list[QuadNode] = []
-
-                for root in self.roots:
-                    self._get_leaves(root, leaves)
-    
-                subdivided_any = False
-
-                for i in range(len(leaves)):
-                    for j in range(i + 1, len(leaves)):
-                        a, b = leaves[i], leaves[j]
-    
-                        # Only check pairs with depth difference >= 2
-                        if abs(a.depth - b.depth) <= 1:
-                            continue
-    
-                        if self._are_neighbors(a, b):
-                            # Subdivide the coarser leaf
-                            coarser = a if a.depth < b.depth else b
-                            coarser.subdivide()
-                            subdivided_any = True
-    
-                if not subdivided_any:
-                    break
+            self._balance()
 
         # Build VTK HyperTreeGrid
         nx = self.x.size
@@ -295,19 +283,49 @@ class QuadTree:
 
         return mesh
 
-    @staticmethod
-    def _are_neighbors(a: QuadNode, b: QuadNode) -> bool:
-        """Returns True if leaf A and leaf B share a horizontal or vertical edge."""
-        x_touch = (abs(a.xmax - b.xmin) < 1.0e-9) or (abs(a.xmin - b.xmax) < 1.0e-9)
-        y_overlap = min(a.ymax, b.ymax) - max(a.ymin, b.ymin) > 1.0e-9
+    def _balance(self) -> None:
+        """Enforces 2:1 balance rule via O(L log L) hash-bucket edge sweeping."""
+        from collections import defaultdict
 
-        if x_touch and y_overlap:
-            return True
+        nx = self.x.size - 1
 
-        y_touch = (abs(a.ymax - b.ymin) < 1.0e-9) or (abs(a.ymin - b.ymax) < 1.0e-9)
-        x_overlap = min(a.xmax, b.xmax) - max(a.xmin, b.xmin) > 1.0e-9
+        while True:
+            # Gather active leaves to determine current max tree depth
+            raw_leaves: list[QuadNode] = []
 
-        return y_touch and x_overlap
+            for root in self.roots:
+                self._get_leaves(root, raw_leaves)
+
+            max_depth = max((node.depth for node in raw_leaves), default=0)
+            scale = 1 << max_depth
+
+            # Assign integer coordinates to all leaf bounds
+            leaves_bounded: list[tuple[QuadNode, int, int, int, int]] = []
+
+            for root_idx, root in enumerate(self.roots):
+                rx = root_idx % nx
+                ry = root_idx // nx
+                x0, x1 = rx * scale, (rx + 1) * scale
+                y0, y1 = ry * scale, (ry + 1) * scale
+                self._get_leaf_bounds(root, x0, x1, y0, y1, leaves_bounded)
+
+            # Bucket leaf boundary segments into hashtables
+            v_left, v_right = defaultdict(list), defaultdict(list)
+            h_bot, h_top = defaultdict(list), defaultdict(list)
+
+            for node, x0, x1, y0, y1 in leaves_bounded:
+                v_left[x0].append((y0, y1, node))
+                v_right[x1].append((y0, y1, node))
+                h_bot[y0].append((x0, x1, node))
+                h_top[y1].append((x0, x1, node))
+
+            # Sweep vertical and horizontal boundaries
+            subdivided = self._sweep_edges(v_left, v_right)
+            subdivided |= self._sweep_edges(h_bot, h_top)
+
+            # Exit when all adjacent neighbor pairs satisfy delta_level <= 1
+            if not subdivided:
+                break
 
     def _build_vtk_tree(
         self,
@@ -331,6 +349,34 @@ class QuadTree:
         else:
             for child in node.children:
                 self._get_leaves(child, leaves)
+
+    def _get_leaf_bounds(
+        self,
+        node: QuadNode,
+        xmin: int,
+        xmax: int,
+        ymin: int,
+        ymax: int,
+        leaves: list[tuple[QuadNode, int, int, int, int]],
+    ) -> None:
+        """Collect leaves with integer bounds on the finest-depth root grid."""
+        if node.is_leaf:
+            leaves.append((node, xmin, xmax, ymin, ymax))
+            return
+
+        xmid = (xmin + xmax) // 2
+        ymid = (ymin + ymax) // 2
+    
+        for child, bounds in zip(
+            node.children,
+            (
+                (xmin, xmid, ymin, ymid),
+                (xmid, xmax, ymin, ymid),
+                (xmin, xmid, ymid, ymax),
+                (xmid, xmax, ymid, ymax),
+            ),
+        ):
+            self._get_leaf_bounds(child, *bounds, leaves)
 
     def _refine_point(
         self,
@@ -366,6 +412,47 @@ class QuadTree:
 
             for child in node.children:
                 self._refine_segment(child, pointa, pointb, depth)
+
+    @staticmethod
+    def _sweep_edges(
+        left_dict: dict[int, list[tuple[int, int, QuadNode]]],
+        right_dict: dict[int, list[tuple[int, int, QuadNode]]],
+    ) -> bool:
+        """Sweeps coincident 1D boundary segments using two pointers."""
+        subdivided_any = False
+
+        # Intersect matching grid line coordinates across the entire domain
+        for coord in left_dict.keys() & right_dict.keys():
+            left = sorted(left_dict[coord], key=lambda item: item[0])
+            right = sorted(right_dict[coord], key=lambda item: item[0])
+
+            i = j = 0
+            n_left, n_right = len(left), len(right)
+
+            while i < n_left and j < n_right:
+                l_min, l_max, l_node = left[i]
+                r_min, r_max, r_node = right[j]
+
+                # Check 1D segment overlap along the shared boundary line
+                if l_min < r_max and r_min < l_max:
+                    diff = l_node.depth - r_node.depth
+
+                    if diff > 1:
+                        r_node.subdivide()
+                        subdivided_any = True
+
+                    elif diff < -1:
+                        l_node.subdivide()
+                        subdivided_any = True
+
+                # Advance two pointers
+                if l_max <= r_max:
+                    i += 1
+
+                if r_max <= l_max:
+                    j += 1
+
+        return subdivided_any
 
     @property
     def max_depth(self) -> int:
