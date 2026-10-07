@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -177,8 +178,9 @@ class QuadTree:
         Y coordinates of the base grid.
     max_depth : int, default 4
         Maximum depth of the quadtree.
-    
+
     """
+
     def __init__(
         self,
         x: ArrayLike,
@@ -219,15 +221,22 @@ class QuadTree:
             for root in self.roots:
                 self._refine_segment(root, pointa, pointb, depth)
 
-    def generate_mesh(self, balance: bool = True) -> pv.UnstructuredGrid:
+    def generate_mesh(
+        self,
+        balance: bool = False,
+        conformal: bool = False,
+    ) -> pv.UnstructuredGrid:
         """
         Generate a QuadTree mesh.
 
         Parameters
         ----------
-        balance : bool, default True
+        balance : bool, default False
             If True, balance the tree so that adjacent cells differ in depth by at most
             one.
+        conformal : bool, default False
+            If True, generate a conforming mesh (i.e., polygons with hanging nodes
+            instead of quads).
 
         Returns
         -------
@@ -238,55 +247,136 @@ class QuadTree:
         if balance:
             self._balance()
 
-        # Build VTK HyperTreeGrid
-        nx = self.x.size
-        ny = self.y.size
-        
-        htg = vtk.vtkHyperTreeGrid()
-        htg.Initialize()
-        htg.SetDimensions((nx, ny, 1))
-        htg.SetBranchFactor(2)
+        if not conformal:
+            # Build VTK HyperTreeGrid
+            nx = self.x.size
+            ny = self.y.size
 
-        xValues = vtk.vtkDoubleArray()
-        xValues.SetNumberOfValues(nx)
-        for i, x in enumerate(self.x):
-            xValues.SetValue(i, x)
-        htg.SetXCoordinates(xValues)
+            htg = vtk.vtkHyperTreeGrid()
+            htg.Initialize()
+            htg.SetDimensions((nx, ny, 1))
+            htg.SetBranchFactor(2)
 
-        yValues = vtk.vtkDoubleArray()
-        yValues.SetNumberOfValues(ny)
-        for i, y in enumerate(self.y):
-            yValues.SetValue(i, y)
-        htg.SetYCoordinates(yValues)
+            xValues = vtk.vtkDoubleArray()
+            xValues.SetNumberOfValues(nx)
+            for i, x in enumerate(self.x):
+                xValues.SetValue(i, x)
+            htg.SetXCoordinates(xValues)
 
-        zValues = vtk.vtkDoubleArray()
-        zValues.SetNumberOfValues(1)
-        zValues.SetValue(0, 0.0)
-        htg.SetZCoordinates(zValues)
+            yValues = vtk.vtkDoubleArray()
+            yValues.SetNumberOfValues(ny)
+            for i, y in enumerate(self.y):
+                yValues.SetValue(i, y)
+            htg.SetYCoordinates(yValues)
 
-        # Traversal via non-oriented cursors
-        cursor = vtk.vtkHyperTreeGridNonOrientedCursor()
-        global_offset = 0
+            zValues = vtk.vtkDoubleArray()
+            zValues.SetNumberOfValues(1)
+            zValues.SetValue(0, 0.0)
+            htg.SetZCoordinates(zValues)
 
-        for root_idx, root_node in enumerate(self.roots):
-            htg.InitializeNonOrientedCursor(cursor, root_idx, True)
-            cursor.SetGlobalIndexStart(global_offset)
+            # Traversal via non-oriented cursors
+            cursor = vtk.vtkHyperTreeGridNonOrientedCursor()
+            offset = 0
 
-            self._build_vtk_tree(root_node, cursor)
-            global_offset += cursor.GetTree().GetNumberOfVertices()
+            for root_idx, root_node in enumerate(self.roots):
+                htg.InitializeNonOrientedCursor(cursor, root_idx, True)
+                cursor.SetGlobalIndexStart(offset)
 
-        # Extract mesh
-        geometry = vtk.vtkHyperTreeGridGeometry()
-        geometry.SetInputData(htg)
-        geometry.Update()
-        mesh = pv.wrap(geometry.GetOutput()).cast_to_unstructured_grid()
+                self._build_vtk_tree(root_node, cursor)
+                offset += cursor.GetTree().GetNumberOfVertices()
+
+            # Extract mesh
+            geometry = vtk.vtkHyperTreeGridGeometry()
+            geometry.SetInputData(htg)
+            geometry.Update()
+            mesh = pv.wrap(geometry.GetOutput()).clean().cast_to_unstructured_grid()
+
+        else:
+            # Collect all leaf nodes to determine the maximum depth for scaling
+            raw_leaves: list[QuadNode] = []
+
+            for root in self.roots:
+                self._get_leaves(root, raw_leaves)
+
+            scale = 1 << max((node.depth for node in raw_leaves), default=0)
+
+            # Determine the bounds of each leaf node in the scaled coordinate system
+            nx = self.x.size - 1
+            leaves: list[tuple[QuadNode, int, int, int, int]] = []
+
+            for root_idx, root in enumerate(self.roots):
+                root_x = root_idx % nx
+                root_y = root_idx // nx
+                self._get_leaf_bounds(
+                    root,
+                    root_x * scale,
+                    (root_x + 1) * scale,
+                    root_y * scale,
+                    (root_y + 1) * scale,
+                    leaves,
+                )
+    
+            if not leaves:
+                return pv.UnstructuredGrid()
+
+            # Organize vertices by their coordinates
+            vertical_vertices: dict[int, set[int]] = defaultdict(set)
+            horizontal_vertices: dict[int, set[int]] = defaultdict(set)
+
+            for _, xmin, xmax, ymin, ymax in leaves:
+                vertical_vertices[xmin].update((ymin, ymax))
+                vertical_vertices[xmax].update((ymin, ymax))
+                horizontal_vertices[ymin].update((xmin, xmax))
+                horizontal_vertices[ymax].update((xmin, xmax))
+
+            # Initialize data structures for mesh construction
+            points: list[tuple[float, float, float]] = []
+            point_ids: dict[tuple[int, int], int] = {}
+            cells: list[int] = []
+    
+            def get_point_id(idx: int, idy: int) -> int:
+                key = (idx, idy)
+
+                if key in point_ids:
+                    return point_ids[key]
+    
+                x_cell = min(idx // scale, self.x.size - 2)
+                y_cell = min(idy // scale, self.y.size - 2)
+                x_fraction = (idx - x_cell * scale) / scale
+                y_fraction = (idy - y_cell * scale) / scale
+                x_value = self.x[x_cell] + x_fraction * (
+                    self.x[x_cell + 1] - self.x[x_cell]
+                )
+                y_value = self.y[y_cell] + y_fraction * (
+                    self.y[y_cell + 1] - self.y[y_cell]
+                )
+                point_ids[key] = len(points)
+                points.append((float(x_value), float(y_value), 0.0))
+
+                return point_ids[key]
+
+            # Construct mesh cells from leaf boundaries
+            for _, xmin, xmax, ymin, ymax in leaves:
+                boundary = [
+                    *((x, ymin) for x in sorted(horizontal_vertices[ymin]) if xmin <= x <= xmax),
+                    *((xmax, y) for y in sorted(vertical_vertices[xmax]) if ymin < y <= ymax),
+                    *((x, ymax) for x in sorted(horizontal_vertices[ymax], reverse=True) if xmin <= x < xmax),
+                    *((xmin, y) for y in sorted(vertical_vertices[xmin], reverse=True) if ymin < y < ymax),
+                ]
+                point_ids_for_cell = [get_point_id(x, y) for x, y in boundary]
+                cells.extend((len(point_ids_for_cell), *point_ids_for_cell))
+    
+            celltypes = np.full(len(leaves), pv.CellType.POLYGON, dtype=np.uint8)
+            mesh = pv.UnstructuredGrid(
+                np.asarray(cells, dtype=np.int64),
+                celltypes,
+                np.asarray(points, dtype=float),
+            )
 
         return mesh
 
     def _balance(self) -> None:
-        """Enforces 2:1 balance rule via O(L log L) hash-bucket edge sweeping."""
-        from collections import defaultdict
-
+        """Enforce 2:1 balance rule via hash-bucket edge sweeping."""
         nx = self.x.size - 1
 
         while True:
@@ -332,7 +422,7 @@ class QuadTree:
         node: QuadNode,
         cursor: vtk.vtkHyperTreeGridNonOrientedCursor,
     ) -> None:
-        """Recursively applies VTK cursor subdivision based on internal tree topology."""
+        """Recursively apply VTK cursor subdivision based on internal tree topology."""
         if not node.is_leaf:
             cursor.SubdivideLeaf()
 
@@ -342,7 +432,7 @@ class QuadTree:
                 cursor.ToParent()
 
     def _get_leaves(self, node: QuadNode, leaves: list[QuadNode]) -> None:
-        """Recursively collects active leaf nodes."""
+        """Recursively collect active leaf nodes."""
         if node.is_leaf:
             leaves.append(node)
             
