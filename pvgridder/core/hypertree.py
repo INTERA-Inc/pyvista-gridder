@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pyvista as pv
 import vtk
+from pyrequire import require_package
 
 from ._base import MeshBase, MeshItem
 
@@ -14,7 +15,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Optional
 
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import NDArray
+    from shapely import Polygon
     from typing_extensions import Self
 
 
@@ -58,6 +60,18 @@ class QuadNode:
         x, y = point
 
         return self.xmin <= x <= self.xmax and self.ymin <= y <= self.ymax
+
+    @require_package("shapely>=2.0")
+    def intersects_polygon(
+        self,
+        points: list[tuple[float, float]] | Polygon,
+    ) -> bool:
+        """Return True if the filled polygon touches or overlaps the node bounds."""
+        from shapely import Polygon, box
+
+        polygon = points if isinstance(points, Polygon) else Polygon(points)
+
+        return bool(polygon.intersects(box(self.xmin, self.ymin, self.xmax, self.ymax)))
 
     def intersects_segment(
         self,
@@ -213,12 +227,49 @@ class QuadTree(MeshBase):
         self,
         point: tuple[float, float],
         depth: Optional[int] = None,
+        group: Optional[str] = None,
     ) -> Self:
         """Refine cell containing point."""
         depth = min(depth, self.max_depth) if depth else self.max_depth
 
         for root in self.roots:
             self._refine_point(root, point, depth)
+
+        if group:
+            mesh = pv.PolyData(np.atleast_2d(np.append(point, 0.0)))
+            item = MeshItem(mesh, group=group)
+            self.items.append(item)
+
+        return self
+
+    @require_package("shapely>=2.0")
+    def add_polygon(
+        self,
+        points: list[tuple[float, float]],
+        depth: Optional[int] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """Refine cells intersecting the polygon."""
+        from shapely import Polygon, get_coordinates, prepare
+
+        polygon = Polygon(points)
+        depth = self.max_depth if depth is None else min(depth, self.max_depth)
+
+        if polygon.is_empty or not polygon.is_valid or polygon.area <= 0.0:
+            raise ValueError("could not create a valid polygon from the given points")
+        
+        prepare(polygon)
+
+        for root in self.roots:
+            self._refine_polygon(root, polygon, depth)
+
+        if group:
+            coordinates = get_coordinates(polygon)
+            mesh = pv.PolyData().from_irregular_faces(
+                np.insert(coordinates, 2, 0.0, axis=1),
+                [np.arange(len(coordinates))],
+            )
+            self.items.append(MeshItem(mesh, group=group))
 
         return self
 
@@ -236,8 +287,8 @@ class QuadTree(MeshBase):
                 self._refine_segment(root, pointa, pointb, depth)
 
         if group:
-            line_mesh = pv.MultipleLines(np.insert(line, 2, 0.0, axis=1))
-            item = MeshItem(line_mesh, group=group)
+            mesh = pv.MultipleLines(np.insert(line, 2, 0.0, axis=1))
+            item = MeshItem(mesh, group=group)
             self.items.append(item)
 
         return self
@@ -440,17 +491,38 @@ class QuadTree(MeshBase):
                 self._initialize_group_array(mesh, groups),
             )
         )
+        xc, yc, _ = mesh.cell_centers().points.T
 
         for item in self.items:
-            if isinstance(item.mesh, pv.PolyData) and item.mesh.n_lines > 0:
-                for polyline in split_lines(item.mesh, as_lines=True):
-                    points_ = polyline.points
+            if isinstance(item.mesh, pv.PolyData):
+                # Polyline
+                if item.mesh.n_lines > 0:
+                    for polyline in split_lines(item.mesh, as_lines=True):
+                        points_ = polyline.points
 
-                    for pointa, pointb in zip(points_[:-1], points_[1:]):
-                        cids = mesh.find_cells_along_line(pointa, pointb)
+                        for pointa, pointb in zip(points_[:-1], points_[1:]):
+                            cids = mesh.find_cells_along_line(pointa, pointb)
 
-                        if cids.size > 0:
-                            group_array[cids] = self._get_group_number(item.group, groups)
+                            if cids.size > 0:
+                                group_array[cids] = self._get_group_number(item.group, groups)
+
+                # Polygon
+                elif item.mesh.n_faces > 0:
+                    from shapely import Polygon, contains_xy
+
+                    for face in item.mesh.irregular_faces:
+                        polygon = Polygon(item.mesh.points[face, :2])
+                        mask = contains_xy(polygon, xc, yc)
+
+                        if mask.any():
+                            group_array[mask] = self._get_group_number(item.group, groups)
+
+                # Point
+                else:
+                    cid = mesh.find_containing_cell(item.mesh.points[0])
+
+                    if cid >= 0:
+                        group_array[cid] = self._get_group_number(item.group, groups)
 
         mesh.cell_data["CellGroup"] = group_array
         mesh.user_dict["CellGroup"] = groups
@@ -566,6 +638,22 @@ class QuadTree(MeshBase):
 
             for child in node.children:
                 self._refine_point(child, point, depth)
+
+    @require_package("shapely>=2.0")
+    def _refine_polygon(
+        self,
+        node: QuadNode,
+        polygon: Polygon,
+        depth: int,
+    ) -> None:
+        """Refine the quadtree within the given polygon up to the specified depth."""
+        if node.depth >= depth or not node.intersects_polygon(polygon):
+            return
+
+        node.subdivide()
+
+        for child in node.children:
+            self._refine_polygon(child, polygon, depth)
 
     def _refine_segment(
         self,
