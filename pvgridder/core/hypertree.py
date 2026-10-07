@@ -442,14 +442,15 @@ class QuadTree(MeshBase):
         )
 
         for item in self.items:
-            if isinstance(item.mesh, pv.PolyData):
-                if item.mesh.n_lines > 0:
-                    for polyline in split_lines(item.mesh, as_lines=True):
-                        for pointa, pointb in zip(polyline.points[:-1], polyline.points[1:]):
-                            cids = mesh.find_cells_intersecting_line(pointa, pointb)
+            if isinstance(item.mesh, pv.PolyData) and item.mesh.n_lines > 0:
+                for polyline in split_lines(item.mesh, as_lines=True):
+                    points_ = polyline.points
 
-                            if cids.size > 0:
-                                group_array[cids] = self._get_group_number(item.group, groups)
+                    for pointa, pointb in zip(points_[:-1], points_[1:]):
+                        cids = mesh.find_cells_along_line(pointa, pointb)
+
+                        if cids.size > 0:
+                            group_array[cids] = self._get_group_number(item.group, groups)
 
         mesh.cell_data["CellGroup"] = group_array
         mesh.user_dict["CellGroup"] = groups
