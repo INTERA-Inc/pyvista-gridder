@@ -7,11 +7,15 @@ import numpy as np
 import pyvista as pv
 import vtk
 
+from ._base import MeshBase, MeshItem
+
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import Optional
 
     from numpy.typing import ArrayLike, NDArray
+    from typing_extensions import Self
 
 
 class QuadNode:
@@ -166,32 +170,39 @@ class QuadNode:
         self._ymax = value
 
 
-class QuadTree:
+class QuadTree(MeshBase):
     """
     QuadTree class.
 
     Parameters
     ----------
-    x : ArrayLike
-        X coordinates of the base grid.
-    y : ArrayLike
-        Y coordinates of the base grid.
+    mesh : pyvista.ImageData | pyvista.RectilinearGrid
+        Base mesh for the quadtree.
     max_depth : int, default 4
         Maximum depth of the quadtree.
+    default_group : str, optional
+        Default group name.
+    ignore_groups : Sequence[str], optional
+        List of groups to ignore.
 
     """
 
     def __init__(
         self,
-        x: ArrayLike,
-        y: ArrayLike,
+        mesh: pv.ImageData | pv.RectilinearGrid,
         *,
         max_depth: int = 4,
+        default_group: Optional[str] = None,
+        ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a quadtree."""
-        self.x = x
-        self.y = y
+        super().__init__(default_group, ignore_groups)
+
+        if isinstance(mesh, pv.ImageData):
+            mesh = mesh.cast_to_rectilinear_grid()
+
         self.max_depth = max_depth
+        self._mesh = mesh.copy()
         self._roots = []
 
         for y1, y2 in zip(self.y[:-1], self.y[1:]):
@@ -202,24 +213,34 @@ class QuadTree:
         self,
         point: tuple[float, float],
         depth: Optional[int] = None,
-    ) -> None:
-        """Refine mesh containing point."""
-        depth = self.max_depth if depth is None else depth
+    ) -> Self:
+        """Refine cell containing point."""
+        depth = min(depth, self.max_depth) if depth else self.max_depth
 
         for root in self.roots:
             self._refine_point(root, point, depth)
+
+        return self
 
     def add_polyline(
         self,
         line: list[tuple[float, float]],
         depth: Optional[int] = None,
-    ) -> None:
-        """Refine mesh intersected by polyline."""
-        depth = self.max_depth if depth is None else depth
+        group: Optional[str] = None,
+    ) -> Self:
+        """Refine cells intersected by polyline."""
+        depth = min(depth, self.max_depth) if depth else self.max_depth
 
         for pointa, pointb in zip(line[:-1], line[1:]):
             for root in self.roots:
                 self._refine_segment(root, pointa, pointb, depth)
+
+        if group:
+            line_mesh = pv.MultipleLines(np.insert(line, 2, 0.0, axis=1))
+            item = MeshItem(line_mesh, group=group)
+            self.items.append(item)
+
+        return self
 
     def generate_mesh(
         self,
@@ -244,6 +265,8 @@ class QuadTree:
             QuadTree mesh.
         
         """
+        from .. import split_lines
+
         if balance:
             self._balance()
 
@@ -315,9 +338,6 @@ class QuadTree:
                     (root_y + 1) * scale,
                     leaves,
                 )
-    
-            if not leaves:
-                return pv.UnstructuredGrid()
 
             # Organize vertices by their coordinates
             vertical_vertices: dict[int, set[int]] = defaultdict(set)
@@ -397,12 +417,42 @@ class QuadTree:
             mesh = pv.UnstructuredGrid(
                 np.asarray(cells, dtype=np.int64),
                 celltypes,
-                np.asarray(points, dtype=float),
+                np.asarray(points, dtype=float).reshape(-1, 3),
             )
             mesh.point_data["HangingNode"] = np.array(
                 point_hanging_node_types,
                 dtype=np.int8,
             )
+
+        centers = mesh.cell_centers().points
+        idx = np.searchsorted(self.x, centers[:, 0], side="right") - 1
+        idy = np.searchsorted(self.y, centers[:, 1], side="right") - 1
+        mesh.cell_data["vtkOriginalCellIds"] = idx + idy * (self.x.size - 1)
+
+        for k, v in self.mesh.cell_data.items():
+            mesh.cell_data[k] = v[mesh.cell_data["vtkOriginalCellIds"]]
+
+        # Generate cell groups
+        groups = dict(self.mesh.user_dict) or {}
+        group_array = np.asanyarray(
+            mesh.cell_data.get(
+                "CellGroup",
+                self._initialize_group_array(mesh, groups),
+            )
+        )
+
+        for item in self.items:
+            if isinstance(item.mesh, pv.PolyData):
+                if item.mesh.n_lines > 0:
+                    for polyline in split_lines(item.mesh, as_lines=True):
+                        for pointa, pointb in zip(polyline.points[:-1], polyline.points[1:]):
+                            cids = mesh.find_cells_intersecting_line(pointa, pointb)
+
+                            if cids.size > 0:
+                                group_array[cids] = self._get_group_number(item.group, groups)
+
+        mesh.cell_data["CellGroup"] = group_array
+        mesh.user_dict["CellGroup"] = groups
 
         return mesh
 
@@ -586,6 +636,11 @@ class QuadTree:
         self._max_depth = value
 
     @property
+    def mesh(self) -> pv.DataSet:
+        """Get the base mesh."""
+        return self._mesh
+
+    @property
     def roots(self) -> list[QuadNode]:
         """Get the root nodes."""
         return self._roots
@@ -593,19 +648,9 @@ class QuadTree:
     @property
     def x(self) -> NDArray:
         """Get the X coordinates of the points."""
-        return self._x
-
-    @x.setter
-    def x(self, value: ArrayLike) -> None:
-        """Set the X coordinates of the points."""
-        self._x = np.asanyarray(value)
+        return np.asanyarray(self.mesh.x)
 
     @property
     def y(self) -> NDArray:
         """Get the Y coordinates of the points."""
-        return self._y
-
-    @y.setter
-    def y(self, value: ArrayLike) -> None:
-        """Set the Y coordinates of the points."""
-        self._y = np.asanyarray(value)
+        return np.asanyarray(self.mesh.y)
