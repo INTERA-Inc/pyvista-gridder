@@ -226,22 +226,25 @@ class QuadTree(MeshBase):
     def add_circle(
         self,
         radius: float,
+        *,
         center: Optional[tuple[float, float]] = None,
+        boundary_only: bool = False,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
-        """
-        Refine cells contained within the circle.
-        """
+        """Refine cells contained within the circle."""
         center_ = np.zeros(2) if center is None else np.asanyarray(center)
         angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
         points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
 
-        return self.add_polygon(points, depth=depth, group=group)
+        return self.add_polygon(
+            points, depth=depth, group=group, boundary_only=boundary_only
+        )
 
     def add_point(
         self,
         point: tuple[float, float],
+        *,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -262,6 +265,8 @@ class QuadTree(MeshBase):
     def add_polygon(
         self,
         points: list[tuple[float, float]],
+        *,
+        boundary_only: bool = False,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -276,14 +281,21 @@ class QuadTree(MeshBase):
         
         prepare(polygon)
 
-        for root in self.roots:
-            self._refine_polygon(root, polygon, depth)
+        if boundary_only:
+            coordinates = get_coordinates(polygon)
+
+            for pointa, pointb in zip(coordinates[:-1], coordinates[1:]):
+                for root in self.roots:
+                    self._refine_segment(root, pointa, pointb, depth)
+
+        else:
+            for root in self.roots:
+                self._refine_polygon(root, polygon, depth)
 
         if group:
-            coordinates = get_coordinates(polygon)
             mesh = pv.PolyData().from_irregular_faces(
-                np.insert(coordinates, 2, 0.0, axis=1),
-                [np.arange(len(coordinates))],
+                np.insert(points, 2, 0.0, axis=1),
+                [np.arange(len(points))],
             )
             self.items.append(MeshItem(mesh, group=group))
 
