@@ -330,18 +330,19 @@ class QuadTree:
                 horizontal_vertices[ymax].update((xmin, xmax))
 
             # Flag hanging nodes within each leaf's bounds
-            hanging_nodes: set[tuple[int, int]] = set()
+            vertical_hanging_nodes: set[tuple[int, int]] = set()
+            horizontal_hanging_nodes: set[tuple[int, int]] = set()
 
             for _, xmin, xmax, ymin, ymax in leaves:
                 for x in (xmin, xmax):
-                    hanging_nodes.update(
+                    vertical_hanging_nodes.update(
                         (x, y)
                         for y in vertical_vertices[x]
                         if ymin < y < ymax
                     )
-                    
+
                 for y in (ymin, ymax):
-                    hanging_nodes.update(
+                    horizontal_hanging_nodes.update(
                         (x, y)
                         for x in horizontal_vertices[y]
                         if xmin < x < xmax
@@ -350,7 +351,7 @@ class QuadTree:
             # Initialize data structures for mesh construction
             points: list[tuple[float, float, float]] = []
             point_ids: dict[tuple[int, int], int] = {}
-            point_hanging_nodes: list[bool] = []
+            point_hanging_node_types: list[int] = []
             cells: list[int] = []
     
             def get_point_id(idx: int, idy: int) -> int:
@@ -370,7 +371,13 @@ class QuadTree:
                     self.y[y_cell + 1] - self.y[y_cell]
                 )
                 point_ids[key] = len(points)
-                point_hanging_nodes.append(key in hanging_nodes)
+                point_hanging_node_types.append(
+                    0
+                    if key in vertical_hanging_nodes
+                    else 1
+                    if key in horizontal_hanging_nodes
+                    else -1
+                )
                 points.append((float(x_value), float(y_value), 0.0))
 
                 return point_ids[key]
@@ -393,8 +400,8 @@ class QuadTree:
                 np.asarray(points, dtype=float),
             )
             mesh.point_data["HangingNode"] = np.array(
-                point_hanging_nodes,
-                dtype=bool,
+                point_hanging_node_types,
+                dtype=np.int8,
             )
 
         return mesh
