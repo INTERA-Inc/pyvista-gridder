@@ -329,9 +329,28 @@ class QuadTree:
                 horizontal_vertices[ymin].update((xmin, xmax))
                 horizontal_vertices[ymax].update((xmin, xmax))
 
+            # Flag hanging nodes within each leaf's bounds
+            hanging_nodes: set[tuple[int, int]] = set()
+
+            for _, xmin, xmax, ymin, ymax in leaves:
+                for x in (xmin, xmax):
+                    hanging_nodes.update(
+                        (x, y)
+                        for y in vertical_vertices[x]
+                        if ymin < y < ymax
+                    )
+                    
+                for y in (ymin, ymax):
+                    hanging_nodes.update(
+                        (x, y)
+                        for x in horizontal_vertices[y]
+                        if xmin < x < xmax
+                    )
+
             # Initialize data structures for mesh construction
             points: list[tuple[float, float, float]] = []
             point_ids: dict[tuple[int, int], int] = {}
+            point_hanging_nodes: list[bool] = []
             cells: list[int] = []
     
             def get_point_id(idx: int, idy: int) -> int:
@@ -351,6 +370,7 @@ class QuadTree:
                     self.y[y_cell + 1] - self.y[y_cell]
                 )
                 point_ids[key] = len(points)
+                point_hanging_nodes.append(key in hanging_nodes)
                 points.append((float(x_value), float(y_value), 0.0))
 
                 return point_ids[key]
@@ -371,6 +391,10 @@ class QuadTree:
                 np.asarray(cells, dtype=np.int64),
                 celltypes,
                 np.asarray(points, dtype=float),
+            )
+            mesh.point_data["HangingNode"] = np.array(
+                point_hanging_nodes,
+                dtype=bool,
             )
 
         return mesh
