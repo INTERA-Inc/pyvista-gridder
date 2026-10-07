@@ -223,6 +223,22 @@ class QuadTree(MeshBase):
             for x1, x2 in zip(self.x[:-1], self.x[1:]):
                 self.roots.append(QuadNode(x1, x2, y1, y2, depth=0))
 
+    def add_circle(
+        self,
+        radius: float,
+        center: Optional[tuple[float, float]] = None,
+        depth: Optional[int] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Refine cells contained within the circle.
+        """
+        center_ = np.zeros(2) if center is None else np.asanyarray(center)
+        angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
+        points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
+
+        return self.add_polygon(points, depth=depth, group=group)
+
     def add_point(
         self,
         point: tuple[float, float],
@@ -249,7 +265,7 @@ class QuadTree(MeshBase):
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
-        """Refine cells intersecting the polygon."""
+        """Refine cells contained within the polygon."""
         from shapely import Polygon, get_coordinates, prepare
 
         polygon = Polygon(points)
@@ -507,7 +523,7 @@ class QuadTree(MeshBase):
                                 group_array[cids] = self._get_group_number(item.group, groups)
 
                 # Polygon
-                elif item.mesh.n_faces > 0:
+                elif item.mesh.n_faces_strict > 0:
                     from shapely import Polygon, contains_xy
 
                     for face in item.mesh.irregular_faces:
