@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Union, cast
 import numpy as np
 import pyvista as pv
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from shapely import Polygon, prepare
 
 
 if TYPE_CHECKING:
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
     from typing_extensions import Self
 
-    from .._typing import DataSetLike, GridLike
+    from .._typing import DataSetLike, GridLike, PolygonLike
 
 
 class MeshItem:
@@ -82,6 +83,21 @@ class MeshBase(ABC):
         self._default_group = default_group if default_group else "default"
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
         self._items = list(items) if items else []
+
+    def _convert_polygon(self, polygon: PolygonLike) -> Polygon:
+        """Convert a PolygonLike object to a Shapely Polygon."""
+        if isinstance(polygon, pv.PolyData):
+            irregular_faces = polygon.irregular_faces
+
+            if len(irregular_faces) == 0:
+                raise ValueError("could not create a valid polygon from the given PolyData")
+
+            polygon = polygon.points[irregular_faces[0], :2]
+
+        polygon = Polygon(polygon) if not isinstance(polygon, Polygon) else polygon
+        prepare(polygon)
+
+        return polygon
 
     def _check_point_array(
         self, points: ArrayLike, axis: Optional[int] = None
