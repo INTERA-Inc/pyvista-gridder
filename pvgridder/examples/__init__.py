@@ -1,5 +1,6 @@
 """Examples module."""
 
+from . import freyberg as freyberg
 from .examples import (
     load_anticline_2d as load_anticline_2d,
     load_anticline_3d as load_anticline_3d,
@@ -9,3 +10,4 @@ from .examples import (
     load_well_2d as load_well_2d,
     load_well_3d as load_well_3d,
 )
+from .freyberg import load as load_freyberg
