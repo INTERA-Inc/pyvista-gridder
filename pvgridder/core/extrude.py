@@ -59,11 +59,11 @@ class MeshExtrude(MeshBase):
                 "invalid mesh, input mesh should be a 2D structured grid or an unstructured grid"
             )
 
-        mesh = (
-            mesh.cast_to_structured_grid()
-            if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid))
-            else mesh.cast_to_unstructured_grid()
-        )
+        if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
+            mesh = mesh.cast_to_structured_grid()
+
+        elif isinstance(mesh, pv.ExplicitStructuredGrid):
+            mesh = mesh.cast_to_unstructured_grid()
 
         super().__init__(default_group, ignore_groups, items=[MeshItem(mesh)])
         self._mesh = mesh
