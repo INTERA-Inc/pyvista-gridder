@@ -5,6 +5,9 @@ from svg.path import parse_path
 from xml.dom import minidom
 
 
+# Parameters
+shift = 14.37
+
 # Extract and interpolate coordinates of the first snake
 with minidom.parse("python_logo.svg") as doc:
     path_strings = [path.getAttribute("d") for path in doc.getElementsByTagName("path")]
@@ -30,23 +33,34 @@ eye = pvg.decimate_rdp(eye)
 
 # Generate Voronoi tesselation from Delaunay triangulation
 snake1 = pvg.VoronoiMesh2D(
-    pvg.Polygon(snake, [eye], celltype="triangle", cellsize=5.0), preference="point"
+    pvg.Polygon(snake, [eye], celltype="triangle", cellsize=5.0, algorithm=8, optimization="Laplace2D"), preference="point"
 ).generate_mesh()
 snake1 = snake1.translate(list(map(lambda x: -x, snake1.center)))
+snake1 = snake1.translate((-shift, -shift, 0.0)).rotate_z(180.0)
 
-# Shift and rotate the second snake
-shift = 14.37
-snake1 = snake1.translate((-shift, -shift, 0.0))
-snake2 = snake1.rotate_z(180.0)
+# Generate QuadTree mesh
+x = np.linspace(snake.bounds.x_min, snake.bounds.x_max, 11)
+y = np.linspace(snake.bounds.y_min, snake.bounds.y_max, 11)
+bmesh = pv.RectilinearGrid(x, y, [0.0])
+
+snake2 = (
+    pvg.QuadTree(bmesh, max_depth=4, default_group="to_remove")
+    .add_polygon(snake.points[:, :2], boundary_only=True, group="snake")
+    .add_polygon(eye.points[:, :2], boundary_only=True, group="to_remove")
+    .generate_mesh(balance=True, conformal=True)
+)
+snake2 = snake2.extract_cells(pvg.get_cell_group(snake2) == "snake")
+snake2 = snake2.translate(list(map(lambda x: -x, snake2.center)))
+snake2 = snake2.translate((-shift, -shift, 0.0))
 
 # Plot
 p = pv.Plotter(
-    window_size=(800, 800),
+    window_size=[800, 800],
     off_screen=True,
     image_scale=2,
 )
-p.add_mesh(snake1, color="#FFD43B", line_width=3, show_edges=True)
-p.add_mesh(snake2, color="#306998", line_width=3, show_edges=True)
+p.add_mesh(snake1, color="#306998", line_width=3, show_edges=True)
+p.add_mesh(snake2, color="#FFD43B", line_width=3, show_edges=True)
 # p.view_xy(negative=True)
 p.camera_position = [
     (0.0, 0.0, -210.0),
