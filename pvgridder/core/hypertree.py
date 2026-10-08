@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from shapely import Polygon
     from typing_extensions import Self
 
+    from .._typing import VectorLike, MatrixLike
+
 
 class QuadNode:
     """
@@ -55,16 +57,16 @@ class QuadNode:
         self.depth = depth
         self._children = []
 
-    def contains_point(self, point: tuple[float, float]) -> bool:
+    def contains_point(self, point: VectorLike) -> bool:
         """Return True if the point is within the node's bounding box."""
-        x, y = point
+        x, y = point[:2]
 
         return self.xmin <= x <= self.xmax and self.ymin <= y <= self.ymax
 
     @require_package("shapely>=2.0")
     def intersects_polygon(
         self,
-        points: list[tuple[float, float]] | Polygon,
+        points: MatrixLike | Polygon,
     ) -> bool:
         """Return True if the filled polygon touches or overlaps the node bounds."""
         from shapely import Polygon, box
@@ -75,12 +77,12 @@ class QuadNode:
 
     def intersects_segment(
         self,
-        pointa: tuple[float, float],
-        pointb: tuple[float, float],
+        pointa: VectorLike,
+        pointb: VectorLike,
     ) -> bool:
         """Return True if the line segment intersects the node's bounding box."""
-        x1, y1 = pointa
-        x2, y2 = pointb
+        x1, y1 = pointa[:2]
+        x2, y2 = pointb[:2]
 
         if max(x1, x2) < self.xmin or min(x1, x2) > self.xmax or max(y1, y2) < self.ymin or min(y1, y2) > self.ymax:
             return False
@@ -227,12 +229,37 @@ class QuadTree(MeshBase):
         self,
         radius: float,
         *,
-        center: Optional[tuple[float, float]] = None,
+        center: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
-        """Refine cells contained within the circle."""
+        """
+        Refine cells contained within the circle.
+
+        Parameters
+        ----------
+        radius : float
+            Radius of the circle.
+        center : VectorLike, optional
+            Center of the circle.
+        boundary_only : bool, default False
+            If True, only refine cells intersecting the boundary.
+        depth : int, optional
+            Maximum depth for refinement.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        Notes
+        -----
+        The circle is approximated by a 64-sided polygon for refinement purposes.
+        
+        """
         center_ = np.zeros(2) if center is None else np.asanyarray(center)
         angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
         points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
@@ -243,19 +270,36 @@ class QuadTree(MeshBase):
 
     def add_point(
         self,
-        point: tuple[float, float],
+        point: VectorLike,
         *,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
-        """Refine cell containing point."""
+        """
+        Refine cell containing point.
+
+        Parameters
+        ----------
+        point : VectorLike
+            Point to refine.
+        depth : int, optional
+            Maximum depth for refinement.
+        group : str, optional
+            Group name.
+        
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+        
+        """
         depth = min(depth, self.max_depth) if depth else self.max_depth
 
         for root in self.roots:
             self._refine_point(root, point, depth)
 
         if group:
-            mesh = pv.PolyData(np.atleast_2d(np.append(point, 0.0)))
+            mesh = pv.PolyData(np.atleast_2d(np.append(point[:2], 0.0)))
             item = MeshItem(mesh, group=group)
             self.items.append(item)
 
@@ -264,13 +308,32 @@ class QuadTree(MeshBase):
     @require_package("shapely>=2.0")
     def add_polygon(
         self,
-        points: list[tuple[float, float]],
+        points: MatrixLike,
         *,
         boundary_only: bool = False,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
-        """Refine cells contained within the polygon."""
+        """
+        Refine cells contained within the polygon.
+        
+        Parameters
+        ----------
+        points : MatrixLike
+            Vertices of the polygon.
+        boundary_only : bool, default False
+            If True, only refine cells intersected by the polygon boundary.
+        depth : int, optional
+            Maximum depth for refinement.
+        group : str, optional
+            Group name.
+        
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+        
+        """
         from shapely import Polygon, get_coordinates, prepare
 
         polygon = Polygon(points)
@@ -303,11 +366,28 @@ class QuadTree(MeshBase):
 
     def add_polyline(
         self,
-        line: list[tuple[float, float]],
+        line: MatrixLike,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
-        """Refine cells intersected by polyline."""
+        """
+        Refine cells intersected by polyline.
+        
+        Parameters
+        ----------
+        line : MatrixLike
+            Vertices of the polyline.
+        depth : int, optional
+            Maximum depth for refinement.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+        
+        """
         depth = min(depth, self.max_depth) if depth else self.max_depth
 
         for pointa, pointb in zip(line[:-1], line[1:]):
@@ -653,7 +733,7 @@ class QuadTree(MeshBase):
     def _refine_point(
         self,
         node: QuadNode,
-        point: tuple[float, float],
+        point: VectorLike,
         depth: int,
     ) -> None:
         """Refine the quadtree at the given point up to the specified depth."""
@@ -686,8 +766,8 @@ class QuadTree(MeshBase):
     def _refine_segment(
         self,
         node: QuadNode,
-        pointa: tuple[float, float],
-        pointb: tuple[float, float],
+        pointa: VectorLike,
+        pointb: VectorLike,
         depth: int,
     ) -> None:
         """Refine the quadtree along the given segment up to the specified depth."""
