@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pyvista as pv
 import vtk
-from pyrequire import require_package
+from shapely import LineString, Polygon, box, contains_xy, get_coordinates, prepare
 
 from ._base import MeshBase, MeshItem
 
@@ -16,10 +16,9 @@ if TYPE_CHECKING:
     from typing import Optional
 
     from numpy.typing import NDArray
-    from shapely import Polygon
     from typing_extensions import Self
 
-    from .._typing import VectorLike, MatrixLike
+    from .._typing import MatrixLike, PolygonLike, PolylineLike, VectorLike
 
 
 class QuadNode:
@@ -63,14 +62,11 @@ class QuadNode:
 
         return self.xmin <= x <= self.xmax and self.ymin <= y <= self.ymax
 
-    @require_package("shapely>=2.0")
     def intersects_polygon(
         self,
         points: MatrixLike | Polygon,
     ) -> bool:
         """Return True if the filled polygon touches or overlaps the node bounds."""
-        from shapely import Polygon, box
-
         polygon = points if isinstance(points, Polygon) else Polygon(points)
 
         return bool(polygon.intersects(box(self.xmin, self.ymin, self.xmax, self.ymax)))
@@ -305,10 +301,9 @@ class QuadTree(MeshBase):
 
         return self
 
-    @require_package("shapely>=2.0")
     def add_polygon(
         self,
-        points: MatrixLike,
+        polygon: PolygonLike,
         *,
         boundary_only: bool = False,
         depth: Optional[int] = None,
@@ -319,8 +314,9 @@ class QuadTree(MeshBase):
         
         Parameters
         ----------
-        points : MatrixLike
-            Vertices of the polygon.
+        polygon : PolygonLike
+            Polygon to refine within. If a PolyData is provided, the first polygon face
+            will be used.
         boundary_only : bool, default False
             If True, only refine cells intersected by the polygon boundary.
         depth : int, optional
@@ -334,20 +330,25 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
         
         """
-        from shapely import Polygon, get_coordinates, prepare
+        if isinstance(polygon, pv.PolyData):
+            irregular_faces = polygon.irregular_faces
 
-        polygon = Polygon(points)
+            if len(irregular_faces) == 0:
+                raise ValueError("could not create a valid polygon from the given PolyData")
+
+            polygon = polygon.points[irregular_faces[0], :2]
+
+        polygon = Polygon(polygon) if not isinstance(polygon, Polygon) else polygon
         depth = self.max_depth if depth is None else min(depth, self.max_depth)
 
         if polygon.is_empty or not polygon.is_valid or polygon.area <= 0.0:
             raise ValueError("could not create a valid polygon from the given points")
         
         prepare(polygon)
+        points = get_coordinates(polygon)
 
         if boundary_only:
-            coordinates = get_coordinates(polygon)
-
-            for pointa, pointb in zip(coordinates[:-1], coordinates[1:]):
+            for pointa, pointb in zip(points[:-1], points[1:]):
                 for root in self.roots:
                     self._refine_segment(root, pointa, pointb, depth)
 
@@ -366,7 +367,7 @@ class QuadTree(MeshBase):
 
     def add_polyline(
         self,
-        line: MatrixLike,
+        line: PolylineLike,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -375,8 +376,8 @@ class QuadTree(MeshBase):
         
         Parameters
         ----------
-        line : MatrixLike
-            Vertices of the polyline.
+        line : PolylineLike
+            Polyline defining the path for refinement.
         depth : int, optional
             Maximum depth for refinement.
         group : str, optional
@@ -388,7 +389,18 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
         
         """
+        from .. import split_lines
+
         depth = min(depth, self.max_depth) if depth else self.max_depth
+
+        if isinstance(line, pv.PolyData):
+            if line.n_lines == 0:
+                raise ValueError("could not create a valid polyline from the given PolyData")
+
+            line = split_lines(line, as_lines=False)[0].points[:, :2]
+
+        elif isinstance(line, LineString):
+            line = get_coordinates(line)
 
         for pointa, pointb in zip(line[:-1], line[1:]):
             for root in self.roots:
@@ -616,8 +628,6 @@ class QuadTree(MeshBase):
 
                 # Polygon
                 elif item.mesh.n_faces_strict > 0:
-                    from shapely import Polygon, contains_xy
-
                     for face in item.mesh.irregular_faces:
                         polygon = Polygon(item.mesh.points[face, :2])
                         mask = contains_xy(polygon, xc, yc)
@@ -747,7 +757,6 @@ class QuadTree(MeshBase):
             for child in node.children:
                 self._refine_point(child, point, depth)
 
-    @require_package("shapely>=2.0")
     def _refine_polygon(
         self,
         node: QuadNode,
