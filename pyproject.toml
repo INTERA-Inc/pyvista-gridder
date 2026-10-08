@@ -35,13 +35,13 @@ dependencies = [
     "pyrequire >= 0.2.0",
     "pyvista >= 0.45",
     "scipy",
+    "shapely >= 2.0",
     "vtk >= 9.4",
 ]
 
 [project.optional-dependencies]
 full = [
     "gmsh",
-    "shapely >= 2.0",
 ]
 test = [
     "pytest",

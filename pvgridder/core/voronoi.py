@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Literal, Union, cast
 import numpy as np
 import pyvista as pv
 from numpy.typing import NDArray
-from pyrequire import require_package
 from scipy.spatial import Voronoi
 
 from ._base import MeshBase, MeshItem
@@ -20,7 +19,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-@require_package("shapely>=2.0")
 class VoronoiMesh2D(MeshBase):
     """
     2D Voronoi mesh class.
