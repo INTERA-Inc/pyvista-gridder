@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyvista as pv
 import vtk
-from shapely import LineString, Polygon, box, contains_xy, get_coordinates, prepare
+from shapely import LineString, Polygon, box, contains_xy, get_coordinates
 
 from ._base import MeshBase, MeshItem
 
@@ -222,11 +222,53 @@ class QuadTree(MeshBase):
 
         self.max_depth = max_depth
         self._mesh = mesh.copy()
+        self._boundary_polygon = None
         self._roots = []
 
         for y1, y2 in zip(self.y[:-1], self.y[1:]):
             for x1, x2 in zip(self.x[:-1], self.x[1:]):
                 self.roots.append(QuadNode(x1, x2, y1, y2, depth=0))
+
+    def add_boundary_polygon(
+        self,
+        polygon: PolygonLike,
+        depth: int = 1,
+    ) -> Self:
+        """
+        Add a boundary polygon to the quadtree.
+
+        Parameters
+        ----------
+        polygon : PolygonLike
+            Boundary polygon to add.
+        depth : int, default 1
+            Depth for refinement of the boundary polygon. No refinement by default.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        Notes
+        -----
+        Only one boundary polygon can be active at a time.
+
+        """
+        if self._boundary_polygon is not None:
+            raise ValueError("could not add a second boundary polygon")
+
+        polygon = self._convert_polygon(polygon)
+        depth = min(depth, self.max_depth) if depth else self.max_depth
+
+        if depth > 1:
+            self.add_polygon(Polygon(polygon.exterior), boundary_only=True, depth=depth)
+
+            for interior in polygon.interiors:
+                self.add_polygon(Polygon(interior), boundary_only=True, depth=depth)
+
+        self._boundary_polygon = polygon
+
+        return self
 
     def add_circle(
         self,
@@ -249,7 +291,7 @@ class QuadTree(MeshBase):
         boundary_only : bool, default False
             If True, only refine cells intersecting the boundary.
         depth : int, optional
-            Maximum depth for refinement.
+            Depth for refinement.
         group : str, optional
             Group name.
 
@@ -286,7 +328,7 @@ class QuadTree(MeshBase):
         point : VectorLike
             Point to refine.
         depth : int, optional
-            Maximum depth for refinement.
+            Depth for refinement.
         group : str, optional
             Group name.
         
@@ -327,7 +369,7 @@ class QuadTree(MeshBase):
         boundary_only : bool, default False
             If True, only refine cells intersected by the polygon boundary.
         depth : int, optional
-            Maximum depth for refinement.
+            Depth for refinement.
         group : str, optional
             Group name.
         
@@ -337,22 +379,13 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
         
         """
-        if isinstance(polygon, pv.PolyData):
-            irregular_faces = polygon.irregular_faces
-
-            if len(irregular_faces) == 0:
-                raise ValueError("could not create a valid polygon from the given PolyData")
-
-            polygon = polygon.points[irregular_faces[0], :2]
-
-        polygon = Polygon(polygon) if not isinstance(polygon, Polygon) else polygon
+        polygon = self._convert_polygon(polygon)
         depth = self.max_depth if depth is None else min(depth, self.max_depth)
 
         if polygon.is_empty or not polygon.is_valid or polygon.area <= 0.0:
             raise ValueError("could not create a valid polygon from the given points")
         
-        prepare(polygon)
-        points = get_coordinates(polygon)
+        points = get_coordinates(polygon.exterior)
 
         if boundary_only:
             for pointa, pointb in zip(points[:-1], points[1:]):
@@ -386,7 +419,7 @@ class QuadTree(MeshBase):
         line : PolyLineLike
             Polyline defining the path for refinement.
         depth : int, optional
-            Maximum depth for refinement.
+            Depth for refinement.
         group : str, optional
             Group name.
 
@@ -424,6 +457,7 @@ class QuadTree(MeshBase):
         self,
         balance: bool = False,
         conformal: bool = False,
+        tolerance: float = 1.0e-8,
     ) -> pv.UnstructuredGrid:
         """
         Generate a QuadTree mesh.
@@ -436,6 +470,8 @@ class QuadTree(MeshBase):
         conformal : bool, default False
             If True, generate a conforming mesh (i.e., polygons with hanging nodes
             instead of quads).
+        tolerance : scalar, default 1.0e-8
+            Set merging tolerance of duplicate points.
 
         Returns
         -------
@@ -490,7 +526,7 @@ class QuadTree(MeshBase):
             geometry = vtk.vtkHyperTreeGridGeometry()
             geometry.SetInputData(htg)
             geometry.Update()
-            mesh = pv.wrap(geometry.GetOutput()).clean().cast_to_unstructured_grid()
+            mesh = pv.wrap(geometry.GetOutput())
 
         else:
             # Collect all leaf nodes to determine the maximum depth for scaling
@@ -651,8 +687,14 @@ class QuadTree(MeshBase):
 
         mesh.cell_data["CellGroup"] = group_array
         mesh.user_dict["CellGroup"] = groups
+        _ = mesh.set_active_scalars("CellGroup", preference="cell")
 
-        return mesh
+        # Handle boundary polygon if it exists
+        if self._boundary_polygon is not None:
+            mask = contains_xy(self._boundary_polygon, xc, yc)
+            mesh = mesh.extract_cells(mask)
+
+        return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
 
     def _balance(self) -> None:
         """Enforce 2:1 balance rule via hash-bucket edge sweeping."""
