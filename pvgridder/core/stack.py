@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
     from typing_extensions import Self
 
+    from .._typing import GridLike, VectorLike
+
 
 class MeshStack2D(MeshStackBase):
     """
@@ -137,7 +139,7 @@ class MeshStack3D(MeshStackBase):
 
     Parameters
     ----------
-    mesh : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : GridLike
         Base mesh.
     axis : int, default 2
         Stacking axis.
@@ -155,10 +157,7 @@ class MeshStack3D(MeshStackBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData
-        | pv.RectilinearGrid
-        | pv.StructuredGrid
-        | pv.UnstructuredGrid,
+        mesh: GridLike,
         axis: int = 2,
         bottom_up: bool = True,
         default_group: Optional[str] = None,
@@ -168,7 +167,13 @@ class MeshStack3D(MeshStackBase):
 
         if isinstance(
             mesh,
-            (pv.ImageData, pv.RectilinearGrid, pv.StructuredGrid, pv.UnstructuredGrid),
+            (
+                pv.ImageData,
+                pv.RectilinearGrid,
+                pv.StructuredGrid,
+                pv.ExplicitStructuredGrid,
+                pv.UnstructuredGrid,
+            ),
         ):
             if get_dimension(mesh) != 2:
                 raise ValueError("invalid mesh, input mesh should be 2D")
@@ -183,7 +188,7 @@ class MeshStack3D(MeshStackBase):
     def add_plane(
         self,
         angles: ArrayLike,
-        point: ArrayLike,
+        point: VectorLike,
         *args,
         **kwargs,
     ) -> Self:
@@ -194,7 +199,7 @@ class MeshStack3D(MeshStackBase):
         ----------
         angles : ArrayLike
             Rotation angles in degrees around the X, Y, and Z axes.
-        point : ArrayLike
+        point : VectorLike
             Coordinates of one point on the plane.
         *args, **kwargs
             Additional arguments. See ``pvgridder.MeshStack3D.add`` for details.

@@ -10,6 +10,24 @@ from numpy.typing import NDArray
 from typing_extensions import TypeAlias
 
 
+RectilinearLike: TypeAlias = Union[
+    pv.ImageData,
+    pv.RectilinearGrid,
+]
+StructuredLike: TypeAlias = Union[
+    RectilinearLike,
+    pv.StructuredGrid,
+]
+GridLike: TypeAlias = Union[
+    StructuredLike,
+    pv.ExplicitStructuredGrid,
+    pv.UnstructuredGrid,
+]
+DataSetLike: TypeAlias = Union[
+    GridLike,
+    pv.DataSet,
+    pv.PolyData,
+]
 VectorLike: TypeAlias = Union[
     Sequence[Union[int, float]],
     NDArray[Union[np.integer[Any], np.floating[Any]]],
@@ -26,7 +44,7 @@ PolygonLike: TypeAlias = Union[
     pv.PolyData,
     Polygon,
 ]
-PolylineLike: TypeAlias = Union[
+PolyLineLike: TypeAlias = Union[
     LineString,
     MatrixLike,
     pv.PolyData,

@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, NDArray
 
+    from .._typing import DataSetLike, PolyLineLike, VectorLike
+
 
 def AnnularSector(
     inner_radius: float = 0.5,
@@ -31,7 +33,7 @@ def AnnularSector(
     theta_resolution: Optional[int | ArrayLike] = None,
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate an annular sector mesh.
@@ -66,7 +68,7 @@ def AnnularSector(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the annular sector.
 
     Returns
@@ -98,7 +100,7 @@ def Annulus(
     theta_resolution: Optional[int | ArrayLike] = None,
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate an annulus mesh.
@@ -129,7 +131,7 @@ def Annulus(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the annulus.
 
     Returns
@@ -157,7 +159,7 @@ def Circle(
     radius: float = 1.0,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.UnstructuredGrid:
     """
     Generate a circle mesh.
@@ -176,7 +178,7 @@ def Circle(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the circle.
 
     Returns
@@ -194,10 +196,10 @@ def Circle(
 
 
 def CurvedLine(
-    origin: ArrayLike,
+    origin: VectorLike,
     length: float,
-    start: ArrayLike,
-    end: Optional[ArrayLike] = None,
+    start: VectorLike,
+    end: Optional[VectorLike] = None,
     resolution: int = 1,
 ) -> pv.PolyData:
     """
@@ -205,13 +207,13 @@ def CurvedLine(
 
     Parameters
     ----------
-    origin : ArrayLike
+    origin : VectorLike
         Origin point of the curved line.
     length : float
         Length of the curved line.
-    start : ArrayLike
+    start : VectorLike
         Starting direction vector of the curved line.
-    end : ArrayLike, optional
+    end : VectorLike, optional
         Ending direction vector of the curved line. If None, defaults to *start*.
     resolution : int, default 1
         Number of segments to divide the curved line into.
@@ -231,6 +233,8 @@ def CurvedLine(
     end = end / np.linalg.norm(end)
 
     # Compute the direction vectors
+    start = cast(np.ndarray, start)
+    end = cast(np.ndarray, end)
     theta = np.arccos((start @ end).clip(-1.0, 1.0))
     directions = (
         np.tile(start, (resolution + 1, 1))
@@ -269,7 +273,7 @@ def CylindricalShell(
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
     z_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate a cylindrical shell mesh.
@@ -312,7 +316,7 @@ def CylindricalShell(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the cylindrical shell.
 
     Returns
@@ -349,7 +353,7 @@ def CylindricalShellSector(
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
     z_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate a cylindrical shell sector mesh.
@@ -396,7 +400,7 @@ def CylindricalShellSector(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the cylindrical shell sector.
 
     Returns
@@ -430,8 +434,8 @@ def CylindricalShellSector(
 
 @require_package("gmsh")
 def Polygon(
-    shell: Optional[pv.DataSet | ArrayLike] = None,
-    holes: Optional[Sequence[pv.DataSet | ArrayLike]] = None,
+    shell: Optional[DataSetLike | ArrayLike] = None,
+    holes: Optional[Sequence[DataSetLike | ArrayLike]] = None,
     celltype: Optional[Literal["polygon", "quad", "triangle"]] = None,
     cellsize: Optional[float] = None,
     algorithm: int = 6,
@@ -443,10 +447,10 @@ def Polygon(
 
     Parameters
     ----------
-    shell : pyvista.DataSet | ArrayLike, optional
+    shell : DataSetLike | ArrayLike, optional
         Polyline or a sequence of (x, y [,z]) numeric coordinate pairs or triples, or
         an array-like with shape (N, 2) or (N, 3).
-    holes : Sequence[pyvista.DataSet | ArrayLike], optional
+    holes : Sequence[DataSetLike | ArrayLike], optional
         A sequence of objects which satisfy the same requirements as the shell
         parameters above.
     celltype : {'polygon', 'quad', 'triangle'}, optional
@@ -472,7 +476,7 @@ def Polygon(
     """
     import gmsh
 
-    def to_points(points: ArrayLike | pv.DataSet) -> NDArray:
+    def to_points(points: ArrayLike | DataSetLike) -> NDArray:
         """Convert to points array."""
         from .. import extract_boundary_polygons, split_lines
 
@@ -503,7 +507,7 @@ def Polygon(
 
     def add_surface(
         engine: type[gmsh.model.geo] | type[gmsh.model.occ],
-        points: pv.DataSet | ArrayLike,
+        points: DataSetLike | ArrayLike,
         celltype: str,
         cellsize: float | None,
         return_curve_loop: bool = False,
@@ -657,7 +661,7 @@ def Quadrilateral(
     y_resolution: Optional[int | ArrayLike] = None,
     x_method: Optional[Literal["constant", "log", "log_r"]] = None,
     y_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate a quadrilateral mesh defined by 4 points.
@@ -685,7 +689,7 @@ def Quadrilateral(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the quadrilateral.
 
     Returns
@@ -722,7 +726,7 @@ def Rectangle(
     y_resolution: Optional[int | ArrayLike] = None,
     x_method: Optional[Literal["constant", "log", "log_r"]] = None,
     y_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate a rectangle mesh of a given size.
@@ -752,7 +756,7 @@ def Rectangle(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the rectangle.
 
     Returns
@@ -782,7 +786,7 @@ def RectangleSector(
     x_method: Optional[Literal["constant", "log", "log_r"]] = None,
     y_method: Optional[Literal["constant", "log", "log_r"]] = None,
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.UnstructuredGrid:
     """
     Generate a sector mesh with rectangle removed at the center.
@@ -825,7 +829,7 @@ def RectangleSector(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the rectangle sector.
 
     Returns
@@ -889,7 +893,7 @@ def Sector(
     theta_max: float = 90.0,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.UnstructuredGrid:
     """
     Generate a sector mesh.
@@ -912,7 +916,7 @@ def Sector(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the sector.
 
     Returns
@@ -949,7 +953,7 @@ def SectorRectangle(
     theta_resolution: Optional[int | ArrayLike] = None,
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.UnstructuredGrid:
     """
     Generate a rectangle mesh with sector removed at the center.
@@ -982,7 +986,7 @@ def SectorRectangle(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the sector.
 
     Returns
@@ -1018,7 +1022,7 @@ def SectorSquare(
     theta_resolution: Optional[int | ArrayLike] = None,
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
     theta_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.UnstructuredGrid:
     """
     Generate a square mesh with sector removed at the center.
@@ -1049,7 +1053,7 @@ def SectorSquare(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the sector.
 
     Returns
@@ -1076,7 +1080,7 @@ def Square(
     dx: float = 1.0,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
     Generate a square mesh of a given size.
@@ -1095,7 +1099,7 @@ def Square(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the square.
 
     Returns
@@ -1124,7 +1128,7 @@ def SquareSector(
     r_resolution: Optional[int | ArrayLike] = None,
     x_method: Optional[Literal["constant", "log", "log_r"]] = None,
     r_method: Optional[Literal["constant", "log", "log_r"]] = None,
-    center: Optional[ArrayLike] = None,
+    center: Optional[VectorLike] = None,
 ) -> pv.UnstructuredGrid:
     """
     Generate a sector mesh with square removed at the center.
@@ -1155,7 +1159,7 @@ def SquareSector(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
-    center : ArrayLike, optional
+    center : VectorLike, optional
         Center of the sector.
 
     Returns
@@ -1181,8 +1185,8 @@ def SquareSector(
 
 
 def StructuredSurface(
-    line_a: Optional[pv.PolyData | ArrayLike] = None,
-    line_b: Optional[pv.PolyData | ArrayLike] = None,
+    line_a: Optional[PolyLineLike] = None,
+    line_b: Optional[PolyLineLike] = None,
     plane: Literal["xy", "yx", "xz", "zx", "yz", "zy"] = "xy",
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
@@ -1192,9 +1196,9 @@ def StructuredSurface(
 
     Parameters
     ----------
-    line_a : pyvista.PolyData | ArrayLike, optional
+    line_a : PolyLineLike, optional
         Starting polyline mesh or coordinates.
-    line_b : pyvista.PolyData | ArrayLike, optional
+    line_b : PolyLineLike, optional
         Ending polyline mesh or coordinates.
     plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
         Surface plane.
@@ -1222,14 +1226,8 @@ def StructuredSurface(
 
 
 def Volume(
-    surface_a: pv.ImageData
-    | pv.RectilinearGrid
-    | pv.StructuredGrid
-    | pv.UnstructuredGrid,
-    surface_b: pv.ImageData
-    | pv.RectilinearGrid
-    | pv.StructuredGrid
-    | pv.UnstructuredGrid,
+    surface_a: DataSetLike,
+    surface_b: DataSetLike,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
@@ -1238,9 +1236,9 @@ def Volume(
 
     Parameters
     ----------
-    surface_a : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_a : DataSetLike
         Starting surface mesh.
-    surface_b : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_b : DataSetLike
         Ending surface mesh.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the extrusion axis or relative position of

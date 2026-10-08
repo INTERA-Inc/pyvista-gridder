@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, NDArray
 
+    from .._typing import DataSetLike, VectorLike
+
 
 def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
     """
@@ -153,7 +155,7 @@ def decimate_rdp(mesh: pv.PolyData, tolerance: float = 1.0e-8) -> pv.PolyData:
 
 @overload
 def extract_boundary_polygons(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     fill: Literal[True],
     with_holes: Literal[True],
 ) -> tuple[pv.UnstructuredGrid, ...] | None: ...
@@ -161,7 +163,7 @@ def extract_boundary_polygons(
 
 @overload
 def extract_boundary_polygons(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     fill: Literal[False],
     with_holes: Literal[True],
 ) -> tuple[list[pv.PolyData], ...] | None: ...
@@ -169,7 +171,7 @@ def extract_boundary_polygons(
 
 @overload
 def extract_boundary_polygons(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     fill: Literal[True],
     with_holes: Literal[False],
 ) -> tuple[pv.PolyData, ...] | None: ...
@@ -177,7 +179,7 @@ def extract_boundary_polygons(
 
 @overload
 def extract_boundary_polygons(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     fill: Literal[False],
     with_holes: Literal[False],
 ) -> tuple[pv.PolyData, ...] | None: ...
@@ -185,13 +187,13 @@ def extract_boundary_polygons(
 
 @overload
 def extract_boundary_polygons(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     fill: Literal[False],
 ) -> tuple[pv.PolyData, ...] | None: ...
 
 
 def extract_boundary_polygons(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     fill: bool = False,
     with_holes: bool = False,
 ) -> (
@@ -205,7 +207,7 @@ def extract_boundary_polygons(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh to extract boundary edges from.
     fill : bool, default False
         If True, return boundary edges as polygons.
@@ -293,7 +295,7 @@ def extract_boundary_polygons(
 
 
 def extract_cell_geometry(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
     """
@@ -301,7 +303,7 @@ def extract_cell_geometry(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh to extract cell geometry from.
     remove_ghost_cells : bool, default True
         If True, remove ghost cells.
@@ -481,7 +483,7 @@ def extract_cell_geometry(
 
 
 def extract_cells(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     ind: ArrayLike,
     invert: bool = False,
     progress_bar: bool = False,
@@ -530,7 +532,7 @@ def extract_cells(
 
 
 def extract_cells_by_dimension(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     ndim: Optional[int] = None,
     method: Literal["lower", "upper"] = "upper",
     keep_empty_cells: bool = False,
@@ -540,7 +542,7 @@ def extract_cells_by_dimension(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh to extract cells from.
     ndim : int, optional
         Dimension to be used for extraction. If None, the dimension of *mesh* is used.
@@ -693,14 +695,14 @@ def extract_layer(
 
 
 def fuse_cells(
-    mesh: pv.DataSet, ind: Sequence[int] | Sequence[Sequence[int]]
+    mesh: DataSetLike, ind: Sequence[int] | Sequence[Sequence[int]]
 ) -> pv.UnstructuredGrid:
     """
     Fuse connected cells into a single cell.
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh to fuse cells from.
     ind : Sequence[int] | Sequence[Sequence[int]]
         Indices or sequence of indices of cells to fuse.
@@ -788,7 +790,7 @@ def fuse_cells(
 
 
 def intersect_polyline(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     line: pv.PolyData,
     min_length: float = 1.0e-4,
     tolerance: float = 1.0e-8,
@@ -801,7 +803,7 @@ def intersect_polyline(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh to intersect with.
     line : pyvista.PolyData
         Polyline to intersect with the mesh.
@@ -839,7 +841,7 @@ def intersect_polyline(
     points = [lines.points[0]]
     count = 0
 
-    def add_point(point: ArrayLike, line_id: int, cell_id: int) -> None:
+    def add_point(point: VectorLike, line_id: int, cell_id: int) -> None:
         """Add a point to the intersection results."""
         if not np.allclose(points[-1], point, atol=tolerance):
             if (
@@ -1273,7 +1275,7 @@ def offset_polygon(
 
 
 def ray_cast(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     pointa: ArrayLike,
     pointb: ArrayLike,
     tolerance: float = 1.0e-8,
@@ -1284,7 +1286,7 @@ def ray_cast(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         The input mesh to perform ray casting on.
     pointa : ArrayLike
         Length 3 coordinate of the start of the ray.
@@ -1369,7 +1371,7 @@ def ray_cast(
 
 
 def reconstruct_line(
-    mesh_or_points: pv.DataSet | ArrayLike,
+    mesh_or_points: DataSetLike | ArrayLike,
     start: int = 0,
     close: bool = False,
     tolerance: float = 1.0e-8,
@@ -1379,7 +1381,7 @@ def reconstruct_line(
 
     Parameters
     ----------
-    mesh_or_points : pyvista.DataSet | ArrayLike
+    mesh_or_points : DataSetLike | ArrayLike
         Mesh from which points to reconstruct a line.
     start : int, default 0
         Index of point to use as starting point for 2-opt algorithm.
@@ -1450,17 +1452,17 @@ def reconstruct_line(
 
 @overload
 def remap_categorical_data(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     key: str,
     mapping: dict[str, int] | dict[int, int] | dict[str | int, int],
     preference: Literal["cell", "point"] = "cell",
     inplace: Literal[False] = False,
-) -> pv.DataSet: ...
+) -> DataSetLike: ...
 
 
 @overload
 def remap_categorical_data(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     key: str,
     mapping: dict[str, int] | dict[int, int] | dict[str | int, int],
     preference: Literal["cell", "point"] = "cell",
@@ -1469,18 +1471,18 @@ def remap_categorical_data(
 
 
 def remap_categorical_data(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     key: str,
     mapping: dict[str, int] | dict[int, int] | dict[str | int, int],
     preference: Literal["cell", "point"] = "cell",
     inplace: bool = False,
-) -> pv.DataSet | None:
+) -> DataSetLike | None:
     """
     Remap categorical cell or point data.
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh with categorical data to remap.
     key : str
         Name of the categorical data to remap.
@@ -1493,7 +1495,7 @@ def remap_categorical_data(
 
     Returns
     -------
-    pyvista.DataSet | None
+    DataSetLike | None
         Mesh with remapped categorical data.
 
     """
@@ -1563,14 +1565,14 @@ def remap_categorical_data(
 
 
 def slice_vertical(
-    mesh: pv.DataSet, points: ArrayLike, clip: bool = True
+    mesh: DataSetLike, points: ArrayLike, clip: bool = True
 ) -> pv.PolyData:
     """
     Extract a vertical slice from a 3D mesh along a polyline.
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Mesh to slice.
     points : ArrayLike
         Array of points defining the polyline along which to slice the mesh.

@@ -11,29 +11,31 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
+    from .._typing import DataSetLike
+
 
 @overload
 def get_cell_connectivity(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     flatten: Literal[False],
 ) -> tuple[NDArray | list[NDArray], ...]: ...
 
 
 @overload
 def get_cell_connectivity(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     flatten: Literal[True],
 ) -> NDArray: ...
 
 
 @overload
 def get_cell_connectivity(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
 ) -> tuple[NDArray | list[NDArray], ...]: ...
 
 
 def get_cell_connectivity(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     flatten: bool = False,
 ) -> NDArray | tuple[NDArray | list[NDArray], ...]:
     """
@@ -41,7 +43,7 @@ def get_cell_connectivity(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     flatten : bool, default False
         If True, flatten the cell connectivity array (e.g., as input of
@@ -89,7 +91,7 @@ def get_cell_connectivity(
 
 
 def get_cell_centers(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     polyhedron_method: Optional[Literal["box", "geometric", "tetra"]] = None,
 ) -> NDArray:
     """
@@ -97,7 +99,7 @@ def get_cell_centers(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     polyhedron_method : {'box', 'geometric', 'tetra'} | None, optional
         Calculation method for centers of polyhedral cells:
@@ -207,13 +209,13 @@ def get_cell_centers(
     return centers
 
 
-def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> NDArray | None:
+def get_cell_group(mesh: DataSetLike, key: str = "CellGroup") -> NDArray | None:
     """
     Get the cell group of a mesh.
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     key : str, default "CellGroup"
         Key to use to get the cell group.
@@ -237,13 +239,13 @@ def get_cell_group(mesh: pv.DataSet, key: str = "CellGroup") -> NDArray | None:
         return None
 
 
-def get_dimension(mesh: pv.DataSet) -> int:
+def get_dimension(mesh: DataSetLike) -> int:
     """
     Get the dimension of a mesh.
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
 
     Returns

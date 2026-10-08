@@ -18,7 +18,14 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from typing_extensions import Self
 
-    from .._typing import MatrixLike, PolygonLike, PolylineLike, VectorLike
+    from .._typing import (
+        DataSetLike,
+        MatrixLike,
+        PolygonLike,
+        PolyLineLike,
+        RectilinearLike,
+        VectorLike,
+    )
 
 
 class QuadNode:
@@ -27,13 +34,13 @@ class QuadNode:
 
     Parameters
     ----------
-    xmin : float
+    xmin : scalar
         Minimum X coordinate of the node's bounding box.
-    xmax : float
+    xmax : scalar
         Maximum X coordinate of the node's bounding box.
-    ymin : float
+    ymin : scalar
         Minimum Y coordinate of the node's bounding box.
-    ymax : float
+    ymax : scalar
         Maximum Y coordinate of the node's bounding box.
     depth : int, default 0
         Depth of the node in the quadtree.
@@ -188,7 +195,7 @@ class QuadTree(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.ImageData | pyvista.RectilinearGrid
+    mesh : RectilinearLike
         Base mesh for the quadtree.
     max_depth : int, default 4
         Maximum depth of the quadtree.
@@ -201,7 +208,7 @@ class QuadTree(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData | pv.RectilinearGrid,
+        mesh: RectilinearLike,
         *,
         max_depth: int = 4,
         default_group: Optional[str] = None,
@@ -235,7 +242,7 @@ class QuadTree(MeshBase):
 
         Parameters
         ----------
-        radius : float
+        radius : scalar
             Radius of the circle.
         center : VectorLike, optional
             Center of the circle.
@@ -367,7 +374,7 @@ class QuadTree(MeshBase):
 
     def add_polyline(
         self,
-        line: PolylineLike,
+        line: PolyLineLike,
         depth: Optional[int] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -376,7 +383,7 @@ class QuadTree(MeshBase):
         
         Parameters
         ----------
-        line : PolylineLike
+        line : PolyLineLike
             Polyline defining the path for refinement.
         depth : int, optional
             Maximum depth for refinement.
@@ -842,7 +849,7 @@ class QuadTree(MeshBase):
         self._max_depth = value
 
     @property
-    def mesh(self) -> pv.DataSet:
+    def mesh(self) -> DataSetLike:
         """Get the base mesh."""
         return self._mesh
 

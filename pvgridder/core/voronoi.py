@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from typing import Optional
 
     from numpy.typing import ArrayLike
+
+    from .._typing import DataSetLike, VectorLike
     from typing_extensions import Self
 
 
@@ -25,7 +27,7 @@ class VoronoiMesh2D(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Background mesh.
     axis : int, default 2
         Background mesh axis to discard.
@@ -43,7 +45,7 @@ class VoronoiMesh2D(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.DataSet,
+        mesh: DataSetLike,
         axis: int = 2,
         preference: Literal["cell", "point"] = "cell",
         default_group: Optional[str] = None,
@@ -59,7 +61,7 @@ class VoronoiMesh2D(MeshBase):
 
     def add(
         self,
-        mesh_or_points: pv.DataSet | ArrayLike,
+        mesh_or_points: DataSetLike | ArrayLike,
         priority: int = 0,
         group: Optional[str] = None,
     ) -> Self:
@@ -68,7 +70,7 @@ class VoronoiMesh2D(MeshBase):
 
         Parameters
         ----------
-        mesh_or_points : pyvista.DataSet | ArrayLike
+        mesh_or_points : DataSetLike | ArrayLike
             Dataset or coordinates of points.
         priority : int, default 0
             Priority of item. Points enclosed in a cell with (strictly) higher
@@ -103,7 +105,7 @@ class VoronoiMesh2D(MeshBase):
         radius: float,
         constraint_radius: Optional[float] = None,
         resolution: Optional[int | ArrayLike] = None,
-        center: Optional[ArrayLike] = None,
+        center: Optional[VectorLike] = None,
         plain: bool = False,
         priority: int = 0,
         group: Optional[str] = None,
@@ -120,7 +122,7 @@ class VoronoiMesh2D(MeshBase):
         resolution : int | ArrayLike, optional
             Number of subdivisions along the azimuthal axis or relative position of
             subdivisions (in percentage) with respect to the starting angle (0 degree).
-        center : ArrayLike, optional
+        center : VectorLike, optional
             Center of the circle.
         plain : bool, default False
             If True, fuse all cells within the circle into a single cell.
@@ -180,7 +182,7 @@ class VoronoiMesh2D(MeshBase):
 
     def add_polyline(
         self,
-        mesh_or_points: ArrayLike | pv.PolyData,
+        line: ArrayLike | pv.PolyData,
         width: float,
         preference: Literal["cell", "point"] = "cell",
         padding: Optional[float] = None,
@@ -194,7 +196,7 @@ class VoronoiMesh2D(MeshBase):
 
         Parameters
         ----------
-        mesh_or_points : ArrayLike | pyvista.PolyData
+        line : ArrayLike | pyvista.PolyData
             Dataset or coordinates of points.
         width : scalar
             Width of polyline.
@@ -228,11 +230,11 @@ class VoronoiMesh2D(MeshBase):
         """
         from .. import extract_cells, split_lines
 
-        if not isinstance(mesh_or_points, pv.PolyData):
-            mesh = pv.MultipleLines(np.asanyarray(mesh_or_points))
+        if not isinstance(line, pv.PolyData):
+            mesh = pv.MultipleLines(np.asanyarray(line))
 
         else:
-            mesh = mesh_or_points.copy()
+            mesh = line.copy()
 
         if isinstance(constraint, int):
             constraint_start = constraint
@@ -583,7 +585,7 @@ class VoronoiMesh2D(MeshBase):
         return new_regions, np.array(new_vertices)
 
     @property
-    def mesh(self) -> pv.DataSet:
+    def mesh(self) -> DataSetLike:
         """Get background mesh."""
         return self._mesh
 

@@ -13,10 +13,12 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
     from shapely import Polygon
 
+    from .._typing import DataSetLike
+
 
 @overload
 def interactive_lasso_selection(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     plotter: Optional[pv.Plotter] = None,
     view: Literal["xy", "xz", "yz"] = "xy",
     preference: Literal["cell", "point"] = "cell",
@@ -26,7 +28,7 @@ def interactive_lasso_selection(
 
 @overload
 def interactive_lasso_selection(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     plotter: Optional[pv.Plotter] = None,
     view: Literal["xy", "xz", "yz"] = "xy",
     preference: Literal["cell", "point"] = "cell",
@@ -36,7 +38,7 @@ def interactive_lasso_selection(
 
 @overload
 def interactive_lasso_selection(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     plotter: Optional[pv.Plotter] = None,
     view: Literal["xy", "xz", "yz"] = "xy",
     preference: Literal["cell", "point"] = "cell",
@@ -45,7 +47,7 @@ def interactive_lasso_selection(
 
 @require_package("shapely")
 def interactive_lasso_selection(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     plotter: Optional[pv.Plotter] = None,
     view: Literal["xy", "xz", "yz"] = "xy",
     preference: Literal["cell", "point"] = "cell",
@@ -57,7 +59,7 @@ def interactive_lasso_selection(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     plotter : pyvista.Plotter, optional
         PyVista plotter.
@@ -173,7 +175,7 @@ def interactive_lasso_selection(
 
 
 def interactive_selection(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     plotter: Optional[pv.Plotter] = None,
     view: Optional[str] = None,
     parallel_projection: bool = False,
@@ -187,7 +189,7 @@ def interactive_selection(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     plotter : pyvista.Plotter, optional
         PyVista plotter.
@@ -228,7 +230,7 @@ def interactive_selection(
     if picker is None:
         picker = "cell" if preference == "cell" else "point"
 
-    def callback(mesh: pv.DataSet) -> None:
+    def callback(mesh: DataSetLike) -> None:
         id_ = (
             mesh.cell_data["vtkOriginalCellIds"][0]
             if preference == "cell"

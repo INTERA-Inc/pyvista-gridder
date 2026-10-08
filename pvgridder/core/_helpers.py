@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, cast
 
 import numpy as np
 import pyvista as pv
@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     from typing import Literal, Optional
 
     from numpy.typing import ArrayLike, NDArray
+
+    from .._typing import DataSetLike, PolyLineLike, VectorLike
 
 
 def generate_arc(
@@ -59,8 +61,8 @@ def generate_arc(
 
 
 def generate_line_from_two_points(
-    point_a: ArrayLike,
-    point_b: ArrayLike,
+    point_a: VectorLike,
+    point_b: VectorLike,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
 ) -> pv.PolyData:
@@ -69,9 +71,9 @@ def generate_line_from_two_points(
 
     Parameters
     ----------
-    point_a : ArrayLike
+    point_a : VectorLike
         Starting point coordinates.
-    point_b : ArrayLike
+    point_b : VectorLike
         Ending point coordinates.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the line or relative position of subdivisions
@@ -109,8 +111,8 @@ def generate_line_from_two_points(
 
 
 def generate_surface_from_two_lines(
-    line_a: pv.PolyData | ArrayLike,
-    line_b: pv.PolyData | ArrayLike,
+    line_a: PolyLineLike,
+    line_b: PolyLineLike,
     plane: Literal["xy", "yx", "xz", "zx", "yz", "zy"] = "xy",
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
@@ -120,9 +122,9 @@ def generate_surface_from_two_lines(
 
     Parameters
     ----------
-    line_a : pyvista.PolyData | ArrayLike
+    line_a : PolyLineLike
         Starting polyline mesh or coordinates.
-    line_b : pyvista.PolyData | ArrayLike
+    line_b : PolyLineLike
         Ending polyline mesh or coordinates.
     plane : {'xy', 'yx', 'xz', 'zx', 'yz', 'zy'}, default 'xy'
         Surface plane.
@@ -142,8 +144,9 @@ def generate_surface_from_two_lines(
         Surface mesh.
 
     """
+    from shapely import LineString, get_coordinates
 
-    def get_points(line: pv.PolyData | ArrayLike) -> NDArray:
+    def get_points(line: PolyLineLike) -> NDArray:
         """Get line points."""
         if isinstance(line, pv.PolyData):
             # Use the first continuous polyline if available
@@ -156,10 +159,12 @@ def generate_surface_from_two_lines(
                 ids = line.irregular_faces[0]
                 ids = np.append(ids, ids[0])
 
-            return line.points[ids]
+            line = line.points[ids]
 
-        else:
-            return np.asanyarray(line)
+        elif isinstance(line, LineString):
+            line = get_coordinates(line)
+
+        return np.asanyarray(line)
 
     line_points_a = get_points(line_a)
     line_points_b = get_points(line_b)
@@ -231,16 +236,8 @@ def generate_surface_from_two_lines(
 
 
 def generate_volume_from_two_surfaces(
-    surface_a: pv.ImageData
-    | pv.RectilinearGrid
-    | pv.PolyData
-    | pv.StructuredGrid
-    | pv.UnstructuredGrid,
-    surface_b: pv.ImageData
-    | pv.RectilinearGrid
-    | pv.PolyData
-    | pv.StructuredGrid
-    | pv.UnstructuredGrid,
+    surface_a: DataSetLike,
+    surface_b: DataSetLike,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
     invert_polyhedron_faces: bool = True,
@@ -250,9 +247,9 @@ def generate_volume_from_two_surfaces(
 
     Parameters
     ----------
-    surface_a : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_a : DataSetLike
         Starting surface mesh.
-    surface_b : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    surface_b : DataSetLike
         Ending surface mesh.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the extrusion axis or relative position of
@@ -280,14 +277,14 @@ def generate_volume_from_two_surfaces(
         surface_a.cast_to_structured_grid()
         if isinstance(surface_a, (pv.ImageData, pv.RectilinearGrid))
         else surface_a.cast_to_unstructured_grid()
-        if isinstance(surface_a, pv.PolyData)
+        if isinstance(surface_a, (pv.PolyData, pv.ExplicitStructuredGrid))
         else surface_a
     )
     surface_b = (
         surface_b.cast_to_structured_grid()
         if isinstance(surface_b, (pv.ImageData, pv.RectilinearGrid))
         else surface_b.cast_to_unstructured_grid()
-        if isinstance(surface_b, pv.PolyData)
+        if isinstance(surface_b, (pv.PolyData, pv.ExplicitStructuredGrid))
         else surface_b
     )
 
@@ -549,7 +546,7 @@ def repeat_structured_data(
 
 def translate(
     mesh: pv.StructuredGrid | pv.UnstructuredGrid,
-    vector: ArrayLike | None,
+    vector: VectorLike | None,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
     """
     Translate a mesh.
@@ -558,7 +555,7 @@ def translate(
     ----------
     mesh : pyvista.StructuredGrid | pyvista.UnstructuredGrid
         Mesh to translate.
-    vector : ArrayLike | None
+    vector : VectorLike | None
         Translation vector. If None, no translation is performed.
 
     Returns
@@ -577,7 +574,10 @@ def translate(
             else:
                 raise ValueError("invalid translation vector")
 
-        mesh = mesh.translate(vector)
+        mesh = cast(
+            Union[pv.StructuredGrid, pv.UnstructuredGrid],
+            mesh.translate(vector),
+        )
 
     return mesh
 
