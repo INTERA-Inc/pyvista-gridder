@@ -358,7 +358,7 @@ class VoronoiMesh2D(MeshBase):
             2D Voronoi mesh.
 
         """
-        from shapely import Polygon, get_coordinates
+        from shapely import Polygon, get_coordinates, prepare
 
         from .. import (
             average_points,
@@ -464,6 +464,7 @@ class VoronoiMesh2D(MeshBase):
             for polygon in boundary_polygon
         ]
         boundary = Polygon(boundary[0], boundary[1:])
+        prepare(boundary)
 
         # Generate polygonal mesh
         points, cells = [], []
