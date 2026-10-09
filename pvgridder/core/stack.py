@@ -31,9 +31,9 @@ class MeshStack2D(MeshStackBase):
     mesh : pyvista.PolyData | ArrayLike
         Base mesh. If ArrayLike, assume straight line depending on *axis*.
 
-         - 0: along Z axis
-         - 1: along Y axis
-         - 2: along X axis
+         - 0: in the XY plane along X axis
+         - 1: in the XY plane along Y axis
+         - 2: in the XZ plane along Z axis
 
     axis : int, default 2
         Stacking axis.
@@ -62,7 +62,7 @@ class MeshStack2D(MeshStackBase):
 
         if isinstance(mesh, (list, tuple, np.ndarray)) and np.asarray(mesh).ndim == 1:
             points = np.zeros((len(mesh), 3))
-            points[:, (axis + 1) % 3] = mesh
+            points[:, 1 if axis == 0 else 0] = mesh
             lines = pv.lines_from_points(points)
 
         elif not isinstance(mesh, pv.PolyData) or (
