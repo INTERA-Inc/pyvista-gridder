@@ -38,7 +38,7 @@ def test_quadtree_min_cellsize(min_cellsize, max_depth_ref):
 
 def test_quadtree_target_cellsize():
     """Test the target cell size option."""
-    cellsize = 1.0 / 2.0 ** 5
+    cellsize = 1.0 / 2.0**5
     bmesh = pvg.Square(3.0, resolution=3)
     mesh = (
         pvg.QuadTree(bmesh, min_cellsize=0.001)
@@ -47,7 +47,7 @@ def test_quadtree_target_cellsize():
         .compute_cell_sizes()
     )
     assert mesh.n_cells == 60
-    assert mesh.cell_data["Area"].min() == cellsize ** 2
+    assert mesh.cell_data["Area"].min() == cellsize**2
 
 
 def test_quadtree_cell_group():
@@ -124,7 +124,6 @@ def test_quadtree_add_boundary_polygon(depth, n_cells_ref):
     assert mesh.n_cells == n_cells_ref
 
 
-
 @pytest.mark.parametrize(
     "depth, boundary_only, n_cells_ref",
     [
@@ -139,10 +138,18 @@ def test_quadtree_add_circle(depth, boundary_only, n_cells_ref):
     bmesh = pvg.Square(3.0, resolution=3)
     mesh = (
         pvg.QuadTree(bmesh)
-        .add_circle(radius=1.0, center=(1.5, 1.5), boundary_only=boundary_only, depth=depth, group="circle")
+        .add_circle(
+            radius=1.0,
+            center=(1.5, 1.5),
+            boundary_only=boundary_only,
+            depth=depth,
+            group="circle",
+        )
         .generate_mesh(balance=False)
     )
-    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "circle").n_cells == n_cells_ref
+    assert (
+        mesh.extract_cells(pvg.get_cell_group(mesh) == "circle").n_cells == n_cells_ref
+    )
 
 
 @pytest.mark.parametrize(
@@ -157,7 +164,9 @@ def test_quadtree_add_point(depth, n_cells_ref):
     bmesh = pvg.Square(3.0, resolution=3)
     mesh = (
         pvg.QuadTree(bmesh)
-        .add_point((0.5, 0.5), depth=depth, group="point")  # center of a cell, 4 points in group 'point'
+        .add_point(
+            (0.5, 0.5), depth=depth, group="point"
+        )  # center of a cell, 4 points in group 'point'
         .add_point((1.6, 1.6), depth=depth, group="point")  # 1 point in group 'point'
         .generate_mesh(balance=False)
     )
@@ -183,7 +192,9 @@ def test_quadtree_add_polygon(depth, boundary_only, n_cells_ref):
         .add_polygon(polygon, depth=depth, boundary_only=boundary_only, group="polygon")
         .generate_mesh(balance=False)
     )
-    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "polygon").n_cells == n_cells_ref
+    assert (
+        mesh.extract_cells(pvg.get_cell_group(mesh) == "polygon").n_cells == n_cells_ref
+    )
 
 
 @pytest.mark.parametrize(
@@ -202,7 +213,10 @@ def test_quadtree_add_polyline(depth, n_cells_ref):
         .add_polyline(polyline, depth=depth, group="polyline")
         .generate_mesh(balance=False)
     )
-    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "polyline").n_cells == n_cells_ref
+    assert (
+        mesh.extract_cells(pvg.get_cell_group(mesh) == "polyline").n_cells
+        == n_cells_ref
+    )
 
 
 def test_quadtree_add_rectangle():

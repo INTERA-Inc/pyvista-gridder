@@ -8,8 +8,8 @@ import pvgridder as pvg
     "mesh, n_cells_ref",
     [
         pytest.param("freyberg", 3429, id="conformal"),
-        pytest.param("freyberg_nonconformal", 2789, id="nonconformal")
-    ]
+        pytest.param("freyberg_nonconformal", 2789, id="nonconformal"),
+    ],
 )
 def test_freyberg(mesh, n_cells_ref, request):
     mesh = request.getfixturevalue(mesh)

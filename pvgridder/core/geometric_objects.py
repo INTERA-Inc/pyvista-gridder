@@ -782,8 +782,13 @@ def Rectangle(
         (0.0, dy),
     ]
     mesh = Quadrilateral(
-        points, x_resolution, y_resolution, x_method, y_method,
-        origin=origin, center=center,
+        points,
+        x_resolution,
+        y_resolution,
+        x_method,
+        y_method,
+        origin=origin,
+        center=center,
     )
 
     return mesh

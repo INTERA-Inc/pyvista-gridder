@@ -540,7 +540,11 @@ class QuadTree(MeshBase):
         points = origin_ + [(0.0, 0.0), (dx, 0.0), (dx, dy), (0.0, dy)]
 
         return self.add_polygon(
-            points, depth=depth, cellsize=cellsize, group=group, boundary_only=boundary_only
+            points,
+            depth=depth,
+            cellsize=cellsize,
+            group=group,
+            boundary_only=boundary_only,
         )
 
     def add_square(
@@ -921,7 +925,7 @@ class QuadTree(MeshBase):
             return depth
 
         mesh_min_cellsize = min((np.diff(self.x).min(), np.diff(self.y).min()))
-        
+
         return max(0, int(np.floor(np.log2(mesh_min_cellsize) - np.log2(cellsize))))
 
     def _get_leaves(self, node: QuadNode, leaves: list[QuadNode]) -> None:
