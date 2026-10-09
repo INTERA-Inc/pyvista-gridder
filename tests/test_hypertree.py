@@ -36,6 +36,20 @@ def test_quadtree_min_cellsize(min_cellsize, max_depth_ref):
     assert qtree.max_depth == max_depth_ref
 
 
+def test_quadtree_target_cellsize():
+    """Test the target cell size option."""
+    cellsize = 1.0 / 2.0 ** 5
+    bmesh = pvg.Square(3.0, resolution=3)
+    mesh = (
+        pvg.QuadTree(bmesh, min_cellsize=0.001)
+        .add_point((1.5, 1.5), cellsize=cellsize)
+        .generate_mesh(balance=False)
+        .compute_cell_sizes()
+    )
+    assert mesh.n_cells == 60
+    assert mesh.cell_data["Area"].min() == cellsize ** 2
+
+
 def test_quadtree_cell_group():
     """Test cell groups in base mesh being correctly passed."""
     bmesh = (

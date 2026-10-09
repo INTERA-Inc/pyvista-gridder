@@ -211,11 +211,8 @@ class QuadTree(MeshBase):
         Base mesh for the quadtree.
     max_depth : int, default 5
         Maximum depth of the quadtree.
-    min_cellsize : float, optional
-        Positive, finite lower bound on refined cell edge lengths. Supersedes
-        *max_depth* if specified. The depth is computed from the smallest base-cell
-        edge, rounding down to avoid refining below this size. Base cells already
-        smaller than this limit are left unchanged.
+    min_cellsize : scalar, optional
+        Lower bound on refined cell edge lengths. Supersedes *max_depth* if specified.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -252,14 +249,8 @@ class QuadTree(MeshBase):
 
             mesh = mesh_
 
-        if min_cellsize is not None:
-            cellsize = min((np.diff(mesh.x).min(), np.diff(mesh.y).min()))
-            max_depth = max(
-                0, int(np.floor(np.log2(cellsize) - np.log2(min_cellsize)))
-            )
-
-        self.max_depth = max_depth
         self._mesh = mesh.copy()
+        self._max_depth = self._get_depth(max_depth, min_cellsize)
         self._boundary_polygon = None
         self._roots = []
 
@@ -271,6 +262,7 @@ class QuadTree(MeshBase):
         self,
         polygon: PolygonLike,
         depth: int = 0,
+        cellsize: Optional[float] = None,
     ) -> Self:
         """
         Add a boundary polygon to the quadtree.
@@ -281,6 +273,8 @@ class QuadTree(MeshBase):
             Boundary polygon to add.
         depth : int, default 0
             Depth for refinement of the boundary polygon. No refinement by default.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
 
         Returns
         -------
@@ -297,6 +291,7 @@ class QuadTree(MeshBase):
 
         polygon = self._convert_polygon(polygon)
         depth = min(depth, self.max_depth)
+        depth = self._get_depth(depth, cellsize)
 
         if depth > 0:
             self.add_polygon(Polygon(polygon.exterior), boundary_only=True, depth=depth)
@@ -356,6 +351,7 @@ class QuadTree(MeshBase):
         point: VectorLike,
         *,
         depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -367,6 +363,8 @@ class QuadTree(MeshBase):
             Point to refine.
         depth : int, optional
             Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
         group : str, optional
             Group name.
 
@@ -377,6 +375,7 @@ class QuadTree(MeshBase):
 
         """
         depth = min(depth, self.max_depth) if depth is not None else self.max_depth
+        depth = self._get_depth(depth, cellsize)
 
         for root in self.roots:
             self._refine_point(root, point, depth)
@@ -394,6 +393,7 @@ class QuadTree(MeshBase):
         *,
         boundary_only: bool = False,
         depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -408,6 +408,8 @@ class QuadTree(MeshBase):
             If True, only refine cells intersected by the polygon boundary.
         depth : int, optional
             Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
         group : str, optional
             Group name.
 
@@ -419,6 +421,7 @@ class QuadTree(MeshBase):
         """
         polygon = self._convert_polygon(polygon)
         depth = self.max_depth if depth is None else min(depth, self.max_depth)
+        depth = self._get_depth(depth, cellsize)
 
         if polygon.is_empty or not polygon.is_valid or polygon.area <= 0.0:
             raise ValueError("could not create a valid polygon from the given points")
@@ -447,6 +450,7 @@ class QuadTree(MeshBase):
         self,
         line: PolyLineLike,
         depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -458,6 +462,8 @@ class QuadTree(MeshBase):
             Polyline defining the path for refinement.
         depth : int, optional
             Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
         group : str, optional
             Group name.
 
@@ -470,6 +476,7 @@ class QuadTree(MeshBase):
         from .. import split_lines
 
         depth = min(depth, self.max_depth) if depth is not None else self.max_depth
+        depth = self._get_depth(depth, cellsize)
 
         if isinstance(line, pv.PolyData):
             if line.n_lines == 0:
@@ -500,6 +507,7 @@ class QuadTree(MeshBase):
         origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -517,6 +525,8 @@ class QuadTree(MeshBase):
             If True, only refine cells intersected by the boundary of the rectangle.
         depth : int, optional
             Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
         group : str, optional
             Group name.
 
@@ -530,7 +540,7 @@ class QuadTree(MeshBase):
         points = origin_ + [(0.0, 0.0), (dx, 0.0), (dx, dy), (0.0, dy)]
 
         return self.add_polygon(
-            points, depth=depth, group=group, boundary_only=boundary_only
+            points, depth=depth, cellsize=cellsize, group=group, boundary_only=boundary_only
         )
 
     def add_square(
@@ -539,6 +549,7 @@ class QuadTree(MeshBase):
         origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -554,6 +565,8 @@ class QuadTree(MeshBase):
             If True, only refine cells intersected by the boundary of the square.
         depth : int, optional
             Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
         group : str, optional
             Group name.
 
@@ -569,6 +582,7 @@ class QuadTree(MeshBase):
             origin=origin,
             boundary_only=boundary_only,
             depth=depth,
+            cellsize=cellsize,
             group=group,
         )
 
@@ -901,6 +915,15 @@ class QuadTree(MeshBase):
                 self._build_vtk_tree(node, cursor)
                 cursor.ToParent()
 
+    def _get_depth(self, depth: int, cellsize: float | None) -> int:
+        """Get the quadtree depth corresponding to the given cell size."""
+        if cellsize is None:
+            return depth
+
+        mesh_min_cellsize = min((np.diff(self.x).min(), np.diff(self.y).min()))
+        
+        return max(0, int(np.floor(np.log2(mesh_min_cellsize) - np.log2(cellsize))))
+
     def _get_leaves(self, node: QuadNode, leaves: list[QuadNode]) -> None:
         """Recursively collect active leaf nodes."""
         if node.is_leaf:
@@ -1033,11 +1056,6 @@ class QuadTree(MeshBase):
     def max_depth(self) -> int:
         """Get the maximum depth."""
         return self._max_depth
-
-    @max_depth.setter
-    def max_depth(self, value: int) -> None:
-        """Set the maximum depth."""
-        self._max_depth = value
 
     @property
     def mesh(self) -> DataSetLike:
