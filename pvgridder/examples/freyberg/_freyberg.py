@@ -11,15 +11,22 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-def load() -> pv.UnstructuredGrid:
+def load(max_depth: int = 2, conformal: bool = True) -> pv.UnstructuredGrid:
     """
     Load the Freyberg example mesh.
+
+    Parameters
+    ----------
+    max_depth : int, default 2
+        Maximum depth of the QuadTree mesh.
+    conformal : bool, default True
+        If True, generate a conformal mesh.
 
     Returns
     -------
     pyvista.UnstructuredGrid
         QuadTree mesh for the Freyberg example.
-    
+
     """
     from ... import QuadTree
 
@@ -27,14 +34,14 @@ def load() -> pv.UnstructuredGrid:
     y = np.linspace(0.0, 10000.0, 41)
     bmesh = pv.RectilinearGrid(x, y, [0.0])
 
-    qt = QuadTree(bmesh, max_depth=2)
-    qt = qt.add_boundary_polygon(load_outcrop())
-    qt = qt.add_polyline(load_river(), group="River")
+    qtree = QuadTree(bmesh, max_depth=max_depth)
+    qtree = qtree.add_boundary_polygon(load_outcrop())
+    qtree = qtree.add_polyline(load_river(), group="River")
 
     for well in load_wells():
-        qt = qt.add_point(well, group="Well")
+        qtree = qtree.add_point(well, group="Well")
 
-    return qt.generate_mesh(balance=True, conformal=False)
+    return qtree.generate_mesh(balance=True, conformal=conformal)
 
 
 def load_outcrop() -> Polygon:
