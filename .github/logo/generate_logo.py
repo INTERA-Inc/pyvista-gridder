@@ -1,8 +1,11 @@
+from xml.dom import minidom
+
 import numpy as np
 import pyvista as pv
-import pvgridder as pvg
+from shapely import Polygon
 from svg.path import parse_path
-from xml.dom import minidom
+
+import pvgridder as pvg
 
 
 # Parameters
@@ -10,12 +13,12 @@ shift = 14.37
 
 # Extract and interpolate coordinates of the first snake
 with minidom.parse("python_logo.svg") as doc:
-    path_strings = [path.getAttribute("d") for path in doc.getElementsByTagName("path")]
+    paths = [path.getAttribute("d") for path in doc.getElementsByTagName("path")]
 
 snake_coordinates = []
 t_values = np.linspace(0.0, 1.0, 8)
 
-for segment in parse_path(path_strings[0]):
+for segment in parse_path(paths[0]):
     if hasattr(segment, "start") and hasattr(segment, "end"):
         for t in t_values:
             point = segment.point(t)
@@ -33,7 +36,14 @@ eye = pvg.decimate_rdp(eye)
 
 # Generate Voronoi tesselation from Delaunay triangulation
 snake1 = pvg.VoronoiMesh2D(
-    pvg.Polygon(snake, [eye], celltype="triangle", cellsize=5.0, algorithm=8, optimization="Laplace2D"), preference="point"
+    pvg.Polygon(
+        snake,
+        [eye],
+        celltype="triangle",
+        cellsize=5.0,
+        algorithm=8,
+    ),
+    preference="point",
 ).generate_mesh()
 snake1 = snake1.translate(list(map(lambda x: -x, snake1.center)))
 snake1 = snake1.translate((-shift, -shift, 0.0)).rotate_z(180.0)
@@ -44,12 +54,10 @@ y = np.linspace(snake.bounds.y_min, snake.bounds.y_max, 11)
 bmesh = pv.RectilinearGrid(x, y, [0.0])
 
 snake2 = (
-    pvg.QuadTree(bmesh, max_depth=4, default_group="to_remove")
-    .add_polygon(snake.points[:, :2], boundary_only=True, group="snake")
-    .add_polygon(eye.points[:, :2], boundary_only=True, group="to_remove")
-    .generate_mesh(balance=True, conformal=True)
+    pvg.QuadTree(bmesh, max_depth=4)
+    .add_boundary_polygon(Polygon(snake.points[:, :2], [eye.points[:, :2]]), depth=4)
+    .generate_mesh(balance=True)
 )
-snake2 = snake2.extract_cells(pvg.get_cell_group(snake2) == "snake")
 snake2 = snake2.translate(list(map(lambda x: -x, snake2.center)))
 snake2 = snake2.translate((-shift, -shift, 0.0))
 
