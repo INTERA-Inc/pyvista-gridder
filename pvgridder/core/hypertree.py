@@ -680,7 +680,7 @@ class QuadTree(MeshBase):
             mesh.cell_data[k] = v[mesh.cell_data["vtkOriginalCellIds"]]
 
         # Generate cell groups
-        groups = dict(self.mesh.user_dict) or {}
+        groups = dict(self.mesh.user_dict.get("CellGroup", {}))
         group_array = np.asanyarray(
             mesh.cell_data.get(
                 "CellGroup",
