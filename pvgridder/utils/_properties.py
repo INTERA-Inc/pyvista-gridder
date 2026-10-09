@@ -205,7 +205,9 @@ def get_cell_centers(
                 weighted_centers = np.zeros((n_cells, 3))
 
                 np.add.at(total_volumes, cell_ids, volumes)
-                np.add.at(weighted_centers, cell_ids, tetra_centroids * volumes[:, None])
+                np.add.at(
+                    weighted_centers, cell_ids, tetra_centroids * volumes[:, None]
+                )
 
                 # Compute centroids
                 mask = total_volumes != 0.0
