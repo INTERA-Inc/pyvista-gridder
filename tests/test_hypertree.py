@@ -181,7 +181,7 @@ def test_quadtree_add_rectangle():
     bmesh = pvg.Square(3.0, resolution=3)
     mesh = (
         pvg.QuadTree(bmesh, max_depth=2)
-        .add_rectangle(1.0, 1.5, center=(1.0, 1.0), group="rectangle")
+        .add_rectangle(1.0, 1.5, origin=(1.0, 1.0), group="rectangle")
         .generate_mesh(balance=False)
     )
     assert mesh.n_cells == 96
@@ -193,7 +193,7 @@ def test_quadtree_add_square():
     bmesh = pvg.Square(3.0, resolution=3)
     mesh = (
         pvg.QuadTree(bmesh, max_depth=2)
-        .add_square(1.0, center=(1.0, 1.0), group="square")
+        .add_square(1.0, origin=(1.0, 1.0), group="square")
         .generate_mesh(balance=False)
     )
     assert mesh.n_cells == 84

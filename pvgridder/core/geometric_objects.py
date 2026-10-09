@@ -661,6 +661,7 @@ def Quadrilateral(
     y_resolution: Optional[int | ArrayLike] = None,
     x_method: Optional[Literal["constant", "log", "log_r"]] = None,
     y_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    origin: Optional[VectorLike] = None,
     center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
@@ -690,8 +691,11 @@ def Quadrilateral(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
+    origin : VectorLike, optional
+        Origin of the quadrilateral.
     center : VectorLike, optional
-        Center of the quadrilateral.
+        Alias for *origin* (for backward compatibility). Ignored if *origin* is
+        specified.
 
     Returns
     -------
@@ -714,7 +718,7 @@ def Quadrilateral(
     line_a = generate_line_from_two_points(points[0], points[1], x_resolution, x_method)
     line_b = generate_line_from_two_points(points[3], points[2], x_resolution, x_method)
     mesh = StructuredSurface(line_a, line_b, "xy", y_resolution, y_method)
-    mesh = translate(mesh, center)
+    mesh = translate(mesh, origin if origin is not None else center)
     mesh = cast(pv.StructuredGrid, mesh)
 
     return mesh
@@ -727,6 +731,7 @@ def Rectangle(
     y_resolution: Optional[int | ArrayLike] = None,
     x_method: Optional[Literal["constant", "log", "log_r"]] = None,
     y_method: Optional[Literal["constant", "log", "log_r"]] = None,
+    origin: Optional[VectorLike] = None,
     center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
@@ -758,8 +763,11 @@ def Rectangle(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
+    origin : VectorLike, optional
+        Origin of the rectangle.
     center : VectorLike, optional
-        Center of the rectangle.
+        Alias for *origin* (for backward compatibility). Ignored if *origin* is
+        specified.
 
     Returns
     -------
@@ -773,7 +781,10 @@ def Rectangle(
         (dx, dy),
         (0.0, dy),
     ]
-    mesh = Quadrilateral(points, x_resolution, y_resolution, x_method, y_method, center)
+    mesh = Quadrilateral(
+        points, x_resolution, y_resolution, x_method, y_method,
+        origin=origin, center=center,
+    )
 
     return mesh
 
@@ -1082,6 +1093,7 @@ def Square(
     dx: float = 1.0,
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
+    origin: Optional[VectorLike] = None,
     center: Optional[VectorLike] = None,
 ) -> pv.StructuredGrid:
     """
@@ -1101,8 +1113,11 @@ def Square(
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
 
+    origin : VectorLike, optional
+        Origin of the square.
     center : VectorLike, optional
-        Center of the square.
+        Alias for *origin* (for backward compatibility). Ignored if *origin* is
+        specified.
 
     Returns
     -------
@@ -1117,6 +1132,7 @@ def Square(
         y_resolution=resolution,
         x_method=method,
         y_method=method,
+        origin=origin,
         center=center,
     )
 

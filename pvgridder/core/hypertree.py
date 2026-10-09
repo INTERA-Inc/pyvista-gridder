@@ -485,7 +485,7 @@ class QuadTree(MeshBase):
         self,
         dx: float,
         dy: float,
-        center: Optional[VectorLike] = None,
+        origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
         group: Optional[str] = None,
@@ -499,8 +499,8 @@ class QuadTree(MeshBase):
             Width of the rectangle.
         dy : scalar
             Height of the rectangle.
-        center : VectorLike, optional
-            Center of the rectangle.
+        origin : VectorLike, optional
+            Origin of the rectangle.
         boundary_only : bool, optional
             If True, only refine cells intersected by the boundary of the rectangle.
         depth : int, optional
@@ -514,8 +514,8 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
 
         """
-        center_ = np.zeros(2) if center is None else np.asanyarray(center[:2])
-        points = center_ + [(0.0, 0.0), (dx, 0.0), (dx, dy), (0.0, dy)]
+        origin_ = np.zeros(2) if origin is None else np.asanyarray(origin[:2])
+        points = origin_ + [(0.0, 0.0), (dx, 0.0), (dx, dy), (0.0, dy)]
 
         return self.add_polygon(
             points, depth=depth, group=group, boundary_only=boundary_only
@@ -524,7 +524,7 @@ class QuadTree(MeshBase):
     def add_square(
         self,
         dx: float,
-        center: Optional[VectorLike] = None,
+        origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
         group: Optional[str] = None,
@@ -536,8 +536,8 @@ class QuadTree(MeshBase):
         ----------
         dx : scalar
             Side length of the square.
-        center : VectorLike, optional
-            Center of the square.
+        origin : VectorLike, optional
+            Origin of the square.
         boundary_only : bool, optional
             If True, only refine cells intersected by the boundary of the square.
         depth : int, optional
@@ -554,7 +554,7 @@ class QuadTree(MeshBase):
         return self.add_rectangle(
             dx=dx,
             dy=dx,
-            center=center,
+            origin=origin,
             boundary_only=boundary_only,
             depth=depth,
             group=group,
