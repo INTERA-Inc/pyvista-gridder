@@ -113,6 +113,7 @@ class QuadNode:
             if p == 0:
                 if q < 0:
                     return False
+
             else:
                 t = q / p
 
@@ -330,7 +331,7 @@ class QuadTree(MeshBase):
         The circle is approximated by a 64-sided polygon for refinement purposes.
 
         """
-        center_ = np.zeros(2) if center is None else np.asanyarray(center)
+        center_ = np.zeros(2) if center is None else np.asanyarray(center[:2])
         angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
         points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
 
@@ -479,6 +480,85 @@ class QuadTree(MeshBase):
             self.items.append(item)
 
         return self
+
+    def add_rectangle(
+        self,
+        dx: float,
+        dy: float,
+        center: Optional[VectorLike] = None,
+        boundary_only: bool = False,
+        depth: Optional[int] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Refine cells contained within the rectangle.
+
+        Parameters
+        ----------
+        dx : scalar
+            Width of the rectangle.
+        dy : scalar
+            Height of the rectangle.
+        center : VectorLike, optional
+            Center of the rectangle.
+        boundary_only : bool, optional
+            If True, only refine cells intersected by the boundary of the rectangle.
+        depth : int, optional
+            Depth for refinement.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        center_ = np.zeros(2) if center is None else np.asanyarray(center[:2])
+        points = center_ + [(0.0, 0.0), (dx, 0.0), (dx, dy), (0.0, dy)]
+
+        return self.add_polygon(
+            points, depth=depth, group=group, boundary_only=boundary_only
+        )
+
+    def add_square(
+        self,
+        dx: float,
+        center: Optional[VectorLike] = None,
+        boundary_only: bool = False,
+        depth: Optional[int] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Refine cells contained within the square.
+
+        Parameters
+        ----------
+        dx : scalar
+            Side length of the square.
+        center : VectorLike, optional
+            Center of the square.
+        boundary_only : bool, optional
+            If True, only refine cells intersected by the boundary of the square.
+        depth : int, optional
+            Depth for refinement.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        return self.add_rectangle(
+            dx=dx,
+            dy=dx,
+            center=center,
+            boundary_only=boundary_only,
+            depth=depth,
+            group=group,
+        )
 
     def generate_mesh(
         self,

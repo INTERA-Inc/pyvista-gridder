@@ -174,3 +174,27 @@ def test_quadtree_add_polyline(depth, n_cells_ref):
         .generate_mesh(balance=False)
     )
     assert mesh.extract_cells(pvg.get_cell_group(mesh) == "polyline").n_cells == n_cells_ref
+
+
+def test_quadtree_add_rectangle():
+    """Test method pvgridder.QuadTree.add_rectangle."""
+    bmesh = pvg.Square(3.0, resolution=3)
+    mesh = (
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_rectangle(1.0, 1.5, center=(1.0, 1.0), group="rectangle")
+        .generate_mesh(balance=False)
+    )
+    assert mesh.n_cells == 96
+    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "rectangle").n_cells == 24
+
+
+def test_quadtree_add_square():
+    """Test method pvgridder.QuadTree.add_square."""
+    bmesh = pvg.Square(3.0, resolution=3)
+    mesh = (
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_square(1.0, center=(1.0, 1.0), group="square")
+        .generate_mesh(balance=False)
+    )
+    assert mesh.n_cells == 84
+    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "square").n_cells == 16
