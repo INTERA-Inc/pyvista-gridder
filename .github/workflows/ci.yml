@@ -13,7 +13,12 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        vtk-version: ["9.4.2", "9.5.0"]
+        vtk-version: ["9.4.2", "9.5.0", "9.6.0"]
+        exclude:
+          - python-version: "3.14"
+            vtk-version: "9.4.2"
+          - python-version: "3.14"
+            vtk-version: "9.5.0"
 
     steps:
     - uses: actions/checkout@v2
