@@ -94,14 +94,10 @@ mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 ### 2D QuadTree mesh
 
 ```python
-import numpy as np
 import pyvista as pv
 import pvgridder as pvg
 
-x = np.linspace(0.0, 5000.0, 21)
-y = np.linspace(0.0, 10000.0, 41)
-bmesh = pv.RectilinearGrid(x, y, [0.0])
-
+bmesh = pvg.Rectangle(5000.0, 10000.0, 20, 40)
 qtree = pvg.QuadTree(bmesh, max_depth=2)
 qtree = qtree.add_boundary_polygon(pvg.examples.freyberg.load_outcrop())
 qtree = qtree.add_polyline(pvg.examples.freyberg.load_river(), group="River")

@@ -60,10 +60,7 @@ p.view_xy()  # type: ignore
 p.screenshot("nightmare_fuel.png", transparent_background=True, return_img=False)
 
 # Example 3: conformal QuadTree
-x = np.linspace(0.0, 5000.0, 21)
-y = np.linspace(0.0, 10000.0, 41)
-bmesh = pv.RectilinearGrid(x, y, [0.0])
-
+bmesh = pvg.Rectangle(5000.0, 10000.0, 20, 40)
 qtree = pvg.QuadTree(bmesh, max_depth=2)
 qtree = qtree.add_boundary_polygon(pvg.examples.freyberg.load_outcrop())
 qtree = qtree.add_polyline(pvg.examples.freyberg.load_river(), group="River")

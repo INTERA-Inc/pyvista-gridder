@@ -28,12 +28,9 @@ def load(max_depth: int = 2, conformal: bool = True) -> pv.UnstructuredGrid:
         QuadTree mesh for the Freyberg example.
 
     """
-    from ... import QuadTree
+    from ... import QuadTree, Rectangle
 
-    x = np.linspace(0.0, 5000.0, 21)
-    y = np.linspace(0.0, 10000.0, 41)
-    bmesh = pv.RectilinearGrid(x, y, [0.0])
-
+    bmesh = Rectangle(5000.0, 10000.0, 20, 40)
     qtree = QuadTree(bmesh, max_depth=max_depth)
     qtree = qtree.add_boundary_polygon(load_outcrop())
     qtree = qtree.add_polyline(load_river(), group="River")

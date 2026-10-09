@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         MatrixLike,
         PolygonLike,
         PolyLineLike,
-        RectilinearLike,
+        StructuredLike,
         VectorLike,
     )
 
@@ -200,7 +200,7 @@ class QuadTree(MeshBase):
 
     Parameters
     ----------
-    mesh : RectilinearLike
+    mesh : StructuredLike
         Base mesh for the quadtree.
     max_depth : int, default 4
         Maximum depth of the quadtree.
@@ -213,7 +213,7 @@ class QuadTree(MeshBase):
 
     def __init__(
         self,
-        mesh: RectilinearLike,
+        mesh: StructuredLike,
         *,
         max_depth: int = 4,
         default_group: Optional[str] = None,
@@ -222,8 +222,22 @@ class QuadTree(MeshBase):
         """Initialize a quadtree."""
         super().__init__(default_group, ignore_groups)
 
+        if mesh.dimensions[2] != 1:
+            raise ValueError("could not create a quadtree with a 3D mesh")
+
         if isinstance(mesh, pv.ImageData):
             mesh = mesh.cast_to_rectilinear_grid()
+
+        elif isinstance(mesh, pv.StructuredGrid):
+            x = mesh.x[:, 0]
+            y = mesh.y[0, :]
+            mesh_ = pv.RectilinearGrid(x, y, [0.0])
+            mesh_.user_dict.update(mesh.user_dict)
+
+            for k, v in mesh.cell_data.items():
+                mesh_.cell_data[k] = v
+
+            mesh = mesh_
 
         self.max_depth = max_depth
         self._mesh = mesh.copy()
@@ -237,7 +251,7 @@ class QuadTree(MeshBase):
     def add_boundary_polygon(
         self,
         polygon: PolygonLike,
-        depth: int = 1,
+        depth: int = 0,
     ) -> Self:
         """
         Add a boundary polygon to the quadtree.
@@ -246,7 +260,7 @@ class QuadTree(MeshBase):
         ----------
         polygon : PolygonLike
             Boundary polygon to add.
-        depth : int, default 1
+        depth : int, default 0
             Depth for refinement of the boundary polygon. No refinement by default.
 
         Returns
@@ -263,9 +277,9 @@ class QuadTree(MeshBase):
             raise ValueError("could not add a second boundary polygon")
 
         polygon = self._convert_polygon(polygon)
-        depth = min(depth, self.max_depth) if depth else self.max_depth
+        depth = min(depth, self.max_depth)
 
-        if depth > 1:
+        if depth > 0:
             self.add_polygon(Polygon(polygon.exterior), boundary_only=True, depth=depth)
 
             for interior in polygon.interiors:
@@ -343,7 +357,7 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
 
         """
-        depth = min(depth, self.max_depth) if depth else self.max_depth
+        depth = min(depth, self.max_depth) if depth is not None else self.max_depth
 
         for root in self.roots:
             self._refine_point(root, point, depth)
@@ -436,7 +450,7 @@ class QuadTree(MeshBase):
         """
         from .. import split_lines
 
-        depth = min(depth, self.max_depth) if depth else self.max_depth
+        depth = min(depth, self.max_depth) if depth is not None else self.max_depth
 
         if isinstance(line, pv.PolyData):
             if line.n_lines == 0:
