@@ -212,7 +212,7 @@ class QuadTree(MeshBase):
     max_depth : int, default 5
         Maximum depth of the quadtree.
     min_cellsize : scalar, optional
-        Lower bound on refined cell edge lengths. Supersedes *max_depth* if specified.
+        Minimum cell size for the quadtree. Supersedes *max_depth* if specified.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
