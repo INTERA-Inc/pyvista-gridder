@@ -1,5 +1,6 @@
 """Core classes."""
 
+from .delaunay import DelaunayMesh2D as DelaunayMesh2D
 from .extrude import MeshExtrude as MeshExtrude
 from .geometric_objects import (
     AnnularSector as AnnularSector,
