@@ -64,10 +64,16 @@ class QuadNode:
         self._children = []
 
     def contains_point(self, point: VectorLike) -> bool:
-        """Return True if the point is within the node's bounding box."""
+        """Return True if the point is within the bounds, allowing for roundoff."""
         x, y = point[:2]
+        epsilon = 8.0 * np.finfo(float).eps
+        xtol = epsilon * max(abs(self.xmin), abs(self.xmax))
+        ytol = epsilon * max(abs(self.ymin), abs(self.ymax))
 
-        return self.xmin <= x <= self.xmax and self.ymin <= y <= self.ymax
+        return (
+            self.xmin - xtol <= x <= self.xmax + xtol
+            and self.ymin - ytol <= y <= self.ymax + ytol
+        )
 
     def intersects_polygon(
         self,
@@ -680,6 +686,7 @@ class QuadTree(MeshBase):
             mesh.cell_data[k] = v[mesh.cell_data["vtkOriginalCellIds"]]
 
         # Generate cell groups
+        mesh = mesh.clean().cast_to_unstructured_grid()
         groups = dict(self.mesh.user_dict.get("CellGroup", {}))
         group_array = np.asanyarray(
             mesh.cell_data.get(
@@ -687,7 +694,6 @@ class QuadTree(MeshBase):
                 self._initialize_group_array(mesh, groups),
             )
         )
-        xc, yc, _ = mesh.cell_centers().points.T
 
         for item in self.items:
             if isinstance(item.mesh, pv.PolyData):
@@ -708,7 +714,7 @@ class QuadTree(MeshBase):
                 elif item.mesh.n_faces > 0:
                     for face in item.mesh.irregular_faces:
                         polygon = Polygon(item.mesh.points[face, :2])
-                        mask = contains_xy(polygon, xc, yc)
+                        mask = contains_xy(polygon, centers[:, 0], centers[:, 1])
 
                         if mask.any():
                             group_array[mask] = self._get_group_number(
@@ -717,9 +723,23 @@ class QuadTree(MeshBase):
 
                 # Point
                 else:
-                    cid = mesh.find_containing_cell(item.mesh.points[0])
+                    point = item.mesh.points[0]
+                    mask = np.isclose(
+                        np.tile(point, reps=(mesh.n_points, 1)),
+                        mesh.points,
+                    ).all(axis=1)
 
-                    if cid >= 0:
+                    if mask.any():
+                        pid = np.flatnonzero(mask)[0]
+                        cid = mesh.point_cell_ids(pid)
+
+                    else:
+                        cid = mesh.find_containing_cell([point])
+                        cid = [cid] if cid >= 0 else []
+
+                    cid = cast(list[int], cid)
+
+                    if len(cid) >= 0:
                         group_array[cid] = self._get_group_number(item.group, groups)
 
         mesh.cell_data["CellGroup"] = group_array
@@ -728,7 +748,7 @@ class QuadTree(MeshBase):
 
         # Handle boundary polygon if it exists
         if self._boundary_polygon is not None:
-            mask = contains_xy(self._boundary_polygon, xc, yc)
+            mask = contains_xy(self._boundary_polygon, centers[:, 0], centers[:, 1])
             mesh = mesh.extract_cells(mask)
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
