@@ -44,7 +44,7 @@ class QuadNode:
         Maximum Y coordinate of the node's bounding box.
     depth : int, default 0
         Depth of the node in the quadtree.
-    
+
     """
 
     def __init__(
@@ -87,7 +87,12 @@ class QuadNode:
         x1, y1 = pointa[:2]
         x2, y2 = pointb[:2]
 
-        if max(x1, x2) < self.xmin or min(x1, x2) > self.xmax or max(y1, y2) < self.ymin or min(y1, y2) > self.ymax:
+        if (
+            max(x1, x2) < self.xmin
+            or min(x1, x2) > self.xmax
+            or max(y1, y2) < self.ymin
+            or min(y1, y2) > self.ymax
+        ):
             return False
 
         # Liang-Barsky algorithm
@@ -303,7 +308,7 @@ class QuadTree(MeshBase):
         Notes
         -----
         The circle is approximated by a 64-sided polygon for refinement purposes.
-        
+
         """
         center_ = np.zeros(2) if center is None else np.asanyarray(center)
         angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
@@ -331,12 +336,12 @@ class QuadTree(MeshBase):
             Depth for refinement.
         group : str, optional
             Group name.
-        
+
         Returns
         -------
         Self
             Self (for daisy chaining).
-        
+
         """
         depth = min(depth, self.max_depth) if depth else self.max_depth
 
@@ -360,7 +365,7 @@ class QuadTree(MeshBase):
     ) -> Self:
         """
         Refine cells contained within the polygon.
-        
+
         Parameters
         ----------
         polygon : PolygonLike
@@ -372,19 +377,19 @@ class QuadTree(MeshBase):
             Depth for refinement.
         group : str, optional
             Group name.
-        
+
         Returns
         -------
         Self
             Self (for daisy chaining).
-        
+
         """
         polygon = self._convert_polygon(polygon)
         depth = self.max_depth if depth is None else min(depth, self.max_depth)
 
         if polygon.is_empty or not polygon.is_valid or polygon.area <= 0.0:
             raise ValueError("could not create a valid polygon from the given points")
-        
+
         points = get_coordinates(polygon.exterior)
 
         if boundary_only:
@@ -413,7 +418,7 @@ class QuadTree(MeshBase):
     ) -> Self:
         """
         Refine cells intersected by polyline.
-        
+
         Parameters
         ----------
         line : PolyLineLike
@@ -427,7 +432,7 @@ class QuadTree(MeshBase):
         -------
         Self
             Self (for daisy chaining).
-        
+
         """
         from .. import split_lines
 
@@ -435,7 +440,9 @@ class QuadTree(MeshBase):
 
         if isinstance(line, pv.PolyData):
             if line.n_lines == 0:
-                raise ValueError("could not create a valid polyline from the given PolyData")
+                raise ValueError(
+                    "could not create a valid polyline from the given PolyData"
+                )
 
             line = split_lines(line, as_lines=False)[0].points[:, :2]
 
@@ -477,7 +484,7 @@ class QuadTree(MeshBase):
         -------
         pyvista.UnstructuredGrid
             QuadTree mesh.
-        
+
         """
         from .. import split_lines
 
@@ -570,16 +577,12 @@ class QuadTree(MeshBase):
             for _, xmin, xmax, ymin, ymax in leaves:
                 for x in (xmin, xmax):
                     vertical_hanging_nodes.update(
-                        (x, y)
-                        for y in vertical_vertices[x]
-                        if ymin < y < ymax
+                        (x, y) for y in vertical_vertices[x] if ymin < y < ymax
                     )
 
                 for y in (ymin, ymax):
                     horizontal_hanging_nodes.update(
-                        (x, y)
-                        for x in horizontal_vertices[y]
-                        if xmin < x < xmax
+                        (x, y) for x in horizontal_vertices[y] if xmin < x < xmax
                     )
 
             # Initialize data structures for mesh construction
@@ -587,13 +590,13 @@ class QuadTree(MeshBase):
             point_ids: dict[tuple[int, int], int] = {}
             point_hanging_node_types: list[int] = []
             cells: list[int] = []
-    
+
             def get_point_id(idx: int, idy: int) -> int:
                 key = (idx, idy)
 
                 if key in point_ids:
                     return point_ids[key]
-    
+
                 x_cell = min(idx // scale, self.x.size - 2)
                 y_cell = min(idy // scale, self.y.size - 2)
                 x_fraction = (idx - x_cell * scale) / scale
@@ -619,14 +622,30 @@ class QuadTree(MeshBase):
             # Construct mesh cells from leaf boundaries
             for _, xmin, xmax, ymin, ymax in leaves:
                 boundary = [
-                    *((x, ymin) for x in sorted(horizontal_vertices[ymin]) if xmin <= x <= xmax),
-                    *((xmax, y) for y in sorted(vertical_vertices[xmax]) if ymin < y <= ymax),
-                    *((x, ymax) for x in sorted(horizontal_vertices[ymax], reverse=True) if xmin <= x < xmax),
-                    *((xmin, y) for y in sorted(vertical_vertices[xmin], reverse=True) if ymin < y < ymax),
+                    *(
+                        (x, ymin)
+                        for x in sorted(horizontal_vertices[ymin])
+                        if xmin <= x <= xmax
+                    ),
+                    *(
+                        (xmax, y)
+                        for y in sorted(vertical_vertices[xmax])
+                        if ymin < y <= ymax
+                    ),
+                    *(
+                        (x, ymax)
+                        for x in sorted(horizontal_vertices[ymax], reverse=True)
+                        if xmin <= x < xmax
+                    ),
+                    *(
+                        (xmin, y)
+                        for y in sorted(vertical_vertices[xmin], reverse=True)
+                        if ymin < y < ymax
+                    ),
                 ]
                 point_ids_for_cell = [get_point_id(x, y) for x, y in boundary]
                 cells.extend((len(point_ids_for_cell), *point_ids_for_cell))
-    
+
             celltypes = np.full(len(leaves), pv.CellType.POLYGON, dtype=np.uint8)
             mesh = pv.UnstructuredGrid(
                 np.asarray(cells, dtype=np.int64),
@@ -667,7 +686,9 @@ class QuadTree(MeshBase):
                             cids = mesh.find_cells_along_line(pointa, pointb)
 
                             if cids.size > 0:
-                                group_array[cids] = self._get_group_number(item.group, groups)
+                                group_array[cids] = self._get_group_number(
+                                    item.group, groups
+                                )
 
                 # Polygon
                 elif item.mesh.n_faces_strict > 0:
@@ -676,7 +697,9 @@ class QuadTree(MeshBase):
                         mask = contains_xy(polygon, xc, yc)
 
                         if mask.any():
-                            group_array[mask] = self._get_group_number(item.group, groups)
+                            group_array[mask] = self._get_group_number(
+                                item.group, groups
+                            )
 
                 # Point
                 else:
@@ -756,7 +779,7 @@ class QuadTree(MeshBase):
         """Recursively collect active leaf nodes."""
         if node.is_leaf:
             leaves.append(node)
-            
+
         else:
             for child in node.children:
                 self._get_leaves(child, leaves)
@@ -777,7 +800,7 @@ class QuadTree(MeshBase):
 
         xmid = (xmin + xmax) // 2
         ymid = (ymin + ymax) // 2
-    
+
         for child, bounds in zip(
             node.children,
             (

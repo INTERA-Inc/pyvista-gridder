@@ -11,8 +11,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Optional
 
-    from .._typing import DataSetLike
     from typing_extensions import Self
+
+    from .._typing import DataSetLike
 
 
 class MeshMerge(MeshBase):

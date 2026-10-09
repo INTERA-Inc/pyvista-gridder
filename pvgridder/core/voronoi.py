@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from typing import Optional
 
     from numpy.typing import ArrayLike
+    from typing_extensions import Self
 
     from .._typing import DataSetLike, VectorLike
-    from typing_extensions import Self
 
 
 class VoronoiMesh2D(MeshBase):

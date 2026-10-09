@@ -40,9 +40,7 @@ class MeshItem:
     thickness: float
     transition: bool
 
-    def __init__(
-        self, mesh: DataSetLike, **kwargs
-    ) -> None:
+    def __init__(self, mesh: DataSetLike, **kwargs) -> None:
         """Initialize a new mesh item."""
         self._mesh = mesh
 
@@ -90,7 +88,9 @@ class MeshBase(ABC):
             irregular_faces = polygon.irregular_faces
 
             if len(irregular_faces) == 0:
-                raise ValueError("could not create a valid polygon from the given PolyData")
+                raise ValueError(
+                    "could not create a valid polygon from the given PolyData"
+                )
 
             polygon = polygon.points[irregular_faces[0], :2]
 
@@ -216,9 +216,7 @@ class MeshBase(ABC):
         return arr
 
     @staticmethod
-    def _clean(
-        mesh: DataSetLike, tolerance: Optional[float] = None
-    ) -> DataSetLike:
+    def _clean(mesh: DataSetLike, tolerance: Optional[float] = None) -> DataSetLike:
         """Clean generated mesh."""
         from .. import remap_categorical_data
 
@@ -310,9 +308,10 @@ class MeshStackBase(MeshBase):
         if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
             mesh = mesh.cast_to_structured_grid()
 
-        if isinstance(
-            mesh, (pv.StructuredGrid, pv.ExplicitStructuredGrid)
-        ) and mesh.dimensions[axis] != 1:
+        if (
+            isinstance(mesh, (pv.StructuredGrid, pv.ExplicitStructuredGrid))
+            and mesh.dimensions[axis] != 1
+        ):
             raise ValueError(
                 f"invalid mesh or axis, dimension along axis {axis} should be 1 (got {mesh.dimensions[axis]})"
             )

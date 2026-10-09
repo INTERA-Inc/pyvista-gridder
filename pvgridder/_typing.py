@@ -5,8 +5,8 @@ from typing import Any, Tuple, Union
 
 import numpy as np
 import pyvista as pv
-from shapely import LineString, Polygon
 from numpy.typing import NDArray
+from shapely import LineString, Polygon
 from typing_extensions import TypeAlias
 
 
