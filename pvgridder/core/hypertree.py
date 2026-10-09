@@ -691,7 +691,7 @@ class QuadTree(MeshBase):
                                 )
 
                 # Polygon
-                elif item.mesh.n_faces_strict > 0:
+                elif item.mesh.n_faces > 0:
                     for face in item.mesh.irregular_faces:
                         polygon = Polygon(item.mesh.points[face, :2])
                         mask = contains_xy(polygon, xc, yc)

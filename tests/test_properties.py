@@ -1,3 +1,5 @@
+from typing import cast
+
 import numpy as np
 import pytest
 import pyvista as pv
@@ -54,7 +56,7 @@ def test_get_cell_connectivity(request, mesh_fixture, flatten):
         )
         assert reconstructed.n_cells == actual_mesh.n_cells
         assert np.allclose(
-            reconstructed.compute_cell_sizes()["Volume"],
+            reconstructed.compute_cell_sizes().cell_data["Volume"],
             actual_mesh.compute_cell_sizes()["Volume"],
         )
 
@@ -86,6 +88,8 @@ def test_get_dimension(request, mesh_fixture, expected_dimension):
 
     else:
         actual_mesh = request.getfixturevalue(mesh_fixture)
+
+    actual_mesh = cast(pv.DataSet, actual_mesh)
 
     # Get mesh dimension
     result = pvg.get_dimension(actual_mesh)
@@ -184,5 +188,6 @@ def test_get_cell_group(request, mesh):
     mesh.cell_data["CellGroup"][mesh.n_cells // 2 :] = 1
     mesh.user_dict["CellGroup"] = {"foo": 0, "bar": 1}
     cell_groups = pvg.get_cell_group(mesh)
+    assert cell_groups is not None
     group_map = {v: k for k, v in mesh.user_dict["CellGroup"].items()}
     assert cell_groups.tolist() == [group_map[i] for i in mesh.cell_data["CellGroup"]]

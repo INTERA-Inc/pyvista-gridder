@@ -79,7 +79,7 @@ def average_points(mesh: pv.PolyData, tolerance: float = 0.0) -> pv.PolyData:
         point_map[group] = group[0]
         new_points[group[0]] = points[group].mean(axis=0)
 
-    if mesh.n_faces_strict:
+    if mesh.n_faces:
         irregular_faces = [
             decimate(point_map[face], close=True) for face in mesh.irregular_faces
         ]
@@ -173,7 +173,7 @@ def extract_boundary_polygons(
 def extract_boundary_polygons(
     mesh: DataSetLike,
     fill: Literal[True],
-    with_holes: Literal[False],
+    with_holes: Literal[False] = False,
 ) -> tuple[pv.PolyData, ...] | None: ...
 
 
@@ -188,7 +188,7 @@ def extract_boundary_polygons(
 @overload
 def extract_boundary_polygons(
     mesh: DataSetLike,
-    fill: Literal[False],
+    fill: Literal[False] = False,
 ) -> tuple[pv.PolyData, ...] | None: ...
 
 
@@ -224,7 +224,7 @@ def extract_boundary_polygons(
 
     from .. import Polygon
 
-    if isinstance(mesh, pv.PolyData) and mesh.n_faces_strict == 0 and mesh.n_lines > 0:
+    if isinstance(mesh, pv.PolyData) and mesh.n_faces == 0 and mesh.n_lines > 0:
         edges = mesh
 
     else:
@@ -1212,7 +1212,7 @@ def offset_polygon(
     else:
         mesh = mesh_or_points
 
-    if not mesh.n_faces_strict:
+    if not mesh.n_faces:
         raise ValueError("could not offset polygon with zero polygon")
 
     if distance > 0.0:
@@ -1306,7 +1306,7 @@ def ray_cast(
     from .. import get_cell_centers
 
     if isinstance(mesh, pv.PolyData):
-        if mesh.n_faces_strict and mesh.n_lines:
+        if mesh.n_faces and mesh.n_lines:
             raise ValueError(
                 "could not ray cast on a polydata with both faces and lines"
             )
@@ -1330,7 +1330,7 @@ def ray_cast(
     dvec = (pointa - pointb) / np.linalg.norm(pointa - pointb)
 
     # Filter faces based on angle with line direction
-    if mesh.n_faces_strict:
+    if mesh.n_faces:
         max_angle = max_angle if max_angle is not None else 90.0 - tolerance
         normals = mesh.compute_normals(
             cell_normals=True, point_normals=False
@@ -1342,9 +1342,9 @@ def ray_cast(
             return None
 
     # Calculate intersection points
-    cells = extract_cells(mesh, ids).extract_geometry()
+    cells = extract_cells(mesh, ids).extract_surface(algorithm=None)
 
-    if mesh.n_faces_strict:
+    if mesh.n_faces:
         centers = get_cell_centers(cells)
         intersection = pointa + dvec * np.expand_dims(
             ((centers - pointa) * normals[ids]).sum(axis=1)
@@ -1681,13 +1681,13 @@ def split_lines(mesh: pv.PolyData, as_lines: bool = True) -> Sequence[pv.PolyDat
     return lines
 
 
-def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
+def quadraticize(mesh: DataSetLike) -> pv.UnstructuredGrid:
     """
     Convert linear mesh to quadratic mesh.
 
     Parameters
     ----------
-    mesh : pyvista.UnstructuredGrid
+    mesh : DataSetLike
         Mesh with linear cells.
 
     Returns
@@ -1696,6 +1696,7 @@ def quadraticize(mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
         Mesh with quadratic cells.
 
     """
+    mesh = mesh.cast_to_unstructured_grid()
     n_points = mesh.n_points
 
     cells = []

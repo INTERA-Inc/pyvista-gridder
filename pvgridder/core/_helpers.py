@@ -368,7 +368,7 @@ def generate_volume_from_two_surfaces(
         points = points.reshape((n_points * perc.size, 3))
 
         n = perc.size - 1
-        offset = surface_a.offset
+        offset = surface_a.cell_offsets
         celltypes = _extruded_celltype_map[surface_a.celltypes]
         cell_connectivity = surface_a.cell_connectivity
         cells = [[] for _ in range(n)]

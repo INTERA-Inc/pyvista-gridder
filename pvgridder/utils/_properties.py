@@ -135,7 +135,7 @@ def get_cell_centers(
         mask = celltypes == pv.CellType.POLYHEDRON
 
         if polyhedron_method is not None and mask.any():
-            offset = mesh.offset
+            offset = mesh.cell_offsets
             connectivity = mesh.cell_connectivity
 
             if polyhedron_method == "box" and vtk_version >= "9.5.0":
