@@ -21,6 +21,10 @@ from .geometric_objects import (
     StructuredSurface as StructuredSurface,
     Volume as Volume,
 )
+from .hypertree import (
+    QuadNode as QuadNode,
+    QuadTree as QuadTree,
+)
 from .merge import MeshMerge as MeshMerge
 from .stack import (
     MeshStack2D as MeshStack2D,

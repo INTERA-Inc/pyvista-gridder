@@ -48,8 +48,8 @@ def clean(c, bytecode=False):
 
 @task
 def ruff(c):
-    c.run("ruff check --fix pvgridder tests")
-    c.run("ruff format --target-version py39 --line-length 88 pvgridder tests")
+    c.run("ruff check --fix pvgridder tests .github")
+    c.run("ruff format pvgridder tests .github")
 
 
 @task

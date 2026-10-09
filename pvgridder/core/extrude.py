@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
     from typing_extensions import Self
 
+    from .._typing import GridLike, VectorLike
+
 
 class MeshExtrude(MeshBase):
     """
@@ -25,7 +27,7 @@ class MeshExtrude(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.ImageData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : GridLike
         Base mesh.
     scale : scalar, optional
         Default scaling factor.
@@ -43,10 +45,7 @@ class MeshExtrude(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData
-        | pv.RectilinearGrid
-        | pv.StructuredGrid
-        | pv.UnstructuredGrid,
+        mesh: GridLike,
         scale: Optional[float] = None,
         angle: Optional[float] = None,
         default_group: Optional[str] = None,
@@ -63,6 +62,9 @@ class MeshExtrude(MeshBase):
         if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
             mesh = mesh.cast_to_structured_grid()
 
+        elif isinstance(mesh, pv.ExplicitStructuredGrid):
+            mesh = mesh.cast_to_unstructured_grid()
+
         super().__init__(default_group, ignore_groups, items=[MeshItem(mesh)])
         self._mesh = mesh
         self._angle = angle
@@ -70,7 +72,7 @@ class MeshExtrude(MeshBase):
 
     def add(
         self,
-        vector: ArrayLike,
+        vector: VectorLike,
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         scale: Optional[float] = None,
@@ -82,7 +84,7 @@ class MeshExtrude(MeshBase):
 
         Parameters
         ----------
-        vector : ArrayLike
+        vector : VectorLike
             Translation vector.
         resolution : int | ArrayLike, optional
             Number of subdivisions along the extrusion axis or relative position of

@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import cast
 
 import numpy as np
 import pytest
@@ -52,16 +53,18 @@ def test_average_points(request, mesh, tolerance, expected_points, ref_sum):
 
     # Extract surface to get polydata if needed
     if not isinstance(actual_mesh, pv.PolyData):
-        actual_mesh = actual_mesh.extract_surface()
+        actual_mesh = actual_mesh.extract_surface(algorithm=None)
 
     # If it's an example mesh, we'll check area preservation instead of point count
     is_example = mesh in [pvg.examples.load_anticline_2d, pvg.examples.load_well_2d]
 
     if is_example:
         # Get original area for example meshes
-        original_area = actual_mesh.compute_cell_sizes(
-            length=False, area=True, volume=False
-        )["Area"].sum()
+        original_area = (
+            actual_mesh.compute_cell_sizes(length=False, area=True, volume=False)
+            .cell_data["Area"]
+            .sum()
+        )
 
     # Apply average_points
     original_point_count = actual_mesh.n_points
@@ -77,9 +80,11 @@ def test_average_points(request, mesh, tolerance, expected_points, ref_sum):
     # Specific checks based on mesh type
     if is_example:
         # For example meshes, check area preservation
-        result_area = result.compute_cell_sizes(length=False, area=True, volume=False)[
-            "Area"
-        ].sum()
+        result_area = (
+            result.compute_cell_sizes(length=False, area=True, volume=False)
+            .cell_data["Area"]
+            .sum()
+        )
         assert np.isclose(original_area, result_area, rtol=1e-4)
 
     elif expected_points is not None:
@@ -155,6 +160,7 @@ def test_extract_boundary_polygons(mesh, fill, ref_sum):
     """Test boundary extraction with different meshes and fill options."""
     # Get the actual mesh (calling the function if it's callable)
     actual_mesh = mesh() if callable(mesh) else mesh
+    actual_mesh = cast(pv.DataSet, actual_mesh)
 
     # Extract boundaries
     boundaries = pvg.extract_boundary_polygons(actual_mesh, fill=fill)
@@ -170,7 +176,7 @@ def test_extract_boundary_polygons(mesh, fill, ref_sum):
 
     if fill:
         # With fill=True, each boundary should have faces
-        assert all(b.n_faces_strict > 0 for b in boundaries)
+        assert all(b.n_faces > 0 for b in boundaries)
 
     else:
         # With fill=False, each boundary should have lines
@@ -221,6 +227,7 @@ def test_extract_cell_geometry(mesh, remove_ghost_cells, ref_sum):
     """Test cell geometry extraction with different meshes and empty cell options."""
     # Get the actual mesh (calling the function if it's callable)
     actual_mesh = mesh() if callable(mesh) else mesh
+    actual_mesh = cast(pv.DataSet, actual_mesh)
 
     # Extract cell geometry
     result = pvg.extract_cell_geometry(
@@ -229,7 +236,7 @@ def test_extract_cell_geometry(mesh, remove_ghost_cells, ref_sum):
 
     # Should be a polydata with cell outlines
     assert isinstance(result, pv.PolyData)
-    assert result.n_faces_strict > 0 or result.n_lines > 0  # Either faces or lines
+    assert result.n_faces > 0 or result.n_lines > 0  # Either faces or lines
 
     # Verify the sum of points matches the reference value
     assert np.allclose(result.points.sum(), ref_sum, rtol=1e-5)
@@ -331,8 +338,8 @@ def test_fuse_cells(request, mesh, cell_ids):
 
     # Check area
     assert np.allclose(
-        results.compute_cell_sizes()["Area"].sum(),
-        actual_mesh.compute_cell_sizes()["Area"].sum(),
+        results.compute_cell_sizes().cell_data["Area"].sum(),
+        actual_mesh.compute_cell_sizes().cell_data["Area"].sum(),
     )
 
 
@@ -557,7 +564,7 @@ def test_merge_lines(request, mesh, as_lines):
         pytest.param(
             lambda: pvg.extract_boundary_polygons(
                 pvg.examples.load_well_2d(), fill=True
-            )[0],
+            )[0],  # type: ignore
             0.1,
             "increase",
             id="well_2d_boundary",
@@ -578,17 +585,17 @@ def test_offset_polygon(request, mesh_or_points, distance, expected_area_change)
     original_area = None
 
     if is_polydata and expected_area_change is not None:
-        original_area = actual_input.compute_cell_sizes()["Area"][0]
+        original_area = actual_input.compute_cell_sizes().cell_data["Area"][0]
 
     result = pvg.offset_polygon(actual_input, distance=distance)
 
     # Basic verification for all inputs
     assert isinstance(result, pv.PolyData)
-    assert result.n_faces_strict > 0
+    assert result.n_faces > 0
 
     # Check area change if applicable
     if is_polydata and expected_area_change is not None and original_area is not None:
-        result_area = result.compute_cell_sizes()["Area"][0]
+        result_area = result.compute_cell_sizes().cell_data["Area"][0]
 
         if expected_area_change == "increase":
             assert result_area > original_area
@@ -642,6 +649,7 @@ def test_ray_cast(request, mesh, pointa, pointb, sum_ref):
         mesh = mesh()
 
     intersection = pvg.ray_cast(mesh, pointa, pointb)
+    assert intersection is not None
 
     # Compare against reference sum
     sum_ = (
@@ -701,12 +709,17 @@ def test_ray_cast(request, mesh, pointa, pointb, sum_ref):
         # Example mesh points
         pytest.param(
             lambda: pvg.examples.load_anticline_2d()
-            .extract_surface()
+            .extract_surface(algorithm=None)
             .points[
                 np.random.RandomState(42).choice(
-                    pvg.examples.load_anticline_2d().extract_surface().n_points,
+                    pvg.examples.load_anticline_2d()
+                    .extract_surface(algorithm=None)
+                    .n_points,
                     size=min(
-                        20, pvg.examples.load_anticline_2d().extract_surface().n_points
+                        20,
+                        pvg.examples.load_anticline_2d()
+                        .extract_surface(algorithm=None)
+                        .n_points,
                     ),
                     replace=False,
                 )
@@ -721,6 +734,7 @@ def test_reconstruct_line(points_source, close):
     """Test line reconstruction with different points sources and close options."""
     # Get points
     points = points_source() if callable(points_source) else points_source
+    points = cast(np.ndarray, points)
 
     try:
         # Reconstruct line
@@ -765,23 +779,14 @@ def test_reconstruct_line(points_source, close):
             "cell",
             id="basic_cell",
         ),
-        # Skip this test case for now as it uses a complex lambda function
-        # pytest.param(lambda: lambda m: add_point_data(m, "category"), "category", {0: 10, 1: 20}, False, "point", id="basic_point"),
         # Example mesh
         pytest.param(
-            pvg.examples.load_well_2d, "CellGroup", None, False, "cell", id="well_2d"
+            pvg.examples.load_well_2d, "CellGroup", {}, False, "cell", id="well_2d"
         ),
     ],
 )
 def test_remap_categorical_data(request, mesh, key, mapping, inplace, preference):
     """Test categorical data remapping with different options and meshes."""
-
-    # Helper function to add point data for testing preference
-    def add_point_data(m, key):
-        m = m.copy()
-        m.point_data[key] = np.tile([0, 1, 2], m.n_points)[: m.n_points]
-        return m
-
     # Get the actual mesh
     if isinstance(mesh, str):
         actual_mesh = request.getfixturevalue(mesh)
@@ -789,8 +794,10 @@ def test_remap_categorical_data(request, mesh, key, mapping, inplace, preference
     else:
         actual_mesh = mesh()
 
+    actual_mesh = cast(pv.DataSet, actual_mesh)
+
     # For example meshes, create a mapping based on the available data
-    if mapping is None and key in actual_mesh.cell_data:
+    if not mapping and key in actual_mesh.cell_data:
         values = np.unique(actual_mesh.cell_data[key])
 
         if len(values) >= 2:
@@ -920,7 +927,7 @@ def test_split_lines(request, mesh, as_lines):
         # Example mesh
         pytest.param(
             lambda: pvg.examples.load_well_2d()
-            .extract_surface()
+            .extract_surface(algorithm=None)
             .triangulate()
             .cast_to_unstructured_grid(),
             pv.CellType.QUADRATIC_TRIANGLE,
@@ -932,6 +939,7 @@ def test_split_lines(request, mesh, as_lines):
 def test_quadraticize(mesh, expected_celltype, ref_sum):
     """Test converting linear cells to quadratic cells."""
     actual_mesh = mesh() if callable(mesh) else mesh()
+    actual_mesh = cast(pv.DataSet, actual_mesh)
     result = pvg.quadraticize(actual_mesh)
 
     assert isinstance(result, pv.UnstructuredGrid)

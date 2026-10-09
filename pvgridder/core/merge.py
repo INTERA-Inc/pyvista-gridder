@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from .._typing import DataSetLike
+
 
 class MeshMerge(MeshBase):
     """
@@ -40,7 +42,7 @@ class MeshMerge(MeshBase):
 
     def add(
         self,
-        mesh: pv.DataSet,
+        mesh: DataSetLike,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -48,7 +50,7 @@ class MeshMerge(MeshBase):
 
         Parameters
         ----------
-        mesh : pyvista.DataSet
+        mesh : DataSetLike
             Mesh to merge.
         group : str, optional
             Group name.

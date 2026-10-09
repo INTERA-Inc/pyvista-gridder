@@ -19,6 +19,7 @@ Structured and unstructured mesh generation using PyVista for the Finite-Element
 - **Surface Extrusion**: Extrude surface meshes into volumetric meshes while preserving their original type.
 - **1.5D/2.5D Mesh Creation**: Generate meshes by stacking polylines or surfaces, ideal for geological modeling and similar applications.
 - **2D Voronoi Mesh Generation**: Create 2D Voronoi meshes from a background mesh, with support for adding constraint points to define custom shapes.
+- **2D QuadTree Mesh Generation**: Create 2D QuadTree meshes from a base rectilinear mesh, with support for refining cells with predefined or custom shapes.
 - **Mesh Merging**: Combine multiple PyVista meshes into a single mesh and assign cell groups, leaving conformity checks to the user.
 - **Additional Utility Functions**: Includes tools to manipulate structured and unstructured grids.
 
@@ -89,6 +90,28 @@ mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 ```
 
 ![nightmare-fuel](https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true)
+
+### 2D QuadTree mesh
+
+```python
+import pyvista as pv
+import pvgridder as pvg
+
+bmesh = pvg.Rectangle(5000.0, 10000.0, 20, 40)
+qtree = pvg.QuadTree(bmesh, max_depth=2)
+qtree = qtree.add_boundary_polygon(pvg.examples.freyberg.load_outcrop())
+qtree = qtree.add_polyline(pvg.examples.freyberg.load_river(), group="River")
+
+for well in pvg.examples.freyberg.load_wells():
+    qtree = qtree.add_point(well, group="Well")
+
+mesh = qtree.generate_mesh(balance=True, conformal=False)
+mesh_conformal = qtree.generate_mesh(balance=True, conformal=True)
+connectivity = pvg.get_connectivity(mesh)
+connectivity_conformal = pvg.get_connectivity(mesh_conformal)
+```
+
+![quadtree](https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/quadtree.png?raw=true)
 
 ### 2.5D geological model
 

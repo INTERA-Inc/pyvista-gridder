@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Union, cast
 import numpy as np
 import pyvista as pv
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from shapely import Polygon, prepare
 
 
 if TYPE_CHECKING:
@@ -15,6 +16,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
     from typing_extensions import Self
 
+    from .._typing import DataSetLike, GridLike, PolygonLike
+
 
 class MeshItem:
     """
@@ -22,7 +25,7 @@ class MeshItem:
 
     Parameters
     ----------
-    mesh : pyvista.PolyData | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : DataSetLike
         Input mesh.
 
     """
@@ -37,9 +40,7 @@ class MeshItem:
     thickness: float
     transition: bool
 
-    def __init__(
-        self, mesh: pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid, **kwargs
-    ) -> None:
+    def __init__(self, mesh: DataSetLike, **kwargs) -> None:
         """Initialize a new mesh item."""
         self._mesh = mesh
 
@@ -47,7 +48,7 @@ class MeshItem:
             setattr(self, k, v)
 
     @property
-    def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
+    def mesh(self) -> DataSetLike:
         """Get mesh."""
         return self._mesh
 
@@ -80,6 +81,23 @@ class MeshBase(ABC):
         self._default_group = default_group if default_group else "default"
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
         self._items = list(items) if items else []
+
+    def _convert_polygon(self, polygon: PolygonLike) -> Polygon:
+        """Convert a PolygonLike object to a Shapely Polygon."""
+        if isinstance(polygon, pv.PolyData):
+            irregular_faces = polygon.irregular_faces
+
+            if len(irregular_faces) == 0:
+                raise ValueError(
+                    "could not create a valid polygon from the given PolyData"
+                )
+
+            polygon = polygon.points[irregular_faces[0], :2]
+
+        polygon = Polygon(polygon) if not isinstance(polygon, Polygon) else polygon
+        prepare(polygon)
+
+        return polygon
 
     def _check_point_array(
         self, points: ArrayLike, axis: Optional[int] = None
@@ -118,7 +136,7 @@ class MeshBase(ABC):
 
     def _initialize_group_array(
         self,
-        mesh_or_size: pv.DataSet | int,
+        mesh_or_size: DataSetLike | int,
         groups: dict,
         group: Optional[str | dict] = None,
         default_group: Optional[str] = None,
@@ -198,7 +216,7 @@ class MeshBase(ABC):
         return arr
 
     @staticmethod
-    def _clean(mesh: pv.DataSet, tolerance: Optional[float] = None) -> pv.DataSet:
+    def _clean(mesh: DataSetLike, tolerance: Optional[float] = None) -> DataSetLike:
         """Clean generated mesh."""
         from .. import remap_categorical_data
 
@@ -259,7 +277,7 @@ class MeshStackBase(MeshBase):
 
     Parameters
     ----------
-    mesh : pyvista.ImageData | pyvista.PolyData | pyvista.RectilinearGrid | pyvista.StructuredGrid | pyvista.UnstructuredGrid
+    mesh : GridLike | pyvista.PolyData
         Base mesh.
     axis : int, default 2
         Stacking axis.
@@ -277,11 +295,7 @@ class MeshStackBase(MeshBase):
 
     def __init__(
         self,
-        mesh: pv.ImageData
-        | pv.PolyData
-        | pv.RectilinearGrid
-        | pv.StructuredGrid
-        | pv.UnstructuredGrid,
+        mesh: GridLike | pv.PolyData,
         axis: int = 2,
         bottom_up: bool = True,
         default_group: Optional[str] = None,
@@ -294,7 +308,10 @@ class MeshStackBase(MeshBase):
         if isinstance(mesh, (pv.ImageData, pv.RectilinearGrid)):
             mesh = mesh.cast_to_structured_grid()
 
-        if isinstance(mesh, pv.StructuredGrid) and mesh.dimensions[axis] != 1:
+        if (
+            isinstance(mesh, (pv.StructuredGrid, pv.ExplicitStructuredGrid))
+            and mesh.dimensions[axis] != 1
+        ):
             raise ValueError(
                 f"invalid mesh or axis, dimension along axis {axis} should be 1 (got {mesh.dimensions[axis]})"
             )
@@ -307,7 +324,7 @@ class MeshStackBase(MeshBase):
 
     def add(
         self,
-        arg: float | ArrayLike | Callable | pv.DataSet,
+        arg: float | ArrayLike | Callable | DataSetLike,
         resolution: Optional[int | ArrayLike] = None,
         method: Optional[Literal["constant", "log", "log_r"]] = None,
         priority: int = 0,
@@ -320,7 +337,7 @@ class MeshStackBase(MeshBase):
 
         Parameters
         ----------
-        arg : scalar | Callable | pyvista.DataSet
+        arg : scalar | Callable | DataSetLike
             New item to add to stack:
 
              - if scalar, all points of the previous items are translated by *abs(arg)*
@@ -332,7 +349,7 @@ class MeshStackBase(MeshBase):
                ``y``, ``z`` are the coordinates of the points of the base mesh, and
                ``xyz`` is an array of the output coordinates along the stacking axis.
 
-             - if :class:`pyvista.DataSet`, the coordinates of the points along the
+             - if DataSetLike, the coordinates of the points along the
                stacking axis are obtained by linear interpolation of the coordinates of
                the points in the dataset.
 
@@ -523,7 +540,7 @@ class MeshStackBase(MeshBase):
         self,
         points: ArrayLike,
         extrapolation: Optional[Literal["nearest"]] = None,
-    ) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
+    ) -> DataSetLike:
         """Interpolate new point coordinates."""
         points = np.asanyarray(points)
         mesh = self.mesh.copy()
@@ -569,7 +586,7 @@ class MeshStackBase(MeshBase):
         return mesh
 
     @property
-    def mesh(self) -> pv.PolyData | pv.StructuredGrid | pv.UnstructuredGrid:
+    def mesh(self) -> DataSetLike:
         """Get base mesh."""
         return self._mesh
 

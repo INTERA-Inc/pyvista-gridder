@@ -11,9 +11,11 @@ if TYPE_CHECKING:
 
     from numpy.typing import ArrayLike, NDArray
 
+    from .._typing import DataSetLike
+
 
 def get_neighborhood(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     remove_ghost_cells: bool = True,
 ) -> tuple[NDArray, ...]:
     """
@@ -21,7 +23,7 @@ def get_neighborhood(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     remove_ghost_cells : bool, optional
         If True, remove ghost cells.
@@ -48,7 +50,7 @@ def get_neighborhood(
 
 
 def get_connectivity(
-    mesh: pv.DataSet,
+    mesh: DataSetLike,
     cell_centers: Optional[ArrayLike] = None,
     remove_ghost_cells: bool = True,
 ) -> pv.PolyData:
@@ -57,7 +59,7 @@ def get_connectivity(
 
     Parameters
     ----------
-    mesh : pyvista.DataSet
+    mesh : DataSetLike
         Input mesh.
     cell_centers : ArrayLike, optional
         Cell centers used for connectivity lines.
