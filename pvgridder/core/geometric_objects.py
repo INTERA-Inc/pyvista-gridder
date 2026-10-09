@@ -682,6 +682,7 @@ def Quadrilateral(
          - if 'constant', subdivisions are equally spaced.
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
     y_method : {'constant', 'log', 'log_r'}, optional
         Subdivision method if *y_resolution* is an integer:
 
@@ -734,9 +735,9 @@ def Rectangle(
     Parameters
     ----------
     dx : scalar, default 1.0
-        Size of rectangle along X axis.
+        Width of the rectangle.
     dy : scalar, default 1.0
-        Size of rectangle along Y axis.
+        Height of the rectangle.
     x_resolution : int | ArrayLike, optional
         Number of subdivisions along the X axis or relative position of subdivisions
         (in percentage) with respect to the X coordinate of the first point.
@@ -749,6 +750,7 @@ def Rectangle(
          - if 'constant', subdivisions are equally spaced.
          - if 'log', subdivisions are logarithmically spaced (from small to large).
          - if 'log_r', subdivisions are logarithmically spaced (from large to small).
+
     y_method : {'constant', 'log', 'log_r'}, optional
         Subdivision method if *y_resolution* is an integer:
 
@@ -1088,7 +1090,7 @@ def Square(
     Parameters
     ----------
     dx : scalar, default 1.0
-        Size of square along X and Y axes.
+        Side length of the square.
     resolution : int | ArrayLike, optional
         Number of subdivisions along the X and Y axes or relative position of
         subdivisions (in percentage) with respect to the X coordinate of the first point.
