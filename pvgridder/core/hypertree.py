@@ -547,7 +547,7 @@ class QuadTree(MeshBase):
             geometry = vtk.vtkHyperTreeGridGeometry()
             geometry.SetInputData(htg)
             geometry.Update()
-            mesh = pv.wrap(geometry.GetOutput())
+            mesh = pv.wrap(geometry.GetOutput()).cast_to_unstructured_grid()
 
         else:
             # Collect all leaf nodes to determine the maximum depth for scaling
