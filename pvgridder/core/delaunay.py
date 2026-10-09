@@ -81,8 +81,9 @@ class DelaunayMesh2D(MeshBase):
     def generate_mesh(
         self,
         tolerance: float = 1.0e-8,
+        algorithm: int = 6,
+        optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
         engine: Literal["gmsh", "occ"] = "gmsh",
-        optimization: Optional[str] = None,
     ) -> pv.UnstructuredGrid:
         mesh = pv.UnstructuredGrid()
 
