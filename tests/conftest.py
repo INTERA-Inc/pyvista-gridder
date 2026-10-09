@@ -143,6 +143,18 @@ def concave_polyhedron():
     return pvg.examples.load_concave_polyhedron()
 
 
+@pytest.fixture(scope="session")
+def freyberg():
+    """Fixture for Freyberg example mesh."""
+    return pvg.examples.load_freyberg(conformal=True)
+
+
+@pytest.fixture(scope="session")
+def freyberg_nonconformal():
+    """Fixture for Freyberg example mesh (non-conformal)."""
+    return pvg.examples.load_freyberg(conformal=False)
+
+
 @pytest.fixture
 def half_stadium():
     """Fixture for half stadium example mesh."""
