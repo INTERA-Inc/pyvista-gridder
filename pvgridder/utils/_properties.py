@@ -165,43 +165,51 @@ def get_cell_centers(
                 polyhedron_face_locations = _get_irregular_cells(
                     mesh.GetPolyhedronFaceLocations()
                 )
+                all_v0, all_v1, all_v2, all_apex, cell_ids = [], [], [], [], []
 
-                for center, locations, i0, mask_ in zip(
-                    centers,
-                    polyhedron_face_locations,
-                    offset[:-1],
-                    mask,
+                for cell_id, (locations, i0, mask_) in enumerate(
+                    zip(polyhedron_face_locations, offset[:-1], mask)
                 ):
                     if not mask_:
                         continue
 
-                    # Triangulate polyhedron's faces
-                    triangles = np.array(
-                        [
-                            (face[0], v1, v2)
-                            for face in [polyhedron_faces[loc] for loc in locations]
-                            for v1, v2 in zip(face[1:], face[2:])
-                        ]
-                    )
+                    apex_idx = connectivity[i0]
 
-                    # Use polyhedron's first vertex as apex
-                    apex = mesh.points[connectivity[i0]]
-                    apex = np.broadcast_to(apex, (len(triangles), 3))
+                    for loc in locations:
+                        face = polyhedron_faces[loc]
+                        f0 = face[0]
 
-                    # Tetrahedralize polyhedron
-                    v0 = mesh.points[triangles[:, 0]]
-                    v1 = mesh.points[triangles[:, 1]]
-                    v2 = mesh.points[triangles[:, 2]]
-                    tetras = np.stack((v0, v1, v2, apex), axis=1)
+                        for v1, v2 in zip(face[1:-1], face[2:]):
+                            all_v0.append(f0)
+                            all_v1.append(v1)
+                            all_v2.append(v2)
+                            all_apex.append(apex_idx)
+                            cell_ids.append(cell_id)
 
-                    # Compute tetrahedral volumes
-                    volumes = (
-                        np.einsum("ij,ij->i", np.cross(v0 - apex, v1 - apex), v2 - apex)
-                        / 6.0
-                    )
+                cell_ids = np.array(cell_ids)
 
-                    # Compute centroid
-                    center[:] = np.average(tetras.mean(axis=1), axis=0, weights=volumes)
+                # Extract 3D points in unified NumPy arrays
+                v0 = mesh.points[all_v0]
+                v1 = mesh.points[all_v1]
+                v2 = mesh.points[all_v2]
+                apex = mesh.points[all_apex]
+
+                # Compute all tetrahedral volumes and centroids
+                v0_a, v1_a, v2_a = v0 - apex, v1 - apex, v2 - apex
+                volumes = np.einsum("ij,ij->i", np.cross(v0_a, v1_a), v2_a) / 6.0
+                tetra_centroids = (v0 + v1 + v2 + apex) / 4.0
+
+                # Aggregate globally
+                n_cells = len(mask)
+                total_volumes = np.zeros(n_cells)
+                weighted_centers = np.zeros((n_cells, 3))
+
+                np.add.at(total_volumes, cell_ids, volumes)
+                np.add.at(weighted_centers, cell_ids, tetra_centroids * volumes[:, None])
+
+                # Compute centroids
+                mask = total_volumes != 0.0
+                centers[mask] = weighted_centers[mask] / total_volumes[mask, None]
 
     if ghost_cells is not None:
         mesh.cell_data["vtkGhostType"] = ghost_cells
