@@ -21,6 +21,21 @@ def test_quadtree_base_mesh(bmesh):
     assert mesh.n_cells == bmesh.n_cells
 
 
+@pytest.mark.parametrize(
+    "min_cellsize, max_depth_ref",
+    [
+        pytest.param(1.0, 0, id="min_cellsize_1.0"),
+        pytest.param(0.5, 1, id="min_cellsize_0.5"),
+        pytest.param(0.1, 3, id="min_cellsize_0.1"),
+    ],
+)
+def test_quadtree_min_cellsize(min_cellsize, max_depth_ref):
+    """Test the minimum cell size option."""
+    bmesh = pvg.Square(3.0, resolution=3)
+    qtree = pvg.QuadTree(bmesh, min_cellsize=min_cellsize)
+    assert qtree.max_depth == max_depth_ref
+
+
 def test_quadtree_cell_group():
     """Test cell groups in base mesh being correctly passed."""
     bmesh = (

@@ -209,8 +209,13 @@ class QuadTree(MeshBase):
     ----------
     mesh : StructuredLike
         Base mesh for the quadtree.
-    max_depth : int, default 4
+    max_depth : int, default 5
         Maximum depth of the quadtree.
+    min_cellsize : float, optional
+        Positive, finite lower bound on refined cell edge lengths. Supersedes
+        *max_depth* if specified. The depth is computed from the smallest base-cell
+        edge, rounding down to avoid refining below this size. Base cells already
+        smaller than this limit are left unchanged.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -222,7 +227,8 @@ class QuadTree(MeshBase):
         self,
         mesh: StructuredLike,
         *,
-        max_depth: int = 4,
+        max_depth: int = 5,
+        min_cellsize: Optional[float] = None,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
@@ -245,6 +251,12 @@ class QuadTree(MeshBase):
                 mesh_.cell_data[k] = v
 
             mesh = mesh_
+
+        if min_cellsize is not None:
+            cellsize = min((np.diff(mesh.x).min(), np.diff(mesh.y).min()))
+            max_depth = max(
+                0, int(np.floor(np.log2(cellsize) - np.log2(min_cellsize)))
+            )
 
         self.max_depth = max_depth
         self._mesh = mesh.copy()
