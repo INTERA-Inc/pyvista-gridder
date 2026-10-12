@@ -201,7 +201,9 @@ class MeshBase(ABC):
 
         return arr
 
-    def _validate_points(self, points: PointLike, axis: Optional[int] = None) -> NDArray:
+    def _validate_points(
+        self, points: PointLike, axis: Optional[int] = None
+    ) -> NDArray:
         """Convert a PointLike object to a NumPy array."""
         if isinstance(points, pv.PolyData):
             if points.n_verts == 0:
@@ -211,9 +213,8 @@ class MeshBase(ABC):
 
         elif isinstance(points, Point):
             points = get_coordinates(points)
-        
-        return self._check_point_array(points, axis=axis)
 
+        return self._check_point_array(points, axis=axis)
 
     def _validate_polygon(self, polygon: PolygonLike) -> Polygon:
         """Convert a PolygonLike object to a Shapely Polygon."""
@@ -238,7 +239,9 @@ class MeshBase(ABC):
 
         if isinstance(line, pv.PolyData):
             if not line.n_lines:
-                raise ValueError("could not create a valid polyline from the given PolyData")            
+                raise ValueError(
+                    "could not create a valid polyline from the given PolyData"
+                )
 
             line = split_lines(line, as_lines=False)[0].points[:, :2]
 
@@ -307,7 +310,9 @@ class MeshBase(ABC):
                 values = cellsize_array
 
             else:
-                raise ValueError("could not interpret cellsize array for polygon vertices")
+                raise ValueError(
+                    "could not interpret cellsize array for polygon vertices"
+                )
 
         return {
             tuple(coordinate): float(value)

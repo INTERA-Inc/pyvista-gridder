@@ -59,9 +59,7 @@ class DelaunayMesh2D(MeshBase):
         holes = [Polygon(interior) for interior in validated_polygon.interiors]
 
         self._polygon = Polygon(validated_polygon.exterior)
-        self._cellsize = (
-            np.asanyarray(cellsize) if cellsize is not None else None
-        )
+        self._cellsize = np.asanyarray(cellsize) if cellsize is not None else None
 
         for hole in holes:
             self.add_polygon(hole, cellsize=cellsize, hole=True)
@@ -106,7 +104,7 @@ class DelaunayMesh2D(MeshBase):
         points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
 
         return self.add_polygon(
-            points, 
+            points,
             boundary_only=boundary_only,
             cellsize=cellsize,
             hole=hole,
@@ -192,9 +190,7 @@ class DelaunayMesh2D(MeshBase):
         if hole:
             polygons = [
                 part
-                for part in get_parts(
-                    polygon.intersection(self._polygon)
-                )
+                for part in get_parts(polygon.intersection(self._polygon))
                 if isinstance(part, Polygon) and part.area > 0.0
             ]
 
@@ -208,9 +204,7 @@ class DelaunayMesh2D(MeshBase):
             cell_sizes = self._get_ring_sizes(poly.exterior, cellsize)
             points = get_coordinates(poly.exterior)[:-1]
             points = self._check_point_array(points, axis=2)
-            mesh = pv.PolyData().from_irregular_faces(
-                points, [np.arange(len(points))]
-            )
+            mesh = pv.PolyData().from_irregular_faces(points, [np.arange(len(points))])
             self.items.append(
                 MeshItem(
                     mesh,
@@ -253,9 +247,7 @@ class DelaunayMesh2D(MeshBase):
         line = self._validate_polyline(line)
         segments = [
             segment
-            for segment in get_parts(
-                line.intersection(self._polygon)
-            )
+            for segment in get_parts(line.intersection(self._polygon))
             if isinstance(segment, LineString) and segment.length > 0.0
         ]
 
@@ -286,9 +278,7 @@ class DelaunayMesh2D(MeshBase):
         max_cellsize: Optional[float] = None,
         celltype: Literal["quad", "triangle"] = "triangle",
         algorithm: Optional[int] = None,
-        optimization: Optional[
-            Literal["Netgen", "Laplace2D", "Relocate2D"]
-        ] = None,
+        optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
         engine: Literal["gmsh", "occ"] = "gmsh",
     ) -> pv.UnstructuredGrid:
         """
@@ -324,14 +314,8 @@ class DelaunayMesh2D(MeshBase):
         from shapely.geometry import MultiPoint
         from shapely.ops import polygonize, split, unary_union
 
-        if (
-            min_cellsize
-            and max_cellsize
-            and min_cellsize > max_cellsize
-        ):
-            raise ValueError(
-                "could not set min_cellsize greater than max_cellsize"
-            )
+        if min_cellsize and max_cellsize and min_cellsize > max_cellsize:
+            raise ValueError("could not set min_cellsize greater than max_cellsize")
 
         if engine not in {"gmsh", "occ"}:
             raise ValueError(f"invalid engine '{engine}'")
@@ -345,15 +329,11 @@ class DelaunayMesh2D(MeshBase):
         # Extract holes and define the domain for the Delaunay mesh
         holes = [item.geometry for item in self.items if item.hole]
         domain = (
-            self._polygon.difference(unary_union(holes))
-            if holes
-            else self._polygon
+            self._polygon.difference(unary_union(holes)) if holes else self._polygon
         )
 
         if domain.is_empty:
-            raise ValueError(
-                "could not generate a valid domain with the given holes"
-            )
+            raise ValueError("could not generate a valid domain with the given holes")
 
         # Compute the characteristic sizes for the mesh points
         sizes = self._get_ring_sizes(self._polygon.exterior, self._cellsize)
@@ -371,9 +351,7 @@ class DelaunayMesh2D(MeshBase):
 
             elif not item.hole:
                 constraints.append(
-                    geometry.boundary
-                    if isinstance(geometry, Polygon)
-                    else geometry
+                    geometry.boundary if isinstance(geometry, Polygon) else geometry
                 )
 
             if isinstance(geometry, Polygon):
@@ -383,17 +361,13 @@ class DelaunayMesh2D(MeshBase):
             elif item.cellsize is not None:
                 for coordinate in get_coordinates(geometry):
                     key = (float(coordinate[0]), float(coordinate[1]))
-                    sizes[key] = min(
-                        sizes.get(key, item.cellsize), item.cellsize
-                    )
-        
+                    sizes[key] = min(sizes.get(key, item.cellsize), item.cellsize)
+
         # Construct the network of constraints and split it with the items
         network = unary_union(constraints).intersection(domain)
 
         if items:
-            network = split(
-                network, MultiPoint([item.geometry for item in items])
-            )
+            network = split(network, MultiPoint([item.geometry for item in items]))
 
         # Extract lines from the network to form the polygonized faces
         def _extract_lines(geom):
@@ -417,9 +391,7 @@ class DelaunayMesh2D(MeshBase):
                 max_cellsize
                 if max_cellsize is not None
                 else np.linalg.norm(
-                    np.diff(
-                        get_coordinates(self._polygon.exterior)[:, :2], axis=0
-                    ),
+                    np.diff(get_coordinates(self._polygon.exterior)[:, :2], axis=0),
                     axis=1,
                 ).max()
             )
@@ -459,14 +431,12 @@ class DelaunayMesh2D(MeshBase):
                         add_point(key[0]), add_point(key[1])
                     )
 
-                return (
-                    curve_tags[key] if key_a == key[0] else -curve_tags[key]
-                )
+                return curve_tags[key] if key_a == key[0] else -curve_tags[key]
 
             # Add network lines to the Gmsh model
             for line in network_lines:
                 points = get_coordinates(line)
-                
+
                 for pointa, pointb in zip(points[:-1], points[1:]):
                     add_curve(pointa, pointb)
 
@@ -554,7 +524,7 @@ class DelaunayMesh2D(MeshBase):
                 physical_tag = gmsh.model.addPhysicalGroup(0, v)
                 gmsh.model.setPhysicalName(0, physical_tag, k)
                 groups[k] = physical_tag
-            
+
             for k, v in curve_groups.items():
                 physical_curves[v].append(k)
 
@@ -571,9 +541,7 @@ class DelaunayMesh2D(MeshBase):
             # Precalculate internal curve midpoints for fast embedding checks
             internal_curves = [
                 (
-                    Point(
-                        (k[0][0] + k[1][0]) * 0.5, (k[0][1] + k[1][1]) * 0.5
-                    ),
+                    Point((k[0][0] + k[1][0]) * 0.5, (k[0][1] + k[1][1]) * 0.5),
                     abs(tag),
                 )
                 for k, tag in curve_tags.items()
@@ -583,10 +551,12 @@ class DelaunayMesh2D(MeshBase):
             embedded_item_points = [
                 (
                     item.geometry,
-                    point_tags[(
-                        float(item.geometry.coords[0][0]),
-                        float(item.geometry.coords[0][1]),
-                    )],
+                    point_tags[
+                        (
+                            float(item.geometry.coords[0][0]),
+                            float(item.geometry.coords[0][1]),
+                        )
+                    ],
                 )
                 for item in items
                 if (
@@ -635,9 +605,9 @@ class DelaunayMesh2D(MeshBase):
                 if type_ in _gmsh_to_pyvista_type:
                     n = 3 if type_ == 2 else 4
                     mapped_nodes = tag_to_idx[np.reshape(nodes, (-1, n))]
-                    cells_dict.setdefault(
-                        _gmsh_to_pyvista_type[type_], []
-                    ).append(mapped_nodes)
+                    cells_dict.setdefault(_gmsh_to_pyvista_type[type_], []).append(
+                        mapped_nodes
+                    )
 
             cells = {k: np.vstack(v) for k, v in cells_dict.items()}
             mesh = pv.UnstructuredGrid(cells, np.reshape(coordinates, (-1, 3)))

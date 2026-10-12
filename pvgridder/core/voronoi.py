@@ -383,7 +383,7 @@ class VoronoiMesh2D(MeshBase):
 
                 if "PointGroup" in self.mesh.user_dict:
                     mesh.user_dict["CellGroup"] = self.mesh.user_dict["PointGroup"]
-            
+
         points = get_cell_centers(mesh).tolist()
         group_array = self._initialize_group_array(mesh, groups)
         priority_array = np.full(mesh.n_cells, -np.inf)

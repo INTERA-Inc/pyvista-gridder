@@ -525,7 +525,7 @@ def Polygon(
 
         for hole in holes_points:
             del2d = del2d.add_polygon(hole, cellsize=cellsize, hole=True)
-            
+
         mesh = del2d.generate_mesh(
             celltype=celltype,
             algorithm=algorithm,
