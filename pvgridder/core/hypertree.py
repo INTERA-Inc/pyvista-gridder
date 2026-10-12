@@ -289,7 +289,7 @@ class QuadTree(MeshBase):
         if self._boundary_polygon is not None:
             raise ValueError("could not add a second boundary polygon")
 
-        polygon = self._convert_polygon(polygon)
+        polygon = self._validate_polygon(polygon)
         depth = min(depth, self.max_depth)
         depth = self._get_depth(depth, cellsize)
 
@@ -419,7 +419,7 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
 
         """
-        polygon = self._convert_polygon(polygon)
+        polygon = self._validate_polygon(polygon)
         depth = self.max_depth if depth is None else min(depth, self.max_depth)
         depth = self._get_depth(depth, cellsize)
 
@@ -592,23 +592,23 @@ class QuadTree(MeshBase):
 
     def generate_mesh(
         self,
+        tolerance: float = 1.0e-8,
         balance: bool = False,
         conformal: bool = False,
-        tolerance: float = 1.0e-8,
     ) -> pv.UnstructuredGrid:
         """
         Generate a QuadTree mesh.
 
         Parameters
         ----------
+        tolerance : scalar, default 1.0e-8
+            Set merging tolerance of duplicate points.
         balance : bool, default False
             If True, balance the tree so that adjacent cells differ in depth by at most
             one.
         conformal : bool, default False
             If True, generate a conforming mesh (i.e., polygons with hanging nodes
             instead of quads).
-        tolerance : scalar, default 1.0e-8
-            Set merging tolerance of duplicate points.
 
         Returns
         -------
