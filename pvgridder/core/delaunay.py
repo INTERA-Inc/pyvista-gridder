@@ -500,48 +500,46 @@ class DelaunayMesh2D(MeshBase):
             # Setup physical groups
             point_groups = dict.fromkeys(point_tags.values(), self.default_group)
             curve_groups = {}
-            curve_endpoint_groups = {}
+            endpoint_groups = {}
             surface_groups = defaultdict(list)
 
             for item in self.items:
                 has_group = item.group and item.group not in self.ignore_groups
 
-                if has_group:
-                    for point in get_coordinates(item.geometry):
-                        key = (float(point[0]), float(point[1]))
-                        point_tag = point_tags.get(key)
+                if not has_group:
+                    continue
 
-                        if point_tag is not None:
-                            point_groups[point_tag] = item.group
+                for point in get_coordinates(item.geometry):
+                    key = (float(point[0]), float(point[1]))
+                    point_tag = point_tags.get(key)
 
-                if has_group and isinstance(item.geometry, (LineString, Polygon)):
+                    if point_tag is not None:
+                        point_groups[point_tag] = item.group
+
+                if isinstance(item.geometry, (LineString, Polygon)):
                     grouped_boundary = (
                         item.geometry
                         if isinstance(item.geometry, LineString)
                         else item.geometry.boundary
                     )
+
                     for k, v in curve_tags.items():
                         if grouped_boundary.covers(LineString(k)):
                             curve_groups[abs(v)] = item.group
 
                             for endpoint in k:
-                                curve_endpoint_groups[point_tags[endpoint]] = item.group
+                                endpoint_groups[point_tags[endpoint]] = item.group
 
-                if isinstance(item.geometry, Polygon) and not item.hole:
-                    item_surfaces = [
+                if (
+                    isinstance(item.geometry, Polygon)
+                    and not item.hole
+                    and not getattr(item, "boundary_only", False)
+                ):
+                    surface_groups[item.group] += [
                         surface
                         for face, surface in zip(faces, surfaces)
                         if item.geometry.covers(face.representative_point())
                     ]
-
-                    if not item_surfaces:
-                        continue
-
-                    if (
-                        has_group
-                        and not getattr(item, "boundary_only", False)
-                    ):
-                        surface_groups[item.group].extend(item_surfaces)
 
             groups = {}
             physical_points = defaultdict(list)
@@ -668,7 +666,7 @@ class DelaunayMesh2D(MeshBase):
                 if len(nodes) > 0:
                     point_array[tag_to_idx[nodes]] = group_ids[group]
 
-            for point_tag, group in curve_endpoint_groups.items():
+            for point_tag, group in endpoint_groups.items():
                 nodes, _, _ = gmsh.model.mesh.getNodes(0, point_tag)
 
                 if len(nodes) > 0:
