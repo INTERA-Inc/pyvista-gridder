@@ -475,11 +475,11 @@ class VoronoiMesh2D(MeshBase):
         points, cells = [], []
         n_points = 0
 
-        for i, region in enumerate(regions):
+        for region in regions:
             polygon = Polygon(vertices[region])
 
             if not polygon.is_valid:
-                raise ValueError(f"region {i} is not a valid polygon")
+                polygon = polygon.buffer(0)
 
             polygon = boundary.intersection(polygon)
             points_ = get_coordinates(polygon)[:-1]
