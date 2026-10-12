@@ -434,10 +434,10 @@ def CylindricalShellSector(
 
 @require_package("gmsh")
 def Polygon(
-    shell: Optional[DataSetLike | ArrayLike] = None,
+    shell: DataSetLike | ArrayLike,
     holes: Optional[Sequence[DataSetLike | ArrayLike]] = None,
     celltype: Optional[Literal["polygon", "quad", "triangle"]] = None,
-    cellsize: Optional[float] = None,
+    cellsize: Optional[ArrayLike] = None,
     algorithm: int = 6,
     optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
     engine: Literal["gmsh", "occ"] = "gmsh",
@@ -447,7 +447,7 @@ def Polygon(
 
     Parameters
     ----------
-    shell : DataSetLike | ArrayLike, optional
+    shell : DataSetLike | ArrayLike
         Polyline or a sequence of (x, y [,z]) numeric coordinate pairs or triples, or
         an array-like with shape (N, 2) or (N, 3).
     holes : Sequence[DataSetLike | ArrayLike], optional
@@ -456,7 +456,7 @@ def Polygon(
     celltype : {'polygon', 'quad', 'triangle'}, optional
         Preferred cell type. If `quad` or `triangle`, use Gmsh to perform 2D Delaunay
         triangulation.
-    cellsize : float, optional
+    cellsize : ArrayLike, optional
         Size of the mesh elements. If None, the size is computed from the input points.
     algorithm : int, default 6
         Gmsh algorithm.
@@ -474,7 +474,7 @@ def Polygon(
         Polygon mesh.
 
     """
-    import gmsh
+    from .. import DelaunayMesh2D
 
     def to_points(points: ArrayLike | DataSetLike) -> NDArray:
         """Convert to points array."""
@@ -505,57 +505,8 @@ def Polygon(
 
         return points
 
-    def add_surface(
-        engine: type[gmsh.model.geo] | type[gmsh.model.occ],
-        points: DataSetLike | ArrayLike,
-        celltype: str,
-        cellsize: float | None,
-        return_curve_loop: bool = False,
-    ) -> int | tuple[int, int]:
-        """Add a plane surface."""
-        points = np.asanyarray(points)
-
-        # Compute mesh size
-        if cellsize is None:
-            lengths = np.linalg.norm(np.diff(points, axis=0), axis=-1)
-            lengths = np.insert(lengths, 0, lengths[-1])
-            sizes = np.maximum(lengths[:-1], lengths[1:])
-
-        else:
-            sizes = np.full(len(points) - 1, cellsize, dtype=float)
-
-        sizes *= 1.0 if celltype == "triangle" else 2.0
-
-        # Add points
-        node_tags = []
-
-        for (x, y, z), size in zip(points[:-1], sizes):
-            tag = engine.add_point(x, y, z, size)
-            node_tags.append(tag)
-
-        # Add lines
-        line_tags = []
-
-        for tag1, tag2 in zip(node_tags[:-1], node_tags[1:]):
-            tag = engine.add_line(tag1, tag2)
-            line_tags.append(tag)
-
-        # Close loop
-        tag = engine.add_line(node_tags[-1], node_tags[0])
-        line_tags.append(tag)
-        tag = engine.add_curve_loop(line_tags)
-
-        if return_curve_loop:
-            return tag
-
-        else:
-            tag = engine.add_plane_surface([tag])
-
-            return (2, tag)
-
-    shell = shell if shell is not None else pv.Polygon()
-    shell = to_points(shell)
-    holes = [to_points(hole) for hole in holes] if holes is not None else []
+    shell_points = to_points(shell)
+    holes_points = [to_points(hole) for hole in holes] if holes is not None else []
     celltype = celltype if celltype else "triangle" if holes else "polygon"
 
     if celltype == "polygon":
@@ -564,90 +515,23 @@ def Polygon(
                 "could not generate a polygon of cell type 'polygon' with holes"
             )
 
-        points = shell[:-1]
-        cells = np.insert(np.arange(len(points)), 0, len(points))
+        points = shell_points[:-1]
+        cells = np.insert(np.arange(len(shell_points)), 0, len(shell_points))
         celltypes = [pv.CellType.POLYGON]
         mesh = pv.UnstructuredGrid(cells, celltypes, points)
 
     elif celltype in {"quad", "triangle"}:
-        try:
-            gmsh.initialize()
+        del2d = DelaunayMesh2D(shell_points, cellsize=cellsize)
 
-            # Generate plane surfaces from points
-            if engine == "gmsh":
-                engine_ = gmsh.model.geo
-                curve_tags = [
-                    add_surface(
-                        engine_, points, celltype, cellsize, return_curve_loop=True
-                    )
-                    for points in [shell, *holes]
-                ]
-                tag = engine_.add_plane_surface(curve_tags)
-                dim_tags = [(2, tag)]
-
-            elif engine == "occ":
-                engine_ = gmsh.model.occ
-                shell_tags = [add_surface(engine_, shell, celltype, cellsize)]
-
-                if holes:
-                    hole_tags = [
-                        add_surface(engine_, hole, celltype, cellsize) for hole in holes
-                    ]
-                    dim_tags, _ = engine_.cut(
-                        shell_tags,
-                        hole_tags,
-                        removeObject=True,
-                        removeTool=True,
-                    )
-
-                else:
-                    dim_tags = cast(list[tuple[int, int]], shell_tags)
-
-            else:
-                raise ValueError(f"invalid engine '{engine}'")
-
-            # Generate mesh
-            if cellsize is not None:
-                gmsh.option.set_number("Mesh.MeshSizeMin", cellsize)
-                gmsh.option.set_number("Mesh.MeshSizeMax", cellsize)
-                # gmsh.option.set_number("Mesh.MeshSizeExtendFromBoundary", 0)
-                # gmsh.option.set_number("Mesh.MeshSizeExtendFromBoundary", 0)
-                gmsh.option.set_number("Mesh.MeshSizeFromPoints", 0)
-                gmsh.option.set_number("Mesh.MeshSizeFromCurvature", 0)
-
-            gmsh.option.set_number("Mesh.Algorithm", algorithm)
-            gmsh.option.set_number("General.Verbosity", 0)
-            engine_.synchronize()
-
-            if celltype == "quad":
-                for dim_tag in dim_tags:
-                    gmsh.model.mesh.setRecombine(*dim_tag)
-
-            gmsh.model.mesh.generate(2)
-
-            if optimization:
-                gmsh.model.mesh.optimize(optimization, force=True)
-
-            # Convert to PyVista
-            node_tags, coord, _ = gmsh.model.mesh.getNodes()
-            element_types, _, element_node_tags = gmsh.model.mesh.getElements()
-            gmsh_to_pyvista_type = {2: pv.CellType.TRIANGLE, 3: pv.CellType.QUAD}
-
-            points = np.reshape(coord, (-1, 3))
-            cells = {
-                gmsh_to_pyvista_type[type_]: np.reshape(
-                    node_tags,
-                    (-1, gmsh.model.mesh.getElementProperties(type_)[3]),
-                )
-                - 1
-                for type_, node_tags in zip(element_types, element_node_tags)
-                if type_ not in {1, 15}  # ignore line and vertex
-            }
-            mesh = pv.UnstructuredGrid(cells, points)
-
-        finally:
-            gmsh.clear()
-            gmsh.finalize()
+        for hole in holes_points:
+            del2d = del2d.add_polygon(hole, cellsize=cellsize, hole=True)
+            
+        mesh = del2d.generate_mesh(
+            celltype=celltype,
+            algorithm=algorithm,
+            optimization=optimization,
+            engine=engine,
+        )
 
     else:
         raise ValueError(f"invalid cell type '{celltype}'")

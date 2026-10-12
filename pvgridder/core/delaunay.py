@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union, cast
+from collections import defaultdict
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyvista as pv
-from numpy.typing import NDArray
+from pyrequire import require_package
+from shapely import LineString, Point, Polygon, get_coordinates, get_parts
 
 from ._base import MeshBase, MeshItem
 
-
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-    from typing import Optional
+    from collections.abc import Sequence
+    from typing import Literal, Optional
 
     from numpy.typing import ArrayLike
     from typing_extensions import Self
 
-    from .._typing import DataSetLike, PolygonLike, PolyLineLike, VectorLike
+    from .._typing import PolygonLike, PolyLineLike, VectorLike
 
 
 class DelaunayMesh2D(MeshBase):
@@ -27,10 +28,8 @@ class DelaunayMesh2D(MeshBase):
     ----------
     polygon : PolygonLike
         Polygon defining the 2D domain for the Delaunay mesh.
-    min_cellsize : scalar, optional
-        Minimum cell size for the Delaunay mesh.
-    max_cellsize : scalar, optional
-        Maximum cell size for the Delaunay mesh.
+    cellsize : ArrayLike, optional
+        Target size along the outer boundary.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -41,17 +40,24 @@ class DelaunayMesh2D(MeshBase):
     def __init__(
         self,
         polygon: PolygonLike,
-        min_cellsize: Optional[float] = None,
-        max_cellsize: Optional[float] = None,
+        *,
+        cellsize: Optional[ArrayLike] = None,
         default_group: Optional[str] = None,
         ignore_groups: Optional[Sequence[str]] = None,
     ) -> None:
         """Initialize a 2D Delaunay mesh."""
         super().__init__(default_group, ignore_groups)
 
-        self._polygon = self._convert_polygon(polygon)
-        self._min_cellsize = min_cellsize
-        self._max_cellsize = max_cellsize
+        validated_polygon = self._validate_polygon(polygon)
+        holes = [Polygon(interior) for interior in validated_polygon.interiors]
+
+        self._polygon = Polygon(validated_polygon.exterior)
+        self._cellsize = (
+            np.asanyarray(cellsize) if cellsize is not None else None
+        )
+
+        for hole in holes:
+            self.add_polygon(hole, cellsize=cellsize, hole=True)
 
     def add_point(
         self,
@@ -59,15 +65,104 @@ class DelaunayMesh2D(MeshBase):
         cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
+        """
+        Embed a point in the mesh.
+
+        Parameters
+        ----------
+        point : VectorLike
+            Point inside the domain.
+        cellsize : scalar, optional
+            Target cell size at the point.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        points = self._check_point_array(point, axis=2).astype(float, copy=True)
+        geometry = Point(points[:2])
+
+        if not self._polygon.covers(geometry):
+            raise ValueError("could not embed point outside the domain")
+
+        self.items.append(
+            MeshItem(
+                pv.PolyData(points[None, :]),
+                geometry=geometry,
+                cellsize=cellsize,
+                group=group,
+                hole=False,
+            )
+        )
+
         return self
 
     def add_polygon(
         self,
         polygon: PolygonLike,
-        cellsize: Optional[float] = None,
+        cellsize: Optional[ArrayLike] = None,
         hole: bool = False,
         group: Optional[str] = None,
     ) -> Self:
+        """
+        Add a polygon to the mesh.
+
+        Parameters
+        ----------
+        polygon : PolygonLike
+            Polygon to add to the mesh.
+        cellsize : ArrayLike, optional
+            Target cell size along the polygon boundary.
+        hole : bool, default False
+            If True, exclude the polygon interior from the domain.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        polygon = self._validate_polygon(polygon)
+
+        if hole:
+            polygons = [
+                part
+                for part in get_parts(
+                    polygon.intersection(self._polygon)
+                )
+                if isinstance(part, Polygon) and part.area > 0.0
+            ]
+
+        elif self._polygon.covers(polygon):
+            polygons = [polygon]
+
+        else:
+            raise ValueError("could not add polygon outside the domain")
+
+        for poly in polygons:
+            cell_sizes = self._get_ring_sizes(poly.exterior, cellsize)
+            coords = get_coordinates(poly.exterior)[:-1]
+            points = self._check_point_array(coords, axis=2)
+            mesh = pv.PolyData().from_irregular_faces(
+                points, [np.arange(len(points))]
+            )
+            self.items.append(
+                MeshItem(
+                    mesh,
+                    geometry=poly,
+                    cellsize=cellsize,
+                    cell_sizes=cell_sizes,
+                    group=group,
+                    hole=hole,
+                )
+            )
+
         return self
 
     def add_polyline(
@@ -76,15 +171,391 @@ class DelaunayMesh2D(MeshBase):
         cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
+        """
+        Embed a polyline in the mesh.
+
+        Parameters
+        ----------
+        line : PolyLineLike
+            Polyline to clip to the domain. Only X and Y coordinates are used.
+            Each nonempty segment inside the domain is embedded in the mesh.
+        cellsize : scalar, optional
+            Target cell size along the polyline.
+        group : str, optional
+            Physical group for polyline constraint vertices.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+        """
+        line = self._validate_polyline(line)
+        segments = [
+            segment
+            for segment in get_parts(
+                line.intersection(self._polygon)
+            )
+            if isinstance(segment, LineString) and segment.length > 0.0
+        ]
+
+        if not segments:
+            raise ValueError("could not add polyline outside the domain")
+
+        for segment in segments:
+            coordinates = get_coordinates(segment)
+            points = np.column_stack((coordinates, np.zeros(len(coordinates))))
+            self.items.append(
+                MeshItem(
+                    pv.MultipleLines(points),
+                    geometry=segment,
+                    cellsize=cellsize,
+                    group=group,
+                    hole=False,
+                )
+            )
+
         return self
 
+    @require_package("gmsh")
     def generate_mesh(
         self,
         tolerance: float = 1.0e-8,
+        min_cellsize: Optional[float] = None,
+        max_cellsize: Optional[float] = None,
+        celltype: Literal["quad", "triangle"] = "triangle",
         algorithm: int = 6,
-        optimization: Optional[Literal["Netgen", "Laplace2D", "Relocate2D"]] = None,
+        optimization: Optional[
+            Literal["Netgen", "Laplace2D", "Relocate2D"]
+        ] = None,
         engine: Literal["gmsh", "occ"] = "gmsh",
     ) -> pv.UnstructuredGrid:
-        mesh = pv.UnstructuredGrid()
+        """
+        Generate a 2D Delaunay mesh.
+
+        Parameters
+        ----------
+        tolerance : scalar, default 1.0e-8
+            Tolerance for merging duplicate mesh points.
+        min_cellsize : scalar, optional
+            Minimum cell size for the Delaunay mesh.
+        max_cellsize : scalar, optional
+            Maximum cell size for the Delaunay mesh.
+        celltype : {'quad', 'triangle'}, default 'triangle'
+            Preferred cell type.
+        algorithm : int, default 6
+            Gmsh 2D algorithm.
+        optimization : {'Netgen', 'Laplace2D', 'Relocate2D'}, optional
+            Gmsh 2D optimization method.
+        engine : {'gmsh', 'occ'}, default 'gmsh'
+            Geometry engine:
+
+             - 'gmsh': Gmsh built-in engine
+             - 'occ': OpenCascade
+
+        Returns
+        -------
+        pyvista.UnstructuredGrid
+            2D Delaunay mesh.
+
+        """
+        import gmsh
+        from shapely.geometry import MultiPoint
+        from shapely.ops import polygonize, split, unary_union
+
+        if (
+            min_cellsize
+            and max_cellsize
+            and min_cellsize > max_cellsize
+        ):
+            raise ValueError(
+                "could not set min_cellsize greater than max_cellsize"
+            )
+
+        if engine not in {"gmsh", "occ"}:
+            raise ValueError(f"invalid engine '{engine}'")
+
+        if celltype not in {"quad", "triangle"}:
+            raise ValueError(f"invalid cell type '{celltype}'")
+
+        # Extract holes and define the domain for the Delaunay mesh
+        holes = [item.geometry for item in self.items if item.hole]
+        domain = (
+            self._polygon.difference(unary_union(holes))
+            if holes
+            else self._polygon
+        )
+
+        if domain.is_empty:
+            raise ValueError(
+                "could not generate a valid domain with the given holes"
+            )
+
+        # Compute the characteristic sizes for the mesh points
+        sizes = self._get_ring_sizes(self._polygon.exterior, self._cellsize)
+        constraints, items = [domain.boundary], []
+
+        # Process each item to determine constraints and cell sizes
+        for item in self.items:
+            geometry = item.geometry
+
+            if isinstance(geometry, Point):
+                if not domain.covers(geometry):
+                    raise ValueError("could not place point inside a hole")
+
+                items.append(item)
+
+            elif not item.hole:
+                constraints.append(
+                    geometry.boundary
+                    if isinstance(geometry, Polygon)
+                    else geometry
+                )
+
+            if isinstance(geometry, Polygon):
+                for k, v in getattr(item, "cell_sizes", {}).items():
+                    sizes[k] = min(sizes.get(k, v), v)
+
+            elif item.cellsize is not None:
+                for coordinate in get_coordinates(geometry):
+                    key = (float(coordinate[0]), float(coordinate[1]))
+                    sizes[key] = min(
+                        sizes.get(key, item.cellsize), item.cellsize
+                    )
+        
+        # Construct the network of constraints and split it with the items
+        network = unary_union(constraints).intersection(domain)
+
+        if items:
+            network = split(
+                network, MultiPoint([item.geometry for item in items])
+            )
+
+        # Extract lines from the network to form the polygonized faces
+        def _extract_lines(geom):
+            if isinstance(geom, LineString):
+                yield geom
+
+            elif hasattr(geom, "geoms"):
+                for part in geom.geoms:
+                    yield from _extract_lines(part)
+
+        network_lines = list(_extract_lines(network))
+        faces = [
+            face
+            for face in polygonize(network_lines)
+            if domain.covers(face.representative_point())
+        ]
+
+        # Initialize the Gmsh engine and set mesh options
+        try:
+            default_size = (
+                max_cellsize
+                if max_cellsize is not None
+                else np.linalg.norm(
+                    np.diff(
+                        get_coordinates(self._polygon.exterior)[:, :2], axis=0
+                    ),
+                    axis=1,
+                ).max()
+            )
+
+            gmsh.initialize()
+            gmsh.option.setNumber("Mesh.Algorithm", algorithm)
+            gmsh.option.setNumber("General.Verbosity", 0)
+            gmsh.option.setNumber("Mesh.MeshSizeMin", min_cellsize or 0.0)
+            gmsh.option.setNumber("Mesh.MeshSizeMax", max_cellsize or 1.0e20)
+            gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 1)
+            gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 0)
+            gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 1)
+            gmsh.option.setNumber("Mesh.ElementOrder", 1)
+            gmsh.option.setNumber("Mesh.RecombineAll", 0)
+
+            engine_ = gmsh.model.geo if engine == "gmsh" else gmsh.model.occ
+            point_tags, curve_tags = {}, {}
+
+            # Helper functions to add points and curves to the Gmsh model
+            def add_point(point):
+                key = (float(point[0]), float(point[1]))
+
+                if key not in point_tags:
+                    point_tags[key] = engine_.addPoint(
+                        key[0], key[1], 0.0, sizes.get(key, default_size), -1
+                    )
+
+                return point_tags[key]
+
+            def add_curve(pointa, pointb):
+                key_a = (float(pointa[0]), float(pointa[1]))
+                key_b = (float(pointb[0]), float(pointb[1]))
+                key = (key_a, key_b) if key_a < key_b else (key_b, key_a)
+
+                if key not in curve_tags:
+                    curve_tags[key] = engine_.addLine(
+                        add_point(key[0]), add_point(key[1])
+                    )
+
+                return (
+                    curve_tags[key] if key_a == key[0] else -curve_tags[key]
+                )
+
+            # Add network lines to the Gmsh model
+            for line in network_lines:
+                points = get_coordinates(line)
+                
+                for pointa, pointb in zip(points[:-1], points[1:]):
+                    add_curve(pointa, pointb)
+
+            # Collect network points and initialize boundary curves and surfaces
+            network_points = set(point_tags)
+            boundary_curves = set()
+            surfaces = []
+
+            for face in faces:
+                loops = []
+
+                for ring in (face.exterior, *face.interiors):
+                    points = get_coordinates(ring)
+                    tags = [
+                        add_curve(pointa, pointb)
+                        for pointa, pointb in zip(points[:-1], points[1:])
+                    ]
+                    boundary_curves.update(abs(tag) for tag in tags)
+                    loops.append(engine_.addCurveLoop(tags))
+
+                surface = engine_.addPlaneSurface(loops)
+                surfaces.append(surface)
+
+            # Add isolated item points to the Gmsh model
+            for item in items:
+                add_point(item.geometry.coords[0])
+
+            # Synchronize the Gmsh model
+            engine_.synchronize()
+
+            # Setup point physical groups
+            point_groups = dict.fromkeys(
+                point_tags.values(), self.default_group
+            )
+
+            for item in self.items:
+                if not item.group or item.group in self.ignore_groups:
+                    continue
+
+                for points in get_coordinates(item.geometry):
+                    key = (float(points[0]), float(points[1]))
+                    tag = point_tags.get(key)
+
+                    if tag is not None:
+                        point_groups[tag] = item.group
+
+            groups = {}
+            physical_points = defaultdict(list)
+
+            for k, v in point_groups.items():
+                physical_points[v].append(k)
+
+            for k, v in physical_points.items():
+                physical_tag = gmsh.model.addPhysicalGroup(0, v)
+                gmsh.model.setPhysicalName(0, physical_tag, k)
+                groups[k] = physical_tag
+
+            # Precalculate internal curve midpoints for fast embedding checks
+            internal_curves = [
+                (
+                    Point(
+                        (k[0][0] + k[1][0]) * 0.5, (k[0][1] + k[1][1]) * 0.5
+                    ),
+                    abs(tag),
+                )
+                for k, tag in curve_tags.items()
+                if abs(tag) not in boundary_curves
+            ]
+
+            embedded_item_points = [
+                (
+                    item.geometry,
+                    point_tags[(
+                        float(item.geometry.coords[0][0]),
+                        float(item.geometry.coords[0][1]),
+                    )],
+                )
+                for item in items
+                if (
+                    float(item.geometry.coords[0][0]),
+                    float(item.geometry.coords[0][1]),
+                )
+                not in network_points
+            ]
+
+            for face, surface in zip(faces, surfaces):
+                if celltype == "quad":
+                    gmsh.model.mesh.setRecombine(2, surface)
+
+                embedded_curves = [
+                    tag for mid_pt, tag in internal_curves if face.covers(mid_pt)
+                ]
+                embedded_pts = [
+                    tag
+                    for pt_geom, tag in embedded_item_points
+                    if face.contains(pt_geom)
+                ]
+
+                if embedded_curves:
+                    gmsh.model.mesh.embed(1, embedded_curves, 2, surface)
+
+                if embedded_pts:
+                    gmsh.model.mesh.embed(0, embedded_pts, 2, surface)
+
+            gmsh.model.mesh.generate(2)
+
+            if optimization:
+                gmsh.model.mesh.optimize(optimization, force=True)
+
+            # Convert to PyVista
+            node_tags, coordinates, _ = gmsh.model.mesh.getNodes()
+            element_types, _, element_nodes = gmsh.model.mesh.getElements(2)
+
+            max_tag = int(np.max(node_tags) if len(node_tags) > 0 else 0)
+            tag_to_idx = np.empty(max_tag + 1, dtype=np.int64)
+            tag_to_idx[node_tags] = np.arange(len(node_tags))
+            cells_dict = {}
+
+            for type_, nodes in zip(element_types, element_nodes):
+                if type_ in _gmsh_to_pyvista_type:
+                    n = 3 if type_ == 2 else 4
+                    mapped_nodes = tag_to_idx[np.reshape(nodes, (-1, n))]
+                    cells_dict.setdefault(
+                        _gmsh_to_pyvista_type[type_], []
+                    ).append(mapped_nodes)
+
+            cells = {k: np.vstack(v) for k, v in cells_dict.items()}
+            mesh = pv.UnstructuredGrid(cells, np.reshape(coordinates, (-1, 3)))
+
+            # Map point groups to point data array
+            group_ids = {group: i for i, group in enumerate(groups)}
+            default_id = group_ids.get(self.default_group, 0)
+            tag_to_gid = {v: group_ids[k] for k, v in groups.items()}
+            point_array = np.full(len(node_tags), default_id, dtype=int)
+
+            for tag in groups.values():
+                nodes, _ = gmsh.model.mesh.getNodesForPhysicalGroup(0, tag)
+
+                if len(nodes) > 0:
+                    indices = tag_to_idx[nodes]
+                    point_array[indices] = tag_to_gid[tag]
+
+            mesh.point_data["PointGroup"] = point_array
+            mesh.user_dict["PointGroup"] = group_ids
+            mesh.set_active_scalars("PointGroup", preference="point")
+
+        finally:
+            gmsh.clear()
+            gmsh.finalize()
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
+
+
+_gmsh_to_pyvista_type = {
+    2: pv.CellType.TRIANGLE,
+    3: pv.CellType.QUAD,
+}
