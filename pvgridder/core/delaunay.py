@@ -501,9 +501,14 @@ class DelaunayMesh2D(MeshBase):
                     if point_tag is not None:
                         point_groups[point_tag] = item.group
 
-                if isinstance(item.geometry, LineString):
+                if isinstance(item.geometry, (LineString, Polygon)):
+                    grouped_boundary = (
+                        item.geometry
+                        if isinstance(item.geometry, LineString)
+                        else item.geometry.boundary
+                    )
                     for k, v in curve_tags.items():
-                        if item.geometry.covers(LineString(k)):
+                        if grouped_boundary.covers(LineString(k)):
                             curve_groups[abs(v)] = item.group
 
                             for endpoint in k:
