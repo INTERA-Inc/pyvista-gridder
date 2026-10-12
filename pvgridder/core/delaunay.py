@@ -192,8 +192,8 @@ class DelaunayMesh2D(MeshBase):
 
         for poly in polygons:
             cell_sizes = self._get_ring_sizes(poly.exterior, cellsize)
-            coords = get_coordinates(poly.exterior)[:-1]
-            points = self._check_point_array(coords, axis=2)
+            points = get_coordinates(poly.exterior)[:-1]
+            points = self._check_point_array(points, axis=2)
             mesh = pv.PolyData().from_irregular_faces(
                 points, [np.arange(len(points))]
             )
@@ -223,17 +223,17 @@ class DelaunayMesh2D(MeshBase):
         Parameters
         ----------
         line : PolyLineLike
-            Polyline to clip to the domain. Only X and Y coordinates are used.
-            Each nonempty segment inside the domain is embedded in the mesh.
+            Polyline to add to the mesh.
         cellsize : scalar, optional
             Target cell size along the polyline.
         group : str, optional
-            Physical group for polyline constraint vertices.
+            Group name.
 
         Returns
         -------
         Self
             Self (for daisy chaining).
+
         """
         line = self._validate_polyline(line)
         segments = [
@@ -248,8 +248,8 @@ class DelaunayMesh2D(MeshBase):
             raise ValueError("could not add polyline outside the domain")
 
         for segment in segments:
-            coordinates = get_coordinates(segment)
-            points = np.column_stack((coordinates, np.zeros(len(coordinates))))
+            points = get_coordinates(segment)
+            points = np.column_stack((points, np.zeros(len(points))))
             self.items.append(
                 MeshItem(
                     pv.MultipleLines(points),
