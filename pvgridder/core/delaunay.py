@@ -555,6 +555,7 @@ class DelaunayMesh2D(MeshBase):
                 not in network_points
             ]
 
+            # Embed internal curves and points into the mesh surfaces
             for face, surface in zip(faces, surfaces):
                 if celltype == "quad":
                     gmsh.model.mesh.setRecombine(2, surface)
@@ -574,6 +575,7 @@ class DelaunayMesh2D(MeshBase):
                 if embedded_pts:
                     gmsh.model.mesh.embed(0, embedded_pts, 2, surface)
 
+            # Generate and optimize the 2D mesh
             gmsh.model.mesh.generate(2)
 
             if optimization:
