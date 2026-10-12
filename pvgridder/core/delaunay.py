@@ -90,8 +90,9 @@ class DelaunayMesh2D(MeshBase):
             Self (for daisy chaining).
 
         """
+        n = max(np.ceil(2.0 * np.pi * radius / cellsize), 3) if cellsize else 64
         center_ = np.zeros(2) if center is None else np.asanyarray(center[:2])
-        angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
+        angles = np.linspace(0.0, 2.0 * np.pi, int(n), endpoint=False)
         points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
 
         return self.add_polygon(
