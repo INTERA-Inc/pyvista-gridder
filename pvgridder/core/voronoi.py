@@ -373,15 +373,20 @@ class VoronoiMesh2D(MeshBase):
         items = sorted(self.items, key=lambda item: abs(item.priority))
 
         if self.preference == "cell":
-            points = get_cell_centers(self.mesh).tolist()
-            group_array = self._initialize_group_array(self.mesh, groups)
-            priority_array = np.full(self.mesh.n_cells, -np.inf)
+            mesh = self.mesh
 
         elif self.preference == "point":
-            points = self.mesh.points.tolist()
-            group_array = self._initialize_group_array(self.mesh.n_points, groups)
-            priority_array = np.full(self.mesh.n_points, -np.inf)
+            mesh = pv.PolyData(self.mesh.points)
 
+            if "PointGroup" in self.mesh.point_data:
+                mesh.cell_data["CellGroup"] = self.mesh.point_data["PointGroup"]
+
+                if "PointGroup" in self.mesh.user_dict:
+                    mesh.user_dict["CellGroup"] = self.mesh.user_dict["PointGroup"]
+            
+        points = get_cell_centers(mesh).tolist()
+        group_array = self._initialize_group_array(mesh, groups)
+        priority_array = np.full(mesh.n_cells, -np.inf)
         active = np.ones(len(points), dtype=bool)
 
         for i, item in enumerate(items):
