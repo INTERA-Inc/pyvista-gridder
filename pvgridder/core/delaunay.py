@@ -10,6 +10,7 @@ from shapely import LineString, Point, Polygon, get_coordinates, get_parts
 
 from ._base import MeshBase, MeshItem
 
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Literal, Optional
@@ -479,24 +480,36 @@ class DelaunayMesh2D(MeshBase):
             # Synchronize the Gmsh model
             engine_.synchronize()
 
-            # Setup point physical groups
+            # Setup physical groups
             point_groups = dict.fromkeys(
                 point_tags.values(), self.default_group
             )
+            curve_groups = {}
+            curve_endpoint_groups = {}
 
             for item in self.items:
                 if not item.group or item.group in self.ignore_groups:
                     continue
 
-                for points in get_coordinates(item.geometry):
-                    key = (float(points[0]), float(points[1]))
-                    tag = point_tags.get(key)
+                for point in get_coordinates(item.geometry):
+                    key = (float(point[0]), float(point[1]))
+                    point_tag = point_tags.get(key)
 
-                    if tag is not None:
-                        point_groups[tag] = item.group
+                    if point_tag is not None:
+                        point_groups[point_tag] = item.group
+
+                if isinstance(item.geometry, LineString):
+                    for k, v in curve_tags.items():
+                        if item.geometry.covers(LineString(k)):
+                            curve_groups[abs(v)] = item.group
+
+                            for endpoint in k:
+                                curve_endpoint_groups[point_tags[endpoint]] = item.group
 
             groups = {}
             physical_points = defaultdict(list)
+            physical_curves = defaultdict(list)
+            curve_physical_tags = {}
 
             for k, v in point_groups.items():
                 physical_points[v].append(k)
@@ -505,6 +518,14 @@ class DelaunayMesh2D(MeshBase):
                 physical_tag = gmsh.model.addPhysicalGroup(0, v)
                 gmsh.model.setPhysicalName(0, physical_tag, k)
                 groups[k] = physical_tag
+            
+            for curve_tag, group in curve_groups.items():
+                physical_curves[group].append(curve_tag)
+
+            for group, tags in physical_curves.items():
+                physical_tag = gmsh.model.addPhysicalGroup(1, sorted(set(tags)))
+                gmsh.model.setPhysicalName(1, physical_tag, group)
+                curve_physical_tags[group] = physical_tag
 
             # Precalculate internal curve midpoints for fast embedding checks
             internal_curves = [
@@ -588,8 +609,27 @@ class DelaunayMesh2D(MeshBase):
                 nodes, _ = gmsh.model.mesh.getNodesForPhysicalGroup(0, tag)
 
                 if len(nodes) > 0:
-                    indices = tag_to_idx[nodes]
-                    point_array[indices] = tag_to_gid[tag]
+                    point_array[tag_to_idx[nodes]] = tag_to_gid[tag]
+
+            for group, tag in curve_physical_tags.items():
+                nodes, _ = gmsh.model.mesh.getNodesForPhysicalGroup(1, tag)
+
+                if len(nodes) > 0:
+                    point_array[tag_to_idx[nodes]] = group_ids[group]
+
+            for point_tag, group in curve_endpoint_groups.items():
+                nodes, _, _ = gmsh.model.mesh.getNodes(0, point_tag)
+
+                if len(nodes) > 0:
+                    point_array[tag_to_idx[nodes]] = group_ids[group]
+
+            # Explicitly grouped point constraints take precedence over curves
+            for point_tag, group in point_groups.items():
+                if group != self.default_group:
+                    nodes, _, _ = gmsh.model.mesh.getNodes(0, point_tag)
+
+                    if len(nodes) > 0:
+                        point_array[tag_to_idx[nodes]] = group_ids[group]
 
             mesh.point_data["PointGroup"] = point_array
             mesh.user_dict["PointGroup"] = group_ids
