@@ -6,7 +6,13 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 import pyvista as pv
 from pyrequire import require_package
-from shapely import LineString, Point, Polygon, get_coordinates, get_parts
+from shapely import (
+    LineString,
+    Point,
+    Polygon,
+    get_coordinates,
+    get_parts,
+)
 
 from ._base import MeshBase, MeshItem
 
@@ -65,6 +71,7 @@ class DelaunayMesh2D(MeshBase):
         radius: float,
         *,
         center: Optional[VectorLike] = None,
+        boundary_only: bool = False,
         cellsize: Optional[float] = None,
         hole: bool = False,
         group: Optional[str] = None,
@@ -78,6 +85,8 @@ class DelaunayMesh2D(MeshBase):
             Radius of the circle.
         center : VectorLike, optional
             Center of the circle. Defaults to the origin.
+        boundary_only : bool, default False
+            If True, apply the group only along the circle boundary.
         cellsize : float, optional
             Target cell size along the circle boundary.
         hole : bool, default False
@@ -98,6 +107,7 @@ class DelaunayMesh2D(MeshBase):
 
         return self.add_polygon(
             points, 
+            boundary_only=boundary_only,
             cellsize=cellsize,
             hole=hole,
             group=group,
@@ -150,6 +160,7 @@ class DelaunayMesh2D(MeshBase):
         self,
         polygon: PolygonLike,
         *,
+        boundary_only: bool = False,
         cellsize: Optional[ArrayLike] = None,
         hole: bool = False,
         group: Optional[str] = None,
@@ -161,6 +172,8 @@ class DelaunayMesh2D(MeshBase):
         ----------
         polygon : PolygonLike
             Polygon to add to the mesh.
+        boundary_only : bool, default False
+            If True, apply the polygon group only along its boundary.
         cellsize : ArrayLike, optional
             Target cell size along the polygon boundary.
         hole : bool, default False
@@ -204,6 +217,7 @@ class DelaunayMesh2D(MeshBase):
                     geometry=poly,
                     cellsize=cellsize,
                     cell_sizes=cell_sizes,
+                    boundary_only=boundary_only,
                     group=group,
                     hole=hole,
                 )
@@ -484,24 +498,23 @@ class DelaunayMesh2D(MeshBase):
             engine_.synchronize()
 
             # Setup physical groups
-            point_groups = dict.fromkeys(
-                point_tags.values(), self.default_group
-            )
+            point_groups = dict.fromkeys(point_tags.values(), self.default_group)
             curve_groups = {}
             curve_endpoint_groups = {}
+            surface_groups = defaultdict(list)
 
             for item in self.items:
-                if not item.group or item.group in self.ignore_groups:
-                    continue
+                has_group = item.group and item.group not in self.ignore_groups
 
-                for point in get_coordinates(item.geometry):
-                    key = (float(point[0]), float(point[1]))
-                    point_tag = point_tags.get(key)
+                if has_group:
+                    for point in get_coordinates(item.geometry):
+                        key = (float(point[0]), float(point[1]))
+                        point_tag = point_tags.get(key)
 
-                    if point_tag is not None:
-                        point_groups[point_tag] = item.group
+                        if point_tag is not None:
+                            point_groups[point_tag] = item.group
 
-                if isinstance(item.geometry, (LineString, Polygon)):
+                if has_group and isinstance(item.geometry, (LineString, Polygon)):
                     grouped_boundary = (
                         item.geometry
                         if isinstance(item.geometry, LineString)
@@ -514,10 +527,27 @@ class DelaunayMesh2D(MeshBase):
                             for endpoint in k:
                                 curve_endpoint_groups[point_tags[endpoint]] = item.group
 
+                if isinstance(item.geometry, Polygon) and not item.hole:
+                    item_surfaces = [
+                        surface
+                        for face, surface in zip(faces, surfaces)
+                        if item.geometry.covers(face.representative_point())
+                    ]
+
+                    if not item_surfaces:
+                        continue
+
+                    if (
+                        has_group
+                        and not getattr(item, "boundary_only", False)
+                    ):
+                        surface_groups[item.group].extend(item_surfaces)
+
             groups = {}
             physical_points = defaultdict(list)
             physical_curves = defaultdict(list)
             curve_physical_tags = {}
+            surface_physical_tags = {}
 
             for k, v in point_groups.items():
                 physical_points[v].append(k)
@@ -527,13 +557,18 @@ class DelaunayMesh2D(MeshBase):
                 gmsh.model.setPhysicalName(0, physical_tag, k)
                 groups[k] = physical_tag
             
-            for curve_tag, group in curve_groups.items():
-                physical_curves[group].append(curve_tag)
+            for k, v in curve_groups.items():
+                physical_curves[v].append(k)
 
-            for group, tags in physical_curves.items():
-                physical_tag = gmsh.model.addPhysicalGroup(1, sorted(set(tags)))
-                gmsh.model.setPhysicalName(1, physical_tag, group)
-                curve_physical_tags[group] = physical_tag
+            for k, v in physical_curves.items():
+                tag = gmsh.model.addPhysicalGroup(1, sorted(set(v)))
+                gmsh.model.setPhysicalName(1, tag, k)
+                curve_physical_tags[k] = tag
+
+            for k, v in surface_groups.items():
+                tag = gmsh.model.addPhysicalGroup(2, sorted(set(v)))
+                gmsh.model.setPhysicalName(2, tag, k)
+                surface_physical_tags[k] = tag
 
             # Precalculate internal curve midpoints for fast embedding checks
             internal_curves = [
@@ -623,6 +658,12 @@ class DelaunayMesh2D(MeshBase):
 
             for group, tag in curve_physical_tags.items():
                 nodes, _ = gmsh.model.mesh.getNodesForPhysicalGroup(1, tag)
+
+                if len(nodes) > 0:
+                    point_array[tag_to_idx[nodes]] = group_ids[group]
+
+            for group, tag in surface_physical_tags.items():
+                nodes, _ = gmsh.model.mesh.getNodesForPhysicalGroup(2, tag)
 
                 if len(nodes) > 0:
                     point_array[tag_to_idx[nodes]] = group_ids[group]
