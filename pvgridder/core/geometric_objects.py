@@ -516,7 +516,7 @@ def Polygon(
             )
 
         points = shell_points[:-1]
-        cells = np.insert(np.arange(len(shell_points)), 0, len(shell_points))
+        cells = np.insert(np.arange(len(points)), 0, len(points))
         celltypes = [pv.CellType.POLYGON]
         mesh = pv.UnstructuredGrid(cells, celltypes, points)
 
