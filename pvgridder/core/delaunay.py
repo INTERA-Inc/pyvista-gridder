@@ -59,9 +59,52 @@ class DelaunayMesh2D(MeshBase):
         for hole in holes:
             self.add_polygon(hole, cellsize=cellsize, hole=True)
 
+    def add_circle(
+        self,
+        radius: float,
+        *,
+        center: Optional[VectorLike] = None,
+        cellsize: Optional[float] = None,
+        hole: bool = False,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Add a circle to the mesh.
+
+        Parameters
+        ----------
+        radius : float
+            Radius of the circle.
+        center : VectorLike, optional
+            Center of the circle. Defaults to the origin.
+        cellsize : float, optional
+            Target cell size along the circle boundary.
+        hole : bool, default False
+            If True, the circle is treated as a hole in the mesh.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        center_ = np.zeros(2) if center is None else np.asanyarray(center[:2])
+        angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
+        points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
+
+        return self.add_polygon(
+            points, 
+            cellsize=cellsize,
+            hole=hole,
+            group=group,
+        )
+
     def add_point(
         self,
         point: VectorLike,
+        *,
         cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -104,6 +147,7 @@ class DelaunayMesh2D(MeshBase):
     def add_polygon(
         self,
         polygon: PolygonLike,
+        *,
         cellsize: Optional[ArrayLike] = None,
         hole: bool = False,
         group: Optional[str] = None,
@@ -168,6 +212,7 @@ class DelaunayMesh2D(MeshBase):
     def add_polyline(
         self,
         line: PolyLineLike,
+        *,
         cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
@@ -219,6 +264,7 @@ class DelaunayMesh2D(MeshBase):
     @require_package("gmsh")
     def generate_mesh(
         self,
+        *,
         tolerance: float = 1.0e-8,
         min_cellsize: Optional[float] = None,
         max_cellsize: Optional[float] = None,
