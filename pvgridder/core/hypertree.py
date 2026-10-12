@@ -261,6 +261,7 @@ class QuadTree(MeshBase):
     def add_boundary_polygon(
         self,
         polygon: PolygonLike,
+        *,
         depth: int = 0,
         cellsize: Optional[float] = None,
     ) -> Self:
@@ -449,6 +450,7 @@ class QuadTree(MeshBase):
     def add_polyline(
         self,
         line: PolyLineLike,
+        *,
         depth: Optional[int] = None,
         cellsize: Optional[float] = None,
         group: Optional[str] = None,
@@ -504,6 +506,7 @@ class QuadTree(MeshBase):
         self,
         dx: float,
         dy: float,
+        *,
         origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
@@ -550,6 +553,7 @@ class QuadTree(MeshBase):
     def add_square(
         self,
         dx: float,
+        *,
         origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
@@ -592,6 +596,7 @@ class QuadTree(MeshBase):
 
     def generate_mesh(
         self,
+        *,
         tolerance: float = 1.0e-8,
         balance: bool = False,
         conformal: bool = False,
