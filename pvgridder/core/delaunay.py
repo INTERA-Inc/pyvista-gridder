@@ -271,7 +271,7 @@ class DelaunayMesh2D(MeshBase):
         min_cellsize: Optional[float] = None,
         max_cellsize: Optional[float] = None,
         celltype: Literal["quad", "triangle"] = "triangle",
-        algorithm: int = 6,
+        algorithm: Optional[int] = None,
         optimization: Optional[
             Literal["Netgen", "Laplace2D", "Relocate2D"]
         ] = None,
@@ -290,8 +290,8 @@ class DelaunayMesh2D(MeshBase):
             Maximum cell size for the Delaunay mesh.
         celltype : {'quad', 'triangle'}, default 'triangle'
             Preferred cell type.
-        algorithm : int, default 6
-            Gmsh 2D algorithm.
+        algorithm : int, optional
+            Gmsh 2D algorithm. Default is 8 if *celltype* is 'quad', 6 otherwise.
         optimization : {'Netgen', 'Laplace2D', 'Relocate2D'}, optional
             Gmsh 2D optimization method.
         engine : {'gmsh', 'occ'}, default 'gmsh'
@@ -324,6 +324,9 @@ class DelaunayMesh2D(MeshBase):
 
         if celltype not in {"quad", "triangle"}:
             raise ValueError(f"invalid cell type '{celltype}'")
+
+        if algorithm is None:
+            algorithm = 6 if celltype == "quad" else 6
 
         # Extract holes and define the domain for the Delaunay mesh
         holes = [item.geometry for item in self.items if item.hole]
