@@ -32,7 +32,7 @@ class VoronoiMesh2D(MeshBase):
     axis : int, default 2
         Background mesh axis to discard.
     preference : {'cell', 'point'}, default 'cell'
-        Determine which data to use for background mesh.
+        Determine which data to use for background mesh (seed points).
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
