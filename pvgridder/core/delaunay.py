@@ -19,12 +19,27 @@ from ._base import MeshBase, MeshItem
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Literal, Optional
+    from typing import Literal, Optional, Protocol
 
     from numpy.typing import ArrayLike
     from typing_extensions import Self
 
     from .._typing import PolygonLike, PolyLineLike, VectorLike
+
+
+if TYPE_CHECKING:
+    class _GmshGeometryEngine(Protocol):
+        """Geometry methods shared by Gmsh's engines."""
+
+        def addPoint(
+            self, x: float, y: float, z: float, mesh_size: float, tag: int
+        ) -> int: ...
+
+        def addLine(self, point_a: int, point_b: int) -> int: ...
+
+        def addCurveLoop(self, curves: Sequence[int]) -> int: ...
+
+        def addPlaneSurface(self, loops: Sequence[int]) -> int: ...
 
 
 class DelaunayMesh2D(MeshBase):
@@ -410,59 +425,32 @@ class DelaunayMesh2D(MeshBase):
             engine_ = gmsh.model.geo if engine == "gmsh" else gmsh.model.occ
             point_tags, curve_tags = {}, {}
 
-            # Helper functions to add points and curves to the Gmsh model
-            def add_point(point):
-                key = (float(point[0]), float(point[1]))
-
-                if key not in point_tags:
-                    point_tags[key] = engine_.addPoint(
-                        key[0], key[1], 0.0, sizes.get(key, default_size), -1
-                    )
-
-                return point_tags[key]
-
-            def add_curve(pointa, pointb):
-                key_a = (float(pointa[0]), float(pointa[1]))
-                key_b = (float(pointb[0]), float(pointb[1]))
-                key = (key_a, key_b) if key_a < key_b else (key_b, key_a)
-
-                if key not in curve_tags:
-                    curve_tags[key] = engine_.addLine(
-                        add_point(key[0]), add_point(key[1])
-                    )
-
-                return curve_tags[key] if key_a == key[0] else -curve_tags[key]
-
             # Add network lines to the Gmsh model
             for line in network_lines:
                 points = get_coordinates(line)
 
                 for pointa, pointb in zip(points[:-1], points[1:]):
-                    add_curve(pointa, pointb)
+                    self._add_curve(
+                        engine_, pointa, pointb, curve_tags, point_tags, sizes,
+                        default_size,
+                    )
 
             # Collect network points and initialize boundary curves and surfaces
             network_points = set(point_tags)
             boundary_curves = set()
-            surfaces = []
-
-            for face in faces:
-                loops = []
-
-                for ring in (face.exterior, *face.interiors):
-                    points = get_coordinates(ring)
-                    tags = [
-                        add_curve(pointa, pointb)
-                        for pointa, pointb in zip(points[:-1], points[1:])
-                    ]
-                    boundary_curves.update(abs(tag) for tag in tags)
-                    loops.append(engine_.addCurveLoop(tags))
-
-                surface = engine_.addPlaneSurface(loops)
-                surfaces.append(surface)
+            surfaces = [
+                self._add_plane_surface(
+                    engine_, face, curve_tags, point_tags, sizes, default_size,
+                    boundary_curves,
+                )
+                for face in faces
+            ]
 
             # Add isolated item points to the Gmsh model
             for item in items:
-                add_point(item.geometry.coords[0])
+                self._add_point(
+                    engine_, item.geometry.coords[0], point_tags, sizes, default_size
+                )
 
             # Synchronize the Gmsh model
             engine_.synchronize()
@@ -659,6 +647,77 @@ class DelaunayMesh2D(MeshBase):
             gmsh.finalize()
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
+
+    @staticmethod
+    def _add_point(
+        engine: _GmshGeometryEngine,
+        point: ArrayLike,
+        point_tags: dict[tuple[float, float], int],
+        sizes: dict[tuple[float, float], float],
+        default_size: float,
+    ) -> int:
+        """Add a 2D point to a Gmsh geometry engine."""
+        key = (float(point[0]), float(point[1]))
+
+        if key not in point_tags:
+            point_tags[key] = engine.addPoint(
+                key[0], key[1], 0.0, sizes.get(key, default_size), -1
+            )
+
+        return point_tags[key]
+
+    @staticmethod
+    def _add_curve(
+        engine: _GmshGeometryEngine,
+        pointa: ArrayLike,
+        pointb: ArrayLike,
+        curve_tags: dict[tuple[tuple[float, float], tuple[float, float]], int],
+        point_tags: dict[tuple[float, float], int],
+        sizes: dict[tuple[float, float], float],
+        default_size: float,
+    ) -> int:
+        """Add an oriented Gmsh line."""
+        key_a = (float(pointa[0]), float(pointa[1]))
+        key_b = (float(pointb[0]), float(pointb[1]))
+        key = (key_a, key_b) if key_a < key_b else (key_b, key_a)
+
+        if key not in curve_tags:
+            curve_tags[key] = engine.addLine(
+                DelaunayMesh2D._add_point(
+                    engine, key[0], point_tags, sizes, default_size
+                ),
+                DelaunayMesh2D._add_point(
+                    engine, key[1], point_tags, sizes, default_size
+                ),
+            )
+
+        return curve_tags[key] if key_a == key[0] else -curve_tags[key]
+
+    @staticmethod
+    def _add_plane_surface(
+        engine: _GmshGeometryEngine,
+        polygon: Polygon,
+        curve_tags: dict[tuple[tuple[float, float], tuple[float, float]], int],
+        point_tags: dict[tuple[float, float], int],
+        sizes: dict[tuple[float, float], float],
+        default_size: float,
+        boundary_curves: set[int],
+    ) -> int:
+        """Add a Gmsh plane surface from exterior and interior polygon loops."""
+        loops = []
+
+        for ring in (polygon.exterior, *polygon.interiors):
+            points = get_coordinates(ring)
+            tags = [
+                DelaunayMesh2D._add_curve(
+                    engine, pointa, pointb, curve_tags, point_tags, sizes, default_size
+                )
+                for pointa, pointb in zip(points[:-1], points[1:])
+            ]
+            boundary_curves.update(abs(tag) for tag in tags)
+            loops.append(engine.addCurveLoop(tags))
+
+        return engine.addPlaneSurface(loops)
 
 
 _gmsh_to_pyvista_type = {
