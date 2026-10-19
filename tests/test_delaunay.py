@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import pyvista as pv
-from shapely import Polygon
+from shapely import Polygon, unary_union
 
 import pvgridder as pvg
 
@@ -110,6 +110,75 @@ def test_delaunay2d_add_point(engine):
 	point_id = mesh.find_closest_point((2.0, 2.0, 0.0))
 	assert np.allclose(mesh.points[point_id], (2.0, 2.0, 0.0))
 	assert mesh.point_data["PointGroup"][point_id] == mesh.user_dict["PointGroup"]["point"]
+
+
+@pytest.mark.parametrize(
+	"engine, feature, kwargs, n_cells_ref",
+	[
+		pytest.param(
+			"gmsh",
+            "point",
+            {"point": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
+            82,
+            id="gmsh-point",
+        ),
+		pytest.param(
+			"occ",
+            "point", {"point": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
+            82,
+            id="occ-point",
+        ),
+		pytest.param(
+			"gmsh",
+			"circle",
+			{"radius": 0.5, "center": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
+			236,
+			id="gmsh-circle",
+		),
+		pytest.param(
+			"occ",
+			"circle",
+			{"radius": 0.5, "center": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
+			228,
+			id="occ-circle",
+		),
+		pytest.param(
+			"gmsh",
+			"polygon",
+			{"polygon": [(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)], "cellsize": 0.2, "growth": 1.5},
+			480,
+			id="gmsh-polygon",
+		),
+		pytest.param(
+			"occ",
+			"polygon",
+			{"polygon": [(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)], "cellsize": 0.2, "growth": 1.5},
+			488,
+			id="occ-polygon",
+		),
+		pytest.param(
+			"gmsh",
+			"polyline",
+			{"line": [(1.0, 2.0), (3.0, 2.0)], "cellsize": 0.2, "growth": 1.5},
+			172,
+			id="gmsh-polyline",
+		),
+		pytest.param(
+			"occ",
+			"polyline",
+			{"line": [(1.0, 2.0), (3.0, 2.0)], "cellsize": 0.2, "growth": 1.5},
+			170,
+			id="occ-polyline",
+		),
+    ]
+)
+def test_delaunay2d_growth(engine, feature, kwargs, n_cells_ref):
+	"""Test growth option of pvgridder.DelaunayMesh2D features."""
+	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+	del2d = pvg.DelaunayMesh2D(polygon)
+	del2d = getattr(del2d, f"add_{feature}")(**kwargs)
+	mesh = del2d.generate_mesh(max_cellsize=1.0, engine=engine)
+	assert mesh.n_cells == n_cells_ref
 
 
 @pytest.mark.parametrize("engine", ["gmsh", "occ"])

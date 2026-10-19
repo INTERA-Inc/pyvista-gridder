@@ -91,6 +91,7 @@ class DelaunayMesh2D(MeshBase):
         center: Optional[VectorLike] = None,
         boundary_only: bool = False,
         cellsize: Optional[float] = None,
+        growth: Optional[float] = None,
         hole: bool = False,
         group: Optional[str] = None,
     ) -> Self:
@@ -107,6 +108,8 @@ class DelaunayMesh2D(MeshBase):
             If True, apply the group only along the circle boundary.
         cellsize : float, optional
             Target cell size along the circle boundary.
+        growth : float, optional
+            Geometric cell size growth factor away from the circle.
         hole : bool, default False
             If True, the circle is treated as a hole in the mesh.
         group : str, optional
@@ -127,6 +130,7 @@ class DelaunayMesh2D(MeshBase):
             points,
             boundary_only=boundary_only,
             cellsize=cellsize,
+            growth=growth,
             hole=hole,
             group=group,
         )
@@ -137,6 +141,7 @@ class DelaunayMesh2D(MeshBase):
         *,
         cellsize: Optional[float] = None,
         constraint: int = 0,
+        growth: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -150,6 +155,8 @@ class DelaunayMesh2D(MeshBase):
             Target cell size at the point.
         constraint : int, default 0
             Number of constraint points to add evenly around the point.
+        growth : float, optional
+            Geometric cell size growth factor away from the point.
         group : str, optional
             Group name.
 
@@ -173,6 +180,7 @@ class DelaunayMesh2D(MeshBase):
                 group=group,
                 hole=False,
                 constraint=int(constraint),
+                growth=growth,
             )
         )
         return self
@@ -183,6 +191,7 @@ class DelaunayMesh2D(MeshBase):
         *,
         boundary_only: bool = False,
         cellsize: Optional[ArrayLike] = None,
+        growth: Optional[float] = None,
         hole: bool = False,
         group: Optional[str] = None,
     ) -> Self:
@@ -197,6 +206,8 @@ class DelaunayMesh2D(MeshBase):
             If True, apply the polygon group only along its boundary.
         cellsize : ArrayLike, optional
             Target cell size along the polygon boundary.
+        growth : float, optional
+            Geometric cell size growth factor away from the polygon boundary.
         hole : bool, default False
             If True, exclude the polygon interior from the domain.
         group : str, optional
@@ -235,6 +246,7 @@ class DelaunayMesh2D(MeshBase):
                     cellsize=cellsize,
                     cell_sizes=cell_sizes,
                     boundary_only=boundary_only,
+                    growth=growth,
                     group=group,
                     hole=hole,
                 )
@@ -247,6 +259,7 @@ class DelaunayMesh2D(MeshBase):
         line: PolyLineLike,
         *,
         cellsize: Optional[float] = None,
+        growth: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -258,6 +271,8 @@ class DelaunayMesh2D(MeshBase):
             Polyline to add to the mesh.
         cellsize : scalar, optional
             Target cell size along the polyline.
+        growth : float, optional
+            Geometric cell size growth factor away from the polyline.
         group : str, optional
             Group name.
 
@@ -287,6 +302,7 @@ class DelaunayMesh2D(MeshBase):
                     cellsize=cellsize,
                     group=group,
                     hole=False,
+                    growth=growth,
                 )
             )
 
@@ -371,10 +387,14 @@ class DelaunayMesh2D(MeshBase):
         # Compute the characteristic sizes for the mesh points
         sizes = self._get_ring_sizes(self._polygon.exterior, self._cellsize)
         constraints, items = [domain.boundary], []
+        growth_items = []
 
         # Process each item to determine constraints and cell sizes
         for item in self.items:
             geometry = item.geometry
+
+            if getattr(item, "growth", None) is not None:
+                growth_items.append(item)
 
             if isinstance(geometry, Point):
                 if not domain.covers(geometry):
@@ -495,6 +515,72 @@ class DelaunayMesh2D(MeshBase):
 
             # Synchronize the Gmsh model
             engine_.synchronize()
+
+            # Build geometric growth fields
+            growth_fields = []
+
+            for item in growth_items:
+                geometry = item.geometry
+
+                if item.cellsize is not None:
+                    cell_sizes = np.asarray(item.cellsize, dtype=float)
+                    lc = float(
+                        cell_sizes if cell_sizes.ndim == 0 else cell_sizes.min()
+                    )
+
+                elif isinstance(geometry, Polygon) and getattr(
+                    item, "cell_sizes", None
+                ):
+                    lc = float(min(item.cell_sizes.values()))
+
+                else:
+                    lc = float(default_size)
+
+                distance_field = gmsh.model.mesh.field.add("Distance")
+
+                if isinstance(geometry, Point):
+                    point_key = (float(geometry.x), float(geometry.y))
+                    gmsh.model.mesh.field.setNumbers(
+                        distance_field, "PointsList", [point_tags[point_key]]
+                    )
+
+                else:
+                    feature_boundary = (
+                        geometry
+                        if isinstance(geometry, LineString)
+                        else geometry.boundary
+                    )
+                    feature_curves = [
+                        abs(tag)
+                        for edge, tag in curve_tags.items()
+                        if feature_boundary.covers(LineString(edge))
+                    ]
+                    
+                    if not feature_curves:
+                        gmsh.model.mesh.field.remove(distance_field)
+                        continue
+
+                    gmsh.model.mesh.field.setNumbers(
+                        distance_field, "CurvesList", sorted(set(feature_curves))
+                    )
+
+                growth_field = gmsh.model.mesh.field.add("MathEval")
+                gradient = float(item.growth) - 1.0
+                expression = (
+                    f"{lc:.16g} + {gradient:.16g} * F{distance_field}"
+                )
+                gmsh.model.mesh.field.setString(growth_field, "F", expression)
+                growth_fields.append(growth_field)
+
+            if len(growth_fields) == 1:
+                gmsh.model.mesh.field.setAsBackgroundMesh(growth_fields[0])
+
+            elif growth_fields:
+                growth_field = gmsh.model.mesh.field.add("Min")
+                gmsh.model.mesh.field.setNumbers(
+                    growth_field, "FieldsList", growth_fields
+                )
+                gmsh.model.mesh.field.setAsBackgroundMesh(growth_field)
 
             # Setup physical groups
             point_groups = dict.fromkeys(point_tags.values(), self.default_group)
