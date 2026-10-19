@@ -392,8 +392,9 @@ class DelaunayMesh2D(MeshBase):
         # Process each item to determine constraints and cell sizes
         for item in self.items:
             geometry = item.geometry
+            growth = getattr(item, "growth", None)
 
-            if getattr(item, "growth", None) is not None:
+            if growth is not None and growth > 1.0:
                 growth_items.append(item)
 
             if isinstance(geometry, Point):
