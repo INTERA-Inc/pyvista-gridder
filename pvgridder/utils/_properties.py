@@ -227,7 +227,7 @@ def get_cell_group(mesh: DataSetLike, key: str = "CellGroup") -> NDArray | None:
     ----------
     mesh : DataSetLike
         Input mesh.
-    key : str, default "CellGroup"
+    key : str, default 'CellGroup'
         Key to use to get the cell group.
 
     Returns
@@ -282,6 +282,36 @@ def get_dimension(mesh: DataSetLike) -> int:
 
     else:
         raise TypeError(f"could not get dimension of mesh of type '{type(mesh)}'")
+
+
+def get_point_group(mesh: DataSetLike, key: str = "PointGroup") -> NDArray | None:
+    """
+    Get the point group of a mesh.
+
+    Parameters
+    ----------
+    mesh : DataSetLike
+        Input mesh.
+    key : str, default 'PointGroup'
+        Key to use to get the point group.
+
+    Returns
+    -------
+    NDArray | None
+        Point group.
+
+    """
+    if key in mesh.point_data:
+        point_groups = mesh.point_data[key]
+
+        if key in mesh.user_dict:
+            groups = {v: k for k, v in mesh.user_dict[key].items()}
+            point_groups = [groups[i] for i in point_groups]
+
+        return np.array(point_groups)
+
+    else:
+        return None
 
 
 _dimension_map = np.array(
