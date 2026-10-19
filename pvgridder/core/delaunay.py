@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Literal, Optional, Protocol
 
-    from numpy.typing import ArrayLike
+    from numpy.typing import ArrayLike, NDArray
     from typing_extensions import Self
 
     from .._typing import PolygonLike, PolyLineLike, VectorLike
@@ -31,14 +32,19 @@ if TYPE_CHECKING:
         """Geometry methods shared by Gmsh's engines."""
 
         def addPoint(
-            self, x: float, y: float, z: float, mesh_size: float, tag: int
+            self,
+            x: float,
+            y: float,
+            z: float,
+            meshSize: float = 0.0,
+            tag: int = -1,
         ) -> int: ...
 
-        def addLine(self, point_a: int, point_b: int) -> int: ...
+        def addLine(self, startTag: int, endTag: int, tag: int = -1) -> int: ...
 
-        def addCurveLoop(self, curves: Sequence[int]) -> int: ...
+        def addCurveLoop(self, curveTags: Sequence[int], tag: int = -1) -> int: ...
 
-        def addPlaneSurface(self, loops: Sequence[int]) -> int: ...
+        def addPlaneSurface(self, wireTags: Sequence[int], tag: int = -1) -> int: ...
 
 
 class DelaunayMesh2D(MeshBase):
@@ -651,7 +657,7 @@ class DelaunayMesh2D(MeshBase):
     @staticmethod
     def _add_point(
         engine: _GmshGeometryEngine,
-        point: ArrayLike,
+        point: Sequence[float] | NDArray,
         point_tags: dict[tuple[float, float], int],
         sizes: dict[tuple[float, float], float],
         default_size: float,
@@ -669,8 +675,8 @@ class DelaunayMesh2D(MeshBase):
     @staticmethod
     def _add_curve(
         engine: _GmshGeometryEngine,
-        pointa: ArrayLike,
-        pointb: ArrayLike,
+        pointa: Sequence[float] | NDArray,
+        pointb: Sequence[float] | NDArray,
         curve_tags: dict[tuple[tuple[float, float], tuple[float, float]], int],
         point_tags: dict[tuple[float, float], int],
         sizes: dict[tuple[float, float], float],
