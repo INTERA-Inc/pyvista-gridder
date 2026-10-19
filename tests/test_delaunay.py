@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import pyvista as pv
-from shapely import Polygon, unary_union
+from shapely import Polygon
 
 import pvgridder as pvg
 
@@ -10,237 +10,167 @@ pytest.importorskip("gmsh")
 
 
 @pytest.mark.parametrize(
-	"celltype, engine",
-	[
-		pytest.param("triangle", "gmsh", id="triangle_gmsh"),
-		pytest.param("triangle", "occ", id="triangle_occ"),
-		pytest.param("quad", "gmsh", id="quad_gmsh"),
-		pytest.param("quad", "occ", id="quad_occ"),
-	],
+    "polygon, cellsize, default_group, n_points_ref",
+    [
+        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]), None, "default", 31, id="base"),
+        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)], holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]]), None, "default", 36, id="polygon-with-hole"),
+        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]), 0.5, "default", 99, id="cellsize=0.5"),
+        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]), None, "test", 31, id="default_group=test"),
+    ],
 )
-def test_delaunay2d_base_mesh(celltype, engine):
-	"""Test the base mesh and output cell type."""
-	polygon = [(0.0, 0.0), (3.0, 0.0), (3.0, 3.0), (0.0, 3.0)]
-	mesh = (
-		pvg.DelaunayMesh2D(polygon)
-		.generate_mesh(celltype=celltype, engine=engine)
-		.compute_cell_sizes()
-	)
-	assert getattr(pv.CellType, celltype.upper()) in mesh.celltypes
-	assert np.isclose(np.abs(mesh.cell_data["Area"]).sum(), 9.0)
-	assert "PointGroup" in mesh.point_data
-	assert "default" in mesh.user_dict["PointGroup"]
-
-
-@pytest.mark.parametrize("engine", ["gmsh", "occ"])
-def test_delaunay2d_add_hole(engine):
-	"""Test the base mesh with a hole."""
-	domain = Polygon(
-		[(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)],
-		holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]],
-	)
-	mesh = pvg.DelaunayMesh2D(domain).generate_mesh(engine=engine).compute_cell_sizes()
-	centers = mesh.cell_centers().points
-	inside_hole = (
-		(centers[:, 0] > 1.0)
-		& (centers[:, 0] < 3.0)
-		& (centers[:, 1] > 1.0)
-		& (centers[:, 1] < 3.0)
-	)
-	assert not inside_hole.any()
-	assert np.isclose(np.abs(mesh.cell_data["Area"]).sum(), 12.0)
-
-
-def test_delaunay2d_cellsize():
-	"""Test the cellsize option."""
-	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 2.0), (0.0, 2.0)]
-	mesh = pvg.DelaunayMesh2D(polygon)
-	assert list(mesh._get_ring_sizes(mesh._polygon.exterior, None).values()) == [
-		4.0,
-		4.0,
-		4.0,
-		4.0,
-	]
-
-	cellsize = np.array([0.1, 0.2, 0.3, 0.4])
-	mesh = pvg.DelaunayMesh2D(polygon, cellsize=cellsize)
-	assert list(mesh._get_ring_sizes(mesh._polygon.exterior, cellsize).values()) == (
-		cellsize.tolist()
-	)
-
-
-@pytest.mark.parametrize("engine", ["gmsh", "occ"])
-def test_delaunay2d_add_polygon(engine):
-	"""Test method pvgridder.DelaunayMesh2D.add_polygon."""
-	bmesh = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
-	polygon = [(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]
-	for boundary_only in (False, True):
-		mesh = (
-			pvg.DelaunayMesh2D(bmesh)
-			.add_polygon(
-				polygon,
-				boundary_only=boundary_only,
-				cellsize=0.5,
-				group="polygon",
-			)
-			.generate_mesh(max_cellsize=0.8, engine=engine)
-		)
-		group_id = mesh.user_dict["PointGroup"]["polygon"]
-		inside = (
-			(mesh.points[:, 0] > 1.0 + 1.0e-8)
-			& (mesh.points[:, 0] < 3.0 - 1.0e-8)
-			& (mesh.points[:, 1] > 1.0 + 1.0e-8)
-			& (mesh.points[:, 1] < 3.0 - 1.0e-8)
-		)
-		assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 16.0)
-		assert bool((mesh.point_data["PointGroup"][inside] == group_id).any()) is (
-			not boundary_only
-		)
-
-
-@pytest.mark.parametrize("engine", ["gmsh", "occ"])
-def test_delaunay2d_add_point(engine):
-	"""Test method pvgridder.DelaunayMesh2D.add_point."""
-	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
-	mesh = (
-		pvg.DelaunayMesh2D(polygon)
-		.add_point((2.0, 2.0), cellsize=0.4, group="point")
-		.generate_mesh(max_cellsize=1.0, engine=engine)
-	)
-	point_id = mesh.find_closest_point((2.0, 2.0, 0.0))
-	assert np.allclose(mesh.points[point_id], (2.0, 2.0, 0.0))
-	assert mesh.point_data["PointGroup"][point_id] == mesh.user_dict["PointGroup"]["point"]
+def test_delaunay2d_init(polygon, cellsize, default_group, n_points_ref):
+    """Test the initialization of the DelaunayMesh2D class."""
+    mesh = (
+		pvg.DelaunayMesh2D(polygon, cellsize=cellsize, default_group=default_group)
+        .generate_mesh(max_cellsize=1.0, engine="gmsh")
+    )
+    assert mesh.n_points == n_points_ref
+    assert (pvg.get_point_group(mesh) == default_group).sum() == n_points_ref
 
 
 @pytest.mark.parametrize(
-	"engine, feature, kwargs, n_cells_ref",
-	[
-		pytest.param(
-			"gmsh",
-            "point",
-            {"point": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
-            82,
-            id="gmsh-point",
-        ),
-		pytest.param(
-			"occ",
-            "point", {"point": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
-            82,
-            id="occ-point",
-        ),
-		pytest.param(
-			"gmsh",
-			"circle",
-			{"radius": 0.5, "center": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
-			236,
-			id="gmsh-circle",
-		),
-		pytest.param(
-			"occ",
-			"circle",
-			{"radius": 0.5, "center": (2.0, 2.0), "cellsize": 0.2, "growth": 1.5},
-			228,
-			id="occ-circle",
-		),
-		pytest.param(
-			"gmsh",
-			"polygon",
-			{"polygon": [(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)], "cellsize": 0.2, "growth": 1.5},
-			480,
-			id="gmsh-polygon",
-		),
-		pytest.param(
-			"occ",
-			"polygon",
-			{"polygon": [(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)], "cellsize": 0.2, "growth": 1.5},
-			488,
-			id="occ-polygon",
-		),
-		pytest.param(
-			"gmsh",
-			"polyline",
-			{"line": [(1.0, 2.0), (3.0, 2.0)], "cellsize": 0.2, "growth": 1.5},
-			172,
-			id="gmsh-polyline",
-		),
-		pytest.param(
-			"occ",
-			"polyline",
-			{"line": [(1.0, 2.0), (3.0, 2.0)], "cellsize": 0.2, "growth": 1.5},
-			170,
-			id="occ-polyline",
-		),
+    "engine, cellsize, constraint, growth, n_points_ref",
+    [
+        pytest.param("gmsh", 0.4, 0, 1.0, 42, id="base"),
+        pytest.param("gmsh", 0.2, 0, 1.0, 49, id="cellsize=0.2"),
+        pytest.param("gmsh", 0.4, 6, 1.0, 53, id="constraint=6"),
+        pytest.param("gmsh", 0.4, 6, 1.05, 110, id="growth=1.05"),
+        pytest.param("occ", 0.4, 0, 1.0, 42, id="engine=occ"),
+    ],
+)
+def test_delaunay2d_add_point(engine, cellsize, constraint, growth, n_points_ref):
+	"""Test the method pvgridder.DelaunayMesh2D.add_point."""
+	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+	mesh = (
+		pvg.DelaunayMesh2D(polygon)
+		.add_point(
+			(2.0, 2.0),
+            cellsize=cellsize,
+            constraint=constraint,
+            growth=growth,
+            group="point",
+        )
+		.generate_mesh(max_cellsize=1.0, engine=engine)
+	)
+	assert mesh.n_points == n_points_ref
+	assert (pvg.get_point_group(mesh) == "point").sum() == 1
+
+
+@pytest.mark.parametrize(
+    "engine, boundary_only, cellsize, growth, hole, n_points_ref, n_polygon_points",
+    [
+        pytest.param("gmsh", False, 0.5, 1.0, False, 65, 31, id="base"),
+        pytest.param("gmsh", True, 0.5, 1.0, False, 65, 16, id="boundary_only=True"),
+        pytest.param("gmsh", False, 0.2, 1.0, False, 205, 144, id="cellsize=0.2"),
+        pytest.param("gmsh", False, 0.5, 1.05, False, 91, 31, id="growth=1.05"),
+        pytest.param("gmsh", False, 0.5, 1.0, True, 50, 16, id="hole=True"),
+        pytest.param("occ", False, 0.5, 1.0, False, 59, 31, id="engine=occ"),
+    ],
+)
+def test_delaunay2d_add_polygon(engine, boundary_only, cellsize, growth, hole, n_points_ref, n_polygon_points):
+    """Test the method pvgridder.DelaunayMesh2D.add_polygon."""
+    polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    mesh = (
+        pvg.DelaunayMesh2D(polygon)
+        .add_polygon(
+            [(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)],
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group="polygon",
+        )
+        .generate_mesh(max_cellsize=1.0, engine=engine)
+    )
+    assert mesh.n_points == n_points_ref
+    assert (pvg.get_point_group(mesh) == "polygon").sum() == n_polygon_points
+
+
+@pytest.mark.parametrize(
+    "engine, cellsize, growth, n_points_ref, n_line_points",
+    [
+        pytest.param("gmsh", 0.5, 1.0, 61, 9, id="base"),
+        pytest.param("gmsh", 0.2, 1.0, 156, 21, id="cellsize=0.2"),
+        pytest.param("gmsh", 0.5, 1.05, 93, 9, id="growth=1.05"),
+        pytest.param("occ", 0.5, 1.0, 61, 9, id="engine=occ"),
+    ],
+)
+def test_delaunay2d_add_polyline(engine, cellsize, growth, n_points_ref, n_line_points):
+    """Test the method pvgridder.DelaunayMesh2D.add_polyline."""
+    polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    mesh = (
+	    pvg.DelaunayMesh2D(polygon)
+	    .add_polyline(
+	        [(-1.0, 2.0), (2.0, 2.0), (5.0, 2.0)],
+		    cellsize=cellsize,
+            growth=growth,
+		    group="line",
+	    )
+	    .generate_mesh(max_cellsize=1.0, engine=engine)
+    )
+    assert mesh.n_points == n_points_ref
+    assert (pvg.get_point_group(mesh) == "line").sum() == n_line_points
+
+
+@pytest.mark.parametrize(
+    "engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_circle_points",
+    [
+        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, False, 150, 86, id="base"),
+        pytest.param("gmsh", (4.0, 4.0), False, 0.5, 1.0, False, 151, 86, id="center=(4.0,4.0)"),
+        pytest.param("gmsh", (3.0, 3.0), True, 0.5, 1.0, False, 150, 26, id="boundary_only=True"),
+        pytest.param("gmsh", (3.0, 3.0), False, 0.2, 1.0, False, 548, 414, id="cellsize=0.2"),
+        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.05, False, 204, 86, id="growth=1.05"),
+        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, True, 90, 26, id="hole=True"),
     ]
 )
-def test_delaunay2d_growth(engine, feature, kwargs, n_cells_ref):
-	"""Test growth option of pvgridder.DelaunayMesh2D features."""
-	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
-	del2d = pvg.DelaunayMesh2D(polygon)
-	del2d = getattr(del2d, f"add_{feature}")(**kwargs)
-	mesh = del2d.generate_mesh(max_cellsize=1.0, engine=engine)
-	assert mesh.n_cells == n_cells_ref
+def test_delaunay2d_add_circle(engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_circle_points):
+    """Test the method pvgridder.DelaunayMesh2D.add_circle."""
+    polygon = [(0.0, 0.0), (6.0, 0.0), (6.0, 6.0), (0.0, 6.0)]
+    mesh = (
+        pvg.DelaunayMesh2D(polygon)
+        .add_circle(
+            2.0,
+            center=center,
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group="circle",
+        )
+        .generate_mesh(max_cellsize=1.0, engine=engine)
+    )
+    assert mesh.n_points == n_points_ref
+    assert (pvg.get_point_group(mesh) == "circle").sum() == n_circle_points
 
 
-@pytest.mark.parametrize("engine", ["gmsh", "occ"])
-def test_delaunay2d_add_point_constraint(engine):
-	"""Test option constraint of method pvgridder.DelaunayMesh2D.add_point."""
-	polygon = [(0.0, 0.0), (6.0, 0.0), (6.0, 6.0), (0.0, 6.0)]
-	mesh = (
-		pvg.DelaunayMesh2D(polygon)
-		.add_point((3.0, 3.0), cellsize=0.5, constraint=8, group="point")
-		.generate_mesh(max_cellsize=0.5, engine=engine)
-	)
-	groups = mesh.user_dict["PointGroup"]
-	tags = mesh.point_data["PointGroup"]
-	point_id = mesh.find_closest_point((3.0, 3.0, 0.0))
-	assert tags[point_id] == groups["point"]
-
-	constraint_ids = []
+@pytest.mark.parametrize(
+    "min_cellsize, max_cellsize, celltype, algorithm, optimization, engine, n_points_ref",
+    [
+        pytest.param(0.1, 2.0, "triangle", 6, None, "gmsh", 99, id="base"),
+        pytest.param(1.0, 2.0, "triangle", 6, None, "gmsh", 31, id="min_cellsize=0.2"),
+        pytest.param(0.1, 0.4, "triangle", 6, None, "gmsh", 144, id="max_cellsize=0.4"),
+        pytest.param(0.1, 2.0, "quad", 6, None, "gmsh", 98, id="celltype=quad"),
+        pytest.param(0.1, 2.0, "quad", 8, None, "gmsh", 81, id="celltype=quad,algorithm=8"),
+        pytest.param(0.1, 2.0, "triangle", 6, "Netgen", "gmsh", 99, id="algorithm=Netgen"),
+        pytest.param(0.1, 2.0, "triangle", 6, "Laplace2D", "gmsh", 99, id="algorithm=Laplace2D"),
+        pytest.param(0.1, 2.0, "triangle", 6, "Relocate2D", "gmsh", 99, id="algorithm=Relocate2D"),
+        pytest.param(0.1, 2.0, "triangle", 6, None, "occ", 97, id="engine=occ"),
+    ]
+)
+def test_delaunay2d_generate_mesh(min_cellsize, max_cellsize, celltype, algorithm, optimization, engine, n_points_ref):
+    """Test the method pvgridder.DelaunayMesh2D.generate_mesh."""
+    polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    mesh = (
+        pvg.DelaunayMesh2D(polygon, cellsize=0.5)
+        .generate_mesh(
+            min_cellsize=min_cellsize,
+            max_cellsize=max_cellsize,
+            celltype=celltype,
+            algorithm=algorithm,
+            optimization=optimization,
+            engine=engine,
+        )
+    )
+    assert mesh.n_points == n_points_ref
+    assert (mesh.celltypes == 5 if celltype == "triangle" else mesh.celltypes == 9).all()
 	
-	for angle in np.linspace(0.0, 2.0 * np.pi, 8, endpoint=False):
-		expected = np.array([3.0 + 0.5 * np.cos(angle), 3.0 + 0.5 * np.sin(angle), 0.0])
-		constraint_id = mesh.find_closest_point(expected)
-		assert np.allclose(mesh.points[constraint_id], expected)
-		assert tags[constraint_id] == groups["default"]
-		constraint_ids.append(constraint_id)
-
-	assert len(set(constraint_ids)) == 8
-
-
-@pytest.mark.parametrize("engine", ["gmsh", "occ"])
-def test_delaunay2d_add_polyline(engine):
-	"""Test method pvgridder.DelaunayMesh2D.add_polyline."""
-	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
-	mesh = (
-		pvg.DelaunayMesh2D(polygon)
-		.add_polyline(
-			[(-1.0, 2.0), (2.0, 2.0), (5.0, 2.0)],
-			cellsize=0.4,
-			group="line",
-		)
-		.generate_mesh(max_cellsize=1.0, engine=engine)
-	)
-	group_id = mesh.user_dict["PointGroup"]["line"]
-	on_line = np.isclose(mesh.points[:, 1], 2.0)
-	assert np.count_nonzero(mesh.point_data["PointGroup"][on_line] == group_id) > 3
-
-
-@pytest.mark.parametrize("engine", ["gmsh", "occ"])
-def test_delaunay2d_add_circle(engine):
-	"""Test method pvgridder.DelaunayMesh2D.add_circle."""
-	polygon = [(0.0, 0.0), (6.0, 0.0), (6.0, 6.0), (0.0, 6.0)]
-	mesh = (
-		pvg.DelaunayMesh2D(polygon)
-		.add_circle(
-			2.0,
-			center=(3.0, 3.0),
-			cellsize=0.4,
-			group="circle",
-		)
-		.generate_mesh(max_cellsize=1.0, engine=engine)
-	)
-	group_id = mesh.user_dict["PointGroup"]["circle"]
-	radii = np.linalg.norm(mesh.points[:, :2] - (3.0, 3.0), axis=1)
-	inside = radii < 2.0 - 1.0e-8
-	assert (mesh.point_data["PointGroup"] == group_id).any()
-	assert (mesh.point_data["PointGroup"][inside] == group_id).any()
