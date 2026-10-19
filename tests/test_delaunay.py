@@ -113,6 +113,32 @@ def test_delaunay2d_add_point(engine):
 
 
 @pytest.mark.parametrize("engine", ["gmsh", "occ"])
+def test_delaunay2d_add_point_constraint(engine):
+	"""Test option constraint of method pvgridder.DelaunayMesh2D.add_point."""
+	polygon = [(0.0, 0.0), (6.0, 0.0), (6.0, 6.0), (0.0, 6.0)]
+	mesh = (
+		pvg.DelaunayMesh2D(polygon)
+		.add_point((3.0, 3.0), cellsize=0.5, constraint=8, group="point")
+		.generate_mesh(max_cellsize=0.5, engine=engine)
+	)
+	groups = mesh.user_dict["PointGroup"]
+	tags = mesh.point_data["PointGroup"]
+	point_id = mesh.find_closest_point((3.0, 3.0, 0.0))
+	assert tags[point_id] == groups["point"]
+
+	constraint_ids = []
+	
+	for angle in np.linspace(0.0, 2.0 * np.pi, 8, endpoint=False):
+		expected = np.array([3.0 + 0.5 * np.cos(angle), 3.0 + 0.5 * np.sin(angle), 0.0])
+		constraint_id = mesh.find_closest_point(expected)
+		assert np.allclose(mesh.points[constraint_id], expected)
+		assert tags[constraint_id] == groups["default"]
+		constraint_ids.append(constraint_id)
+
+	assert len(set(constraint_ids)) == 8
+
+
+@pytest.mark.parametrize("engine", ["gmsh", "occ"])
 def test_delaunay2d_add_polyline(engine):
 	"""Test method pvgridder.DelaunayMesh2D.add_polyline."""
 	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]

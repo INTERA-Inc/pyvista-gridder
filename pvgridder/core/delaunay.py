@@ -136,6 +136,7 @@ class DelaunayMesh2D(MeshBase):
         point: VectorLike,
         *,
         cellsize: Optional[float] = None,
+        constraint: int = 0,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -147,6 +148,8 @@ class DelaunayMesh2D(MeshBase):
             Point inside the domain.
         cellsize : scalar, optional
             Target cell size at the point.
+        constraint : int, default 0
+            Number of constraint points to add evenly around the point.
         group : str, optional
             Group name.
 
@@ -169,9 +172,9 @@ class DelaunayMesh2D(MeshBase):
                 cellsize=cellsize,
                 group=group,
                 hole=False,
+                constraint=int(constraint),
             )
         )
-
         return self
 
     def add_polygon(
@@ -355,6 +358,16 @@ class DelaunayMesh2D(MeshBase):
         if domain.is_empty:
             raise ValueError("could not generate a valid domain with the given holes")
 
+        # Determine default cell size for the mesh points
+        default_size = (
+            max_cellsize
+            if max_cellsize is not None
+            else np.linalg.norm(
+                np.diff(get_coordinates(self._polygon.exterior)[:, :2], axis=0),
+                axis=1,
+            ).max()
+        )
+
         # Compute the characteristic sizes for the mesh points
         sizes = self._get_ring_sizes(self._polygon.exterior, self._cellsize)
         constraints, items = [domain.boundary], []
@@ -368,6 +381,37 @@ class DelaunayMesh2D(MeshBase):
                     raise ValueError("could not place point inside a hole")
 
                 items.append(item)
+                constraint = getattr(item, "constraint", 0)
+
+                if constraint:
+                    radius = (
+                        item.cellsize if item.cellsize is not None else default_size
+                    )
+                    radius = min(radius, 0.95 * geometry.distance(domain.boundary))
+
+                    if radius <= 0.0:
+                        raise ValueError(
+                            "could not place constraint points due to insufficient clearance from the domain boundary"
+                        )
+
+                    angles = 2.0 * np.pi * np.arange(constraint) / constraint
+
+                    for angle in angles:
+                        constraint_point = Point(
+                            geometry.x + radius * np.cos(angle),
+                            geometry.y + radius * np.sin(angle),
+                        )
+                        items.append(
+                            MeshItem(
+                                pv.PolyData(
+                                    [[constraint_point.x, constraint_point.y, 0.0]]
+                                ),
+                                geometry=constraint_point,
+                                cellsize=item.cellsize,
+                                group=None,
+                                hole=False,
+                            )
+                        )
 
             elif not item.hole:
                 constraints.append(
@@ -407,15 +451,6 @@ class DelaunayMesh2D(MeshBase):
 
         # Initialize the Gmsh engine and set mesh options
         try:
-            default_size = (
-                max_cellsize
-                if max_cellsize is not None
-                else np.linalg.norm(
-                    np.diff(get_coordinates(self._polygon.exterior)[:, :2], axis=0),
-                    axis=1,
-                ).max()
-            )
-
             gmsh.initialize()
             gmsh.option.setNumber("Mesh.Algorithm", algorithm)
             gmsh.option.setNumber("General.Verbosity", 0)
