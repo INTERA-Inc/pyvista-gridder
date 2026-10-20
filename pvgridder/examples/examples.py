@@ -132,6 +132,11 @@ def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
     """
     Load 2D mesh with a well at the center.
 
+    Parameters
+    ----------
+    voronoi : bool, default False
+        If True, generate a Voronoi mesh.
+
     Returns
     -------
     pyvista.UnstructuredGrid
@@ -184,6 +189,11 @@ def load_well_2d(voronoi: bool = False) -> pv.UnstructuredGrid:
 def load_well_3d(voronoi: bool = False) -> pv.UnstructuredGrid:
     """
     Load 3D mesh with a well at the center.
+
+    Parameters
+    ----------
+    voronoi : bool, default False
+        If True, generate a Voronoi mesh.
 
     Returns
     -------

@@ -8,37 +8,67 @@ from shapely import LineString, Polygon
 
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from numpy.typing import NDArray
 
 
-def load(max_depth: int = 2, conformal: bool = True) -> pv.UnstructuredGrid:
+def load(
+    type_: Literal["delaunay", "quadtree"],
+    *,
+    voronoi: bool = False,
+    max_depth: int = 2,
+    conformal: bool = True,
+) -> pv.UnstructuredGrid:
     """
     Load the Freyberg example mesh.
 
     Parameters
     ----------
+    type_ : {'delaunay', 'quadtree'}
+        Type of mesh to generate.
+    voronoi : bool, default False
+        If True, generate a Voronoi mesh.
     max_depth : int, default 2
-        Maximum depth of the QuadTree mesh.
+        Maximum depth of the QuadTree mesh. Only if type_ is 'quadtree'.
     conformal : bool, default True
-        If True, generate a conformal mesh.
+        If True, generate a conformal mesh. Only if type_ is 'quadtree'.
 
     Returns
     -------
     pyvista.UnstructuredGrid
-        QuadTree mesh for the Freyberg example.
+        Delaunay, QuadTree or Voronoi mesh for the Freyberg example.
 
     """
-    from ... import QuadTree, Rectangle
+    from ... import DelaunayMesh2D, QuadTree, Rectangle, VoronoiMesh2D
 
-    bmesh = Rectangle(5000.0, 10000.0, 20, 40)
-    qtree = QuadTree(bmesh, max_depth=max_depth)
-    qtree = qtree.add_boundary_polygon(load_outcrop())
-    qtree = qtree.add_polyline(load_river(), group="River")
+    outcrop = load_outcrop()
+    river = load_river()
+    wells = load_wells()
 
-    for well in load_wells():
-        qtree = qtree.add_point(well, group="Well")
+    if type_ == "delaunay":
+        mesh = (
+            DelaunayMesh2D(outcrop, cellsize=500.0)
+            .add_polyline(river, cellsize=125.0, growth=1.05, group="River")
+            .add_points(wells, cellsize=125.0, growth=1.05, constraint=6, group="Well")
+            .generate_mesh()
+        )
 
-    return qtree.generate_mesh(balance=True, conformal=conformal)
+    elif type_ == "quadtree":
+        bmesh = Rectangle(5000.0, 10000.0, 20, 40)
+        mesh = (
+            QuadTree(bmesh, max_depth=max_depth)
+            .add_boundary_polygon(outcrop)
+            .add_polyline(river, group="River")
+            .add_points(wells, group="Well")
+            .generate_mesh(balance=True, conformal=conformal)
+        )
+
+    if voronoi:
+        preference = "point" if type_ == "delaunay" else "cell"
+        mesh = VoronoiMesh2D(mesh, preference=preference).generate_mesh()
+
+    return mesh
 
 
 def load_outcrop() -> Polygon:
