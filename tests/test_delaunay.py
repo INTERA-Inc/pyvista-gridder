@@ -134,9 +134,7 @@ def test_delaunay2d_add_polygon(engine, boundary_only, cellsize, growth, hole, n
     assert mesh.n_cells == n_cells_ref
     assert (pvg.get_point_group(mesh) == "polygon").sum() == n_polygon_points
     assert (pvg.get_cell_group(mesh) == "polygon").sum() == n_polygon_cells
-
-    if hole:
-        assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), polygon.area - 4.0)
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), polygon.area - (4.0 if hole else 0.0))
 
 
 @pytest.mark.parametrize(
