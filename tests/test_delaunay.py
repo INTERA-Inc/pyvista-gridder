@@ -1,7 +1,4 @@
-import numpy as np
 import pytest
-import pyvista as pv
-from shapely import Polygon
 
 import pvgridder as pvg
 
@@ -12,14 +9,15 @@ pytest.importorskip("gmsh")
 @pytest.mark.parametrize(
     "polygon, cellsize, default_group, n_points_ref",
     [
-        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]), None, "default", 31, id="base"),
-        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)], holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]]), None, "default", 36, id="polygon-with-hole"),
-        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]), 0.5, "default", 99, id="cellsize=0.5"),
-        pytest.param(Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]), None, "test", 31, id="default_group=test"),
+        pytest.param("polygon_square", None, "default", 31, id="base"),
+        pytest.param("polygon_square_with_hole", None, "default", 36, id="polygon-with-hole"),
+        pytest.param("polygon_square", 0.5, "default", 99, id="cellsize=0.5"),
+        pytest.param("polygon_square", None, "test", 31, id="default_group=test"),
     ],
 )
-def test_delaunay2d_init(polygon, cellsize, default_group, n_points_ref):
+def test_delaunay2d_init(polygon, cellsize, default_group, n_points_ref, request):
     """Test the initialization of the DelaunayMesh2D class."""
+    polygon = request.getfixturevalue(polygon)
     mesh = (
 		pvg.DelaunayMesh2D(polygon, cellsize=cellsize, default_group=default_group)
         .generate_mesh(max_cellsize=1.0, engine="gmsh")
@@ -38,9 +36,9 @@ def test_delaunay2d_init(polygon, cellsize, default_group, n_points_ref):
         pytest.param("occ", 0.4, 0, 1.0, 42, id="engine=occ"),
     ],
 )
-def test_delaunay2d_add_point(engine, cellsize, constraint, growth, n_points_ref):
+def test_delaunay2d_add_point(engine, cellsize, constraint, growth, n_points_ref, request):
 	"""Test the method pvgridder.DelaunayMesh2D.add_point."""
-	polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+	polygon = request.getfixturevalue("polygon_square")
 	mesh = (
 		pvg.DelaunayMesh2D(polygon)
 		.add_point(
@@ -67,9 +65,9 @@ def test_delaunay2d_add_point(engine, cellsize, constraint, growth, n_points_ref
         pytest.param("occ", False, 0.5, 1.0, False, 59, 31, id="engine=occ"),
     ],
 )
-def test_delaunay2d_add_polygon(engine, boundary_only, cellsize, growth, hole, n_points_ref, n_polygon_points):
+def test_delaunay2d_add_polygon(engine, boundary_only, cellsize, growth, hole, n_points_ref, n_polygon_points, request):
     """Test the method pvgridder.DelaunayMesh2D.add_polygon."""
-    polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    polygon = request.getfixturevalue("polygon_square")
     mesh = (
         pvg.DelaunayMesh2D(polygon)
         .add_polygon(
@@ -95,9 +93,9 @@ def test_delaunay2d_add_polygon(engine, boundary_only, cellsize, growth, hole, n
         pytest.param("occ", 0.5, 1.0, 61, 9, id="engine=occ"),
     ],
 )
-def test_delaunay2d_add_polyline(engine, cellsize, growth, n_points_ref, n_line_points):
+def test_delaunay2d_add_polyline(engine, cellsize, growth, n_points_ref, n_line_points, request):
     """Test the method pvgridder.DelaunayMesh2D.add_polyline."""
-    polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    polygon = request.getfixturevalue("polygon_square")
     mesh = (
 	    pvg.DelaunayMesh2D(polygon)
 	    .add_polyline(
@@ -115,21 +113,21 @@ def test_delaunay2d_add_polyline(engine, cellsize, growth, n_points_ref, n_line_
 @pytest.mark.parametrize(
     "engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_circle_points",
     [
-        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, False, 150, 86, id="base"),
-        pytest.param("gmsh", (4.0, 4.0), False, 0.5, 1.0, False, 151, 86, id="center=(4.0,4.0)"),
-        pytest.param("gmsh", (3.0, 3.0), True, 0.5, 1.0, False, 150, 26, id="boundary_only=True"),
-        pytest.param("gmsh", (3.0, 3.0), False, 0.2, 1.0, False, 548, 414, id="cellsize=0.2"),
-        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.05, False, 204, 86, id="growth=1.05"),
-        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, True, 90, 26, id="hole=True"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.0, False, 60, 27, id="base"),
+        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, False, 64, 28, id="center=(3.0,3.0)"),
+        pytest.param("gmsh", (2.0, 2.0), True, 0.5, 1.0, False, 60, 13, id="boundary_only=True"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.2, 1.0, False, 167, 123, id="cellsize=0.2"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.05, False, 107, 27, id="growth=1.05"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.0, True, 46, 13, id="hole=True"),
     ]
 )
-def test_delaunay2d_add_circle(engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_circle_points):
+def test_delaunay2d_add_circle(engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_circle_points, request):
     """Test the method pvgridder.DelaunayMesh2D.add_circle."""
-    polygon = [(0.0, 0.0), (6.0, 0.0), (6.0, 6.0), (0.0, 6.0)]
+    polygon = request.getfixturevalue("polygon_square") 
     mesh = (
         pvg.DelaunayMesh2D(polygon)
         .add_circle(
-            2.0,
+            1.0,
             center=center,
             boundary_only=boundary_only,
             cellsize=cellsize,
@@ -157,9 +155,9 @@ def test_delaunay2d_add_circle(engine, center, boundary_only, cellsize, growth, 
         pytest.param(0.1, 2.0, "triangle", 6, None, "occ", 97, id="engine=occ"),
     ]
 )
-def test_delaunay2d_generate_mesh(min_cellsize, max_cellsize, celltype, algorithm, optimization, engine, n_points_ref):
+def test_delaunay2d_generate_mesh(min_cellsize, max_cellsize, celltype, algorithm, optimization, engine, n_points_ref, request):
     """Test the method pvgridder.DelaunayMesh2D.generate_mesh."""
-    polygon = [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    polygon = request.getfixturevalue("polygon_square")
     mesh = (
         pvg.DelaunayMesh2D(polygon, cellsize=0.5)
         .generate_mesh(

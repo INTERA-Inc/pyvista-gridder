@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 import pyvista as pv
+from shapely import Polygon
 
 import pvgridder as pvg
 
@@ -328,3 +329,24 @@ def structured_grid_3d():
     return pv.RectilinearGrid(
         [0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0]
     ).cast_to_structured_grid()
+
+
+@pytest.fixture(scope="session")
+def structured_square():
+    """Create a structured square grid."""
+    return pvg.Square(3.0, resolution=3)
+
+
+@pytest.fixture(scope="session")
+def polygon_square():
+    """Create a square polygon."""
+    return Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)])
+
+
+@pytest.fixture(scope="session")
+def polygon_square_with_hole():
+    """Create a square polygon with a hole."""
+    return Polygon(
+        [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)],
+        holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]]
+    )
