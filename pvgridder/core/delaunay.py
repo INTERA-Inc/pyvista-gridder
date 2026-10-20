@@ -309,6 +309,106 @@ class DelaunayMesh2D(MeshBase):
 
         return self
 
+    def add_rectangle(
+        self,
+        dx: float,
+        dy: float,
+        *,
+        origin: Optional[VectorLike] = None,
+        boundary_only: bool = False,
+        cellsize: Optional[ArrayLike] = None,
+        growth: Optional[float] = None,
+        hole: bool = False,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Add a rectangle to the mesh.
+
+        Parameters
+        ----------
+        dx : float
+            Width of the rectangle.
+        dy : float
+            Height of the rectangle.
+        origin : VectorLike, optional
+            Origin of the rectangle.
+        boundary_only : bool, default False
+            If True, apply the group only along the rectangle boundary.
+        cellsize : ArrayLike, optional
+            Target cell size along the rectangle boundary.
+        growth : float, optional
+            Geometric cell size growth factor away from the rectangle boundary.
+        hole : bool, default False
+            If True, exclude the rectangle interior from the domain.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        origin_ = np.zeros(2) if origin is None else np.asanyarray(origin[:2])
+        points = origin_ + [(0.0, 0.0), (dx, 0.0), (dx, dy), (0.0, dy)]
+
+        return self.add_polygon(
+            points,
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group=group,
+        )
+
+    def add_square(
+        self,
+        dx: float,
+        *,
+        origin: Optional[VectorLike] = None,
+        boundary_only: bool = False,
+        cellsize: Optional[ArrayLike] = None,
+        growth: Optional[float] = None,
+        hole: bool = False,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Add a square to the mesh.
+
+        Parameters
+        ----------
+        dx : float
+            Side length of the square.
+        origin : VectorLike, optional
+            Origin of the square.
+        boundary_only : bool, default False
+            If True, apply the group only along the square boundary.
+        cellsize : ArrayLike, optional
+            Target cell size along the square boundary.
+        growth : float, optional
+            Geometric cell size growth factor away from the square boundary.
+        hole : bool, default False
+            If True, exclude the square interior from the domain.
+        group : str, optional
+            Group name.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        return self.add_rectangle(
+            dx=dx,
+            dy=dx,
+            origin=origin,
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group=group,
+        )
+
     def generate_mesh(
         self,
         *,

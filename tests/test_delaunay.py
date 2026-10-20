@@ -169,6 +169,82 @@ def test_delaunay2d_add_polyline(engine, cellsize, growth, n_points_ref, n_cells
 
 
 @pytest.mark.parametrize(
+    "engine, dx, dy, origin, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_rectangle_points, n_rectangle_cells",
+    [
+        pytest.param("gmsh", 2.0, 1.5, (1.0, 1.0), False, 0.5, 1.0, False, 59, 118, 25, 52, id="base"),
+        pytest.param("gmsh", 1.0, 1.5, (1.0, 1.0), False, 0.5, 1.0, False, 51, 98, 15, 32, id="dx=1.0"),
+        pytest.param("gmsh", 2.0, 1.0, (1.0, 1.0), False, 0.5, 1.0, False, 53, 104, 18, 38, id="dy=1.0"),
+        pytest.param("gmsh", 2.0, 1.5, None, False, 0.5, 1.0, False, 64, 122, 25, 52, id="origin=None"),
+        pytest.param("gmsh", 2.0, 1.5, (1.0, 1.0), True, 0.5, 1.0, False, 59, 118, 14, 18, id="boundary_only=True"),
+        pytest.param("gmsh", 2.0, 1.5, (1.0, 1.0), False, None, 1.0, False, 37, 68, 11, 24, id="cellsize=None"),
+        pytest.param("gmsh", 2.0, 1.5, (1.0, 1.0), False, [0.3, 0.4, 0.5, 0.6], 1.0, False, 78, 160, 35, 72, id="cellsize=array"),
+        pytest.param("gmsh", 2.0, 1.5, (1.0, 1.0), False, 0.5, 1.05, False, 89, 163, 25, 52, id="growth=1.05"),
+        pytest.param("gmsh", 2.0, 1.5, (1.0, 1.0), False, 0.5, 1.0, True, 49, 86, 14, 18, id="hole=True"),
+        pytest.param("occ", 2.0, 1.5, (1.0, 1.0), False, 0.5, 1.0, False, 57, 114, 25, 52, id="engine=occ"),
+    ],
+)
+def test_delaunay2d_add_rectangle(engine, dx, dy, origin, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_rectangle_points, n_rectangle_cells, request):
+    """Test the method pvgridder.DelaunayMesh2D.add_rectangle."""
+    polygon = request.getfixturevalue("polygon_square")
+    mesh = (
+        pvg.DelaunayMesh2D(polygon)
+        .add_rectangle(
+            dx,
+            dy,
+            origin=origin,
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group="rectangle",
+        )
+        .generate_mesh(max_cellsize=1.0, engine=engine)
+    )
+    assert mesh.n_points == n_points_ref
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_point_group(mesh) == "rectangle").sum() == n_rectangle_points
+    assert (pvg.get_cell_group(mesh) == "rectangle").sum() == n_rectangle_cells
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), polygon.area - (dx * dy if hole else 0.0))
+
+
+@pytest.mark.parametrize(
+    "engine, dx, origin, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_square_points, n_square_cells",
+    [
+        pytest.param("gmsh", 2.0, (1.0, 1.0), False, 0.5, 1.0, False, 65, 132, 31, 64, id="base"),
+        pytest.param("gmsh", 1.0, (1.0, 1.0), False, 0.5, 1.0, False, 47, 88, 12, 26, id="dx=1.0"),
+        pytest.param("gmsh", 2.0, None, False, 0.5, 1.0, False, 69, 134, 31, 64, id="origin=None"),
+        pytest.param("gmsh", 2.0, (1.0, 1.0), True, 0.5, 1.0, False, 65, 132, 16, 20, id="boundary_only=True"),
+        pytest.param("gmsh", 2.0, (1.0, 1.0), False, None, 1.0, False, 40, 74, 12, 26, id="cellsize=None"),
+        pytest.param("gmsh", 2.0, (1.0, 1.0), False, [0.3, 0.4, 0.5, 0.6], 1.0, False, 82, 170, 44, 90, id="cellsize=array"),
+        pytest.param("gmsh", 2.0, (1.0, 1.0), False, 0.5, 1.05, False, 91, 168, 31, 64, id="growth=1.05"),
+        pytest.param("gmsh", 2.0, (1.0, 1.0), False, 0.5, 1.0, True, 50, 88, 16, 20, id="hole=True"),
+        pytest.param("occ", 2.0, (1.0, 1.0), False, 0.5, 1.0, False, 59, 120, 31, 64, id="engine=occ"),
+    ],
+)
+def test_delaunay2d_add_square(engine, dx, origin, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_square_points, n_square_cells, request):
+    """Test the method pvgridder.DelaunayMesh2D.add_square."""
+    polygon = request.getfixturevalue("polygon_square")
+    mesh = (
+        pvg.DelaunayMesh2D(polygon)
+        .add_square(
+            dx,
+            origin=origin,
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group="square",
+        )
+        .generate_mesh(max_cellsize=1.0, engine=engine)
+    )
+    assert mesh.n_points == n_points_ref
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_point_group(mesh) == "square").sum() == n_square_points
+    assert (pvg.get_cell_group(mesh) == "square").sum() == n_square_cells
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), polygon.area - (dx**2 if hole else 0.0))
+
+
+@pytest.mark.parametrize(
     "min_cellsize, max_cellsize, celltype, algorithm, optimization, engine, n_points_ref, n_cells_ref",
     [
         pytest.param(0.1, 2.0, "triangle", 6, None, "gmsh", 99, 164, id="base"),
