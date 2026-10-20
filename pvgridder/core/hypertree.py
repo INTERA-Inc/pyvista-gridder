@@ -866,6 +866,7 @@ class QuadTree(MeshBase):
         if self._boundary_polygon is not None:
             mask = contains_xy(self._boundary_polygon, centers[:, 0], centers[:, 1])
             mesh = mesh.extract_cells(mask)
+            centers = centers[mask]
 
         # Add cell centers
         mesh.cell_data["CellCenter"] = centers
