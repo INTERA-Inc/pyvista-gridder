@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Optional
 
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
     from typing_extensions import Self
 
     from .._typing import (
@@ -385,6 +385,44 @@ class QuadTree(MeshBase):
             mesh = pv.PolyData(np.atleast_2d(np.append(point[:2], 0.0)))
             item = MeshItem(mesh, group=group)
             self.items.append(item)
+
+        return self
+
+    def add_points(
+        self,
+        points: ArrayLike,
+        *,
+        depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Refine cells containing multiple points.
+
+        Parameters
+        ----------
+        points : ArrayLike
+            Two-dimensional array of point coordinates, one point per row.
+        depth : int, optional
+            Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
+        group : str, optional
+            Group name applied to all points.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        points = np.asanyarray(points)
+
+        if points.ndim != 2:
+            raise ValueError("points must be a two-dimensional array")
+
+        for point in points:
+            self.add_point(point, depth=depth, cellsize=cellsize, group=group)
 
         return self
 

@@ -186,6 +186,53 @@ class DelaunayMesh2D(MeshBase):
         )
         return self
 
+    def add_points(
+        self,
+        points: ArrayLike,
+        *,
+        cellsize: Optional[float] = None,
+        constraint: int = 0,
+        growth: Optional[float] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Embed multiple points in the mesh.
+
+        Parameters
+        ----------
+        points : ArrayLike
+            Two-dimensional array of point coordinates, one point per row.
+        cellsize : scalar, optional
+            Target cell size at each point.
+        constraint : int, default 0
+            Number of constraint points to add around each point.
+        growth : float, optional
+            Geometric cell size growth factor away from each point.
+        group : str, optional
+            Group name applied to all points.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        points = np.asanyarray(points)
+
+        if points.ndim != 2:
+            raise ValueError("points must be a two-dimensional array")
+
+        for point in points:
+            self.add_point(
+                point,
+                cellsize=cellsize,
+                constraint=constraint,
+                growth=growth,
+                group=group,
+            )
+
+        return self
+
     def add_polygon(
         self,
         polygon: PolygonLike,

@@ -148,6 +148,42 @@ def test_quadtree_add_point(point, depth, cellsize, group, n_cells_ref, n_point_
 
 
 @pytest.mark.parametrize(
+    "points, depth, cellsize, group, n_cells_ref, n_point_cells",
+    [
+        pytest.param(np.array([[0.5, 0.5], [1.6, 1.6]]), 1, None, "points", 15, 5, id="base"),
+        pytest.param(np.array([[0.5, 0.5, 0.0], [1.6, 1.6, 0.0]]), 1, None, "points", 15, 5, id="points=3d"),
+        pytest.param(np.empty((0, 2)), 1, None, "points", 9, 0, id="points=empty"),
+        pytest.param(np.array([[0.5, 0.5], [1.6, 1.6]]), 2, None, "points", 30, 5, id="depth=2"),
+        pytest.param(np.array([[0.5, 0.5], [1.6, 1.6]]), None, None, "points", 30, 5, id="depth=None"),
+        pytest.param(np.array([[0.5, 0.5], [1.6, 1.6]]), 1, 0.25, "points", 30, 5, id="cellsize=0.25"),
+        pytest.param(np.array([[0.5, 0.5], [1.6, 1.6]]), 1, None, None, 15, 0, id="group=None"),
+    ],
+)
+def test_quadtree_add_points(points, depth, cellsize, group, n_cells_ref, n_point_cells, request):
+    """Test the method pvgridder.QuadTree.add_points."""
+    bmesh = request.getfixturevalue("structured_square")
+    qtree = pvg.QuadTree(bmesh, max_depth=2)
+    assert qtree.add_points(points, depth=depth, cellsize=cellsize, group=group) is qtree
+    mesh = qtree.generate_mesh(balance=False)
+    reference = pvg.QuadTree(bmesh, max_depth=2)
+
+    for point in points:
+        reference.add_point(point, depth=depth, cellsize=cellsize, group=group)
+
+    reference = reference.generate_mesh(balance=False)
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "points").sum() == n_point_cells
+    assert np.array_equal(mesh.points, reference.points)
+    assert np.array_equal(mesh.cells, reference.cells)
+
+    cell_group = pvg.get_cell_group(mesh)
+    cell_group_ref = pvg.get_cell_group(reference)
+    assert cell_group is not None
+    assert cell_group_ref is not None
+    assert np.array_equal(cell_group, cell_group_ref)
+
+
+@pytest.mark.parametrize(
     "boundary_only, depth, cellsize, group, n_cells_ref, n_polygon_cells",
     [
         pytest.param(False, 1, None, "polygon", 36, 12, id="base"),

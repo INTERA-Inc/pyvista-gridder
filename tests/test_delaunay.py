@@ -104,6 +104,44 @@ def test_delaunay2d_add_point(engine, cellsize, constraint, growth, n_points_ref
 
 
 @pytest.mark.parametrize(
+    "points, engine, cellsize, constraint, growth, n_points_ref, n_cells_ref, n_point_cells",
+    [
+        pytest.param(np.array([[1.0, 1.0], [3.0, 3.0]]), "gmsh", 0.4, 0, None, 47, 78, 2, id="base"),
+        pytest.param(np.array([[1.0, 1.0, 0.0], [3.0, 3.0, 0.0]]), "gmsh", 0.4, 0, None, 47, 78, 2, id="points=3d"),
+        pytest.param(np.empty((0, 2)), "gmsh", 0.4, 0, None, 31, 44, 0, id="points=empty"),
+        pytest.param(np.array([[1.0, 1.0], [3.0, 3.0]]), "occ", 0.4, 0, None, 44, 72, 2, id="engine=occ"),
+        pytest.param(np.array([[1.0, 1.0], [3.0, 3.0]]), "gmsh", 0.2, 0, None, 56, 96, 2, id="cellsize=0.2"),
+        pytest.param(np.array([[1.0, 1.0], [3.0, 3.0]]), "gmsh", 0.4, 6, None, 69, 122, 2, id="constraint=6"),
+        pytest.param(np.array([[1.0, 1.0], [3.0, 3.0]]), "gmsh", 0.4, 0, 1.05, 125, 214, 2, id="growth=1.05"),
+    ],
+)
+def test_delaunay2d_add_points(points, engine, cellsize, constraint, growth, n_points_ref, n_cells_ref, n_point_cells, request):
+    """Test the method pvgridder.DelaunayMesh2D.add_points."""
+    polygon = request.getfixturevalue("polygon_square")
+    delaunay = pvg.DelaunayMesh2D(polygon)
+    assert delaunay.add_points(points, cellsize=cellsize, constraint=constraint, growth=growth, group="points") is delaunay
+    mesh = delaunay.generate_mesh(max_cellsize=1.0, engine=engine)
+    reference = pvg.DelaunayMesh2D(polygon)
+
+    for point in points:
+        reference.add_point(point, cellsize=cellsize, constraint=constraint, growth=growth, group="points")
+
+    reference = reference.generate_mesh(max_cellsize=1.0, engine=engine)
+    assert mesh.n_points == n_points_ref
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "points").sum() == n_point_cells
+    assert (pvg.get_point_group(mesh) == "points").sum() == n_point_cells
+    assert np.array_equal(mesh.points, reference.points)
+    assert np.array_equal(mesh.cells, reference.cells)
+
+    cell_group = pvg.get_cell_group(mesh)
+    cell_group_ref = pvg.get_cell_group(reference)
+    assert cell_group is not None
+    assert cell_group_ref is not None
+    assert np.array_equal(cell_group, cell_group_ref)
+
+
+@pytest.mark.parametrize(
     "engine, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_polygon_points, n_polygon_cells",
     [
         pytest.param("gmsh", False, 0.5, 1.0, False, 65, 132, 31, 64, id="base"),
