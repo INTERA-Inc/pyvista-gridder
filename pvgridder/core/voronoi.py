@@ -332,7 +332,7 @@ class VoronoiMesh2D(MeshBase):
         infinity: Optional[float] = None,
         min_length: float = 1.0e-4,
         tolerance: float = 1.0e-8,
-        qhull_options: str = "Qc QJ",
+        qhull_options: Optional[str] = None,
         orientation: Literal["CCW", "CW"] = "CCW",
     ) -> pv.UnstructuredGrid:
         """
@@ -346,7 +346,7 @@ class VoronoiMesh2D(MeshBase):
             Set the minimum length of polygons' edges.
         tolerance : scalar, default 1.0e-8
             Set merging tolerance of duplicate points.
-        qhull_options : str, default 'Qc QJ'
+        qhull_options : str, optional
             Additional options to pass to Qhull performing the Voronoi tessellation.
             See <http://www.qhull.org/html/qh-optq.htm#qhull> for more details.
         orientation : {'CCW', 'CW'}, default 'CCW'
@@ -389,7 +389,7 @@ class VoronoiMesh2D(MeshBase):
         priority_array = np.full(mesh.n_cells, -np.inf)
         active = np.ones(len(points), dtype=bool)
 
-        for i, item in enumerate(items):
+        for item in items:
             mesh_a = item.mesh
             points_ = get_cell_centers(mesh_a)
 
