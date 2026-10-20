@@ -710,26 +710,59 @@ class DelaunayMesh2D(MeshBase):
 
             # Convert to PyVista
             node_tags, coordinates, _ = gmsh.model.mesh.getNodes()
-            element_types, _, element_nodes = gmsh.model.mesh.getElements(2)
+            element_types, element_tags, element_nodes = gmsh.model.mesh.getElements()
+
+            group_ids = {self.default_group: 0}
+            element_groups = {}
+
+            for dim, tag in gmsh.model.getPhysicalGroups():
+                group = gmsh.model.getPhysicalName(dim, tag)
+                gid = group_ids.setdefault(group, len(group_ids))
+
+                if dim < 2 and group == self.default_group:
+                    continue
+
+                for entity in gmsh.model.getEntitiesForPhysicalGroup(dim, tag):
+                    _, entity_elements, _ = gmsh.model.mesh.getElements(dim, entity)
+
+                    for tags in entity_elements:
+                        element_groups.update(dict.fromkeys(tags, gid))
 
             max_tag = int(np.max(node_tags) if len(node_tags) > 0 else 0)
             tag_to_idx = np.empty(max_tag + 1, dtype=np.int64)
             tag_to_idx[node_tags] = np.arange(len(node_tags))
             cells_dict = {}
+            cell_group_blocks = {}
 
-            for type_, nodes in zip(element_types, element_nodes):
-                if type_ in _gmsh_to_pyvista_type:
-                    n = 3 if type_ == 2 else 4
+            for type_, tags, nodes in zip(element_types, element_tags, element_nodes):
+                vtk_type = _gmsh_to_pyvista_type.get(type_)
+                
+                if vtk_type:
+                    n = gmsh.model.mesh.getElementProperties(type_)[3]
                     mapped_nodes = tag_to_idx[np.reshape(nodes, (-1, n))]
-                    cells_dict.setdefault(_gmsh_to_pyvista_type[type_], []).append(
-                        mapped_nodes
+                    cell_groups = np.array(
+                        [element_groups.get(tag, 0) for tag in tags], dtype=int
                     )
+
+                    if type_ in {1, 15}:
+                        keep = np.array([tag in element_groups for tag in tags])
+                        mapped_nodes = mapped_nodes[keep]
+                        cell_groups = cell_groups[keep]
+
+                    if not len(mapped_nodes):
+                        continue
+
+                    cells_dict.setdefault(vtk_type, []).append(mapped_nodes)
+                    cell_group_blocks.setdefault(vtk_type, []).append(cell_groups)
 
             cells = {k: np.vstack(v) for k, v in cells_dict.items()}
             mesh = pv.UnstructuredGrid(cells, np.reshape(coordinates, (-1, 3)))
+            mesh.cell_data["CellGroup"] = np.concatenate(
+                [np.concatenate(cell_group_blocks[k]) for k in cells]
+            )
+            mesh.user_dict["CellGroup"] = group_ids.copy()
 
             # Map point groups to point data array
-            group_ids = {group: i for i, group in enumerate(groups)}
             default_id = group_ids.get(self.default_group, 0)
             tag_to_gid = {v: group_ids[k] for k, v in groups.items()}
             point_array = np.full(len(node_tags), default_id, dtype=int)
@@ -849,6 +882,8 @@ class DelaunayMesh2D(MeshBase):
 
 
 _gmsh_to_pyvista_type = {
+    1: pv.CellType.LINE,
     2: pv.CellType.TRIANGLE,
     3: pv.CellType.QUAD,
+    15: pv.CellType.VERTEX,
 }
