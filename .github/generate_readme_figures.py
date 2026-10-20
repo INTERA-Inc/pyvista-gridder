@@ -16,7 +16,7 @@ mesh = (
     .generate_mesh()
 )
 
-p = pv.Plotter(off_screen=True)
+p = pv.Plotter(off_screen=True, image_scale=2)
 p.theme.font.color = "#808080"
 p.add_mesh(
     mesh,
@@ -47,7 +47,7 @@ mesh = (
     .generate_mesh()
 )
 
-p = pv.Plotter(off_screen=True)
+p = pv.Plotter(off_screen=True, image_scale=2)
 p.theme.font.color = "#808080"
 p.add_mesh(
     mesh,
@@ -122,7 +122,7 @@ mesh = (
     .generate_mesh()
 )
 
-p = pv.Plotter(off_screen=True)
+p = pv.Plotter(off_screen=True, image_scale=2)
 p.theme.font.color = "#808080"
 p.add_mesh(
     mesh,
