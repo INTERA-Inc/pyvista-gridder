@@ -71,7 +71,14 @@ class MeshStack2D(MeshStackBase):
             raise ValueError("invalid mesh, input mesh should be a line or a polyline")
 
         else:
-            lines = split_lines(mesh)[0]
+            segments = np.column_stack(
+                (
+                    np.full(mesh.n_points - 1, 2),
+                    np.arange(mesh.n_points - 1),
+                    np.arange(1, mesh.n_points),
+                )
+            ).ravel()
+            lines = mesh.copy() if np.array_equal(mesh.lines, segments) else split_lines(mesh)[0]
 
         super().__init__(lines, axis, bottom_up, default_group, ignore_groups)
 
@@ -82,7 +89,9 @@ class MeshStack2D(MeshStackBase):
         Returns
         -------
         pyvista.StructuredGrid
-            Stacked mesh.
+            Stacked mesh. Inherited ``CellCenter`` data preserves the base-line
+            coordinates and interpolates the stacking-axis coordinate from the
+            mean line-segment heights at each sublayer midpoint.
 
         """
         plane = "yx" if self.axis == 0 else "xy" if self.axis == 1 else "xz"
@@ -260,6 +269,7 @@ class MeshStack3D(MeshStackBase):
                 resolution,
                 method,
                 invert_polyhedron_faces=invert_polyhedron_faces,
+                axis=self.axis,
             )
         )
 
