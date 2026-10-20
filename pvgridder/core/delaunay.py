@@ -734,8 +734,10 @@ class DelaunayMesh2D(MeshBase):
             max_tag = int(np.max(node_tags) if len(node_tags) > 0 else 0)
             tag_to_idx = np.empty(max_tag + 1, dtype=np.int64)
             tag_to_idx[node_tags] = np.arange(len(node_tags))
-            cells_dict = {}
-            cell_group_blocks = {}
+
+            # Map cell groups to cell array
+            cells_dict, cell_offset = {}, 0
+            cell_array = np.empty(sum(len(tags) for tags in element_tags), dtype=int)
 
             for type_, tags, nodes in zip(element_types, element_tags, element_nodes):
                 vtk_type = _gmsh_to_pyvista_type.get(type_)
@@ -750,19 +752,17 @@ class DelaunayMesh2D(MeshBase):
                         mapped_nodes = mapped_nodes[keep]
                         cell_groups = cell_groups[keep]
 
-                    np.maximum(cell_groups, 0, out=cell_groups)
-
                     if not len(mapped_nodes):
                         continue
 
                     cells_dict.setdefault(vtk_type, []).append(mapped_nodes)
-                    cell_group_blocks.setdefault(vtk_type, []).append(cell_groups)
+                    cell_end = cell_offset + len(mapped_nodes)
+                    np.maximum(cell_groups, 0, out=cell_array[cell_offset:cell_end])
+                    cell_offset = cell_end
 
             cells = {k: np.vstack(v) for k, v in cells_dict.items()}
             mesh = pv.UnstructuredGrid(cells, np.reshape(coordinates, (-1, 3)))
-            mesh.cell_data["CellGroup"] = np.concatenate(
-                [np.concatenate(cell_group_blocks[k]) for k in cells]
-            )
+            mesh.cell_data["CellGroup"] = cell_array[:cell_offset]
             mesh.user_dict["CellGroup"] = group_ids.copy()
 
             # Map point groups to point data array
@@ -804,7 +804,7 @@ class DelaunayMesh2D(MeshBase):
 
             mesh.point_data["PointGroup"] = point_array
             mesh.user_dict["PointGroup"] = group_ids
-            mesh.set_active_scalars("PointGroup", preference="point")
+            mesh.set_active_scalars("CellGroup", preference="cell")
 
         finally:
             gmsh.clear()
