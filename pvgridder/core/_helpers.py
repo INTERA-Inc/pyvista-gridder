@@ -481,12 +481,12 @@ def generate_volume_from_two_surfaces(
         offsets = surface.cell_offsets
         connectivity = surface.cell_connectivity
         counts = np.diff(offsets)
-        lower = np.add.reduceat(
-            surface_a.points[connectivity, axis], offsets[:-1]
-        ) / counts
-        upper = np.add.reduceat(
-            surface_b.points[connectivity, axis], offsets[:-1]
-        ) / counts
+        lower = (
+            np.add.reduceat(surface_a.points[connectivity, axis], offsets[:-1]) / counts
+        )
+        upper = (
+            np.add.reduceat(surface_b.points[connectivity, axis], offsets[:-1]) / counts
+        )
         fractions = perc.ravel()
         midpoints = 0.5 * (fractions[:-1] + fractions[1:])
 
@@ -640,7 +640,9 @@ def translate(
         )
 
         if "CellCenter" in mesh.cell_data:
-            mesh.cell_data["CellCenter"] = np.asarray(mesh.cell_data["CellCenter"]) + vector
+            mesh.cell_data["CellCenter"] = (
+                np.asarray(mesh.cell_data["CellCenter"]) + vector
+            )
 
     return mesh
 

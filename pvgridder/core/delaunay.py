@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 
 if TYPE_CHECKING:
+
     class _GmshGeometryEngine(Protocol):
         """Geometry methods shared by Gmsh's engines."""
 
@@ -639,7 +640,12 @@ class DelaunayMesh2D(MeshBase):
 
                 for pointa, pointb in zip(points[:-1], points[1:]):
                     self._add_curve(
-                        engine_, pointa, pointb, curve_tags, point_tags, sizes,
+                        engine_,
+                        pointa,
+                        pointb,
+                        curve_tags,
+                        point_tags,
+                        sizes,
                         default_size,
                     )
 
@@ -649,7 +655,12 @@ class DelaunayMesh2D(MeshBase):
             boundary_curves = set()
             surfaces = [
                 self._add_plane_surface(
-                    engine_, face, curve_tags, point_tags, sizes, default_size,
+                    engine_,
+                    face,
+                    curve_tags,
+                    point_tags,
+                    sizes,
+                    default_size,
                     boundary_curves,
                 )
                 for face in faces
@@ -672,9 +683,7 @@ class DelaunayMesh2D(MeshBase):
 
                 if item.cellsize is not None:
                     cell_sizes = np.asarray(item.cellsize, dtype=float)
-                    lc = float(
-                        cell_sizes if cell_sizes.ndim == 0 else cell_sizes.min()
-                    )
+                    lc = float(cell_sizes if cell_sizes.ndim == 0 else cell_sizes.min())
 
                 elif isinstance(geometry, Polygon) and getattr(
                     item, "cell_sizes", None
@@ -703,7 +712,7 @@ class DelaunayMesh2D(MeshBase):
                         for edge, tag in curve_tags.items()
                         if feature_boundary.covers(LineString(edge))
                     ]
-                    
+
                     if not feature_curves:
                         gmsh.model.mesh.field.remove(distance_field)
                         continue
@@ -714,9 +723,7 @@ class DelaunayMesh2D(MeshBase):
 
                 growth_field = gmsh.model.mesh.field.add("MathEval")
                 gradient = float(item.growth) - 1.0
-                expression = (
-                    f"{lc:.16g} + {gradient:.16g} * F{distance_field}"
-                )
+                expression = f"{lc:.16g} + {gradient:.16g} * F{distance_field}"
                 gmsh.model.mesh.field.setString(growth_field, "F", expression)
                 growth_fields.append(growth_field)
 
@@ -888,7 +895,7 @@ class DelaunayMesh2D(MeshBase):
 
             for type_, tags, nodes in zip(element_types, element_tags, element_nodes):
                 vtk_type = _gmsh_to_pyvista_type.get(type_)
-                
+
                 if vtk_type:
                     n = gmsh.model.mesh.getElementProperties(type_)[3]
                     mapped_nodes = tag_to_idx[np.reshape(nodes, (-1, n))]

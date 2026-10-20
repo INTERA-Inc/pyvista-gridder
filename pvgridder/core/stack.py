@@ -78,7 +78,11 @@ class MeshStack2D(MeshStackBase):
                     np.arange(1, mesh.n_points),
                 )
             ).ravel()
-            lines = mesh.copy() if np.array_equal(mesh.lines, segments) else split_lines(mesh)[0]
+            lines = (
+                mesh.copy()
+                if np.array_equal(mesh.lines, segments)
+                else split_lines(mesh)[0]
+            )
 
         super().__init__(lines, axis, bottom_up, default_group, ignore_groups)
 

@@ -366,5 +366,5 @@ def polygon_square_with_hole():
     """Create a square polygon with a hole."""
     return Polygon(
         [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)],
-        holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]]
+        holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]],
     )

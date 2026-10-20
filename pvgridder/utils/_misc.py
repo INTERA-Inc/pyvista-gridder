@@ -1089,7 +1089,9 @@ def merge(
                         k: np.concatenate(
                             (
                                 v.reshape((*shape_a, *v.shape[1:]), order="F"),
-                                mesh_b.cell_data[k].reshape((*shape_b, *v.shape[1:]), order="F"),
+                                mesh_b.cell_data[k].reshape(
+                                    (*shape_b, *v.shape[1:]), order="F"
+                                ),
                             ),
                             axis=axis,
                         ).reshape((-1, *v.shape[1:]), order="F")
