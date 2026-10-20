@@ -383,8 +383,15 @@ class MeshStackBase(MeshBase):
                 f"invalid mesh or axis, dimension along axis {axis} should be 1 (got {mesh.dimensions[axis]})"
             )
 
+        mesh = mesh.copy()
+
+        if "CellCenter" not in mesh.cell_data:
+            centers = np.asarray(mesh.cell_centers().points)
+            centers[:, axis] = 0.0
+            mesh.cell_data["CellCenter"] = centers
+
         super().__init__(default_group, ignore_groups)
-        self._mesh = mesh.copy()
+        self._mesh = mesh
         self._axis = axis
         self._bottom_up = bottom_up
         self._transition_flag = False

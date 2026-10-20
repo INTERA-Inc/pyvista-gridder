@@ -20,6 +20,10 @@ def test_voronoi2d_init(axis, preference, default_group, ignore_groups, n_cells_
 	"""Test the initialization of the VoronoiMesh2D class."""
 	bmesh = request.getfixturevalue("structured_square").copy()
 	bmesh.points = np.roll(bmesh.points, axis - 2, axis=1)
+
+	if "CellCenter" in bmesh.cell_data:
+		bmesh.cell_data["CellCenter"] = np.roll(bmesh.cell_data["CellCenter"], axis - 2, axis=1)
+
 	voronoi = pvg.VoronoiMesh2D(
 		bmesh,
 		axis=axis,

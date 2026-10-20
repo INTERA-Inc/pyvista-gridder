@@ -93,6 +93,7 @@ def get_cell_connectivity(
 def get_cell_centers(
     mesh: DataSetLike,
     polyhedron_method: Optional[Literal["box", "geometric", "tetra"]] = None,
+    ignore_cell_data: bool = False,
 ) -> NDArray:
     """
     Get the cell centers of a mesh.
@@ -109,6 +110,8 @@ def get_cell_centers(
          - 'tetra': weighted tetrahedral decomposition (as > VTK 9.5.0)
 
         If None, use current VTK's implementation.
+    ignore_cell_data : bool, default False
+        If True, ignore the cached cell centers in the cell data and recalculate them.
 
     Returns
     -------
@@ -118,6 +121,9 @@ def get_cell_centers(
     """
     from pyvista.core.cell import _get_irregular_cells
     from vtk import __version__ as vtk_version
+
+    if "CellCenter" in mesh.cell_data and not ignore_cell_data:
+        return np.array(mesh.cell_data["CellCenter"])
 
     centers = np.full((mesh.n_cells, 3), np.nan)
     ghost_cells = (

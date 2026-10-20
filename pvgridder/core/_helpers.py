@@ -639,6 +639,9 @@ def translate(
             mesh.translate(vector),
         )
 
+        if "CellCenter" in mesh.cell_data:
+            mesh.cell_data["CellCenter"] = np.asarray(mesh.cell_data["CellCenter"]) + vector
+
     return mesh
 
 
