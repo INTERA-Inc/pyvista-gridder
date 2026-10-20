@@ -218,9 +218,9 @@ def test_voronoi2d_generate_mesh(infinity, min_length, tolerance, qhull_options,
 	assert mesh.n_points == n_points_ref
 	assert mesh.n_cells == n_cells_ref
 	assert (pvg.get_cell_group(mesh) == "default").sum() == n_cells_ref
-	assert np.allclose(mesh.cell_data["X"], bmesh.cell_centers().points[:, 0])
-	assert np.allclose(mesh.cell_data["Y"], bmesh.cell_centers().points[:, 1])
-	assert np.allclose(mesh.cell_data["Z"], 0.0)
+	assert np.allclose(mesh.cell_data["CellCenter"][:, 0], bmesh.cell_centers().points[:, 0])
+	assert np.allclose(mesh.cell_data["CellCenter"][:, 1], bmesh.cell_centers().points[:, 1])
+	assert np.allclose(mesh.cell_data["CellCenter"][:, 2], 0.0)
 	assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 9.0)
 
 

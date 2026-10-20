@@ -506,9 +506,7 @@ class VoronoiMesh2D(MeshBase):
 
         # Add coordinates of Voronoi points
         voronoi_points = np.insert(voronoi_points, self.axis, 0.0, axis=1)
-        mesh.cell_data["X"] = voronoi_points[:, 0]
-        mesh.cell_data["Y"] = voronoi_points[:, 1]
-        mesh.cell_data["Z"] = voronoi_points[:, 2]
+        mesh.cell_data["CellCenter"] = voronoi_points
 
         # Fuse cells, if any
         if self.fuse_cells:
