@@ -713,7 +713,10 @@ class DelaunayMesh2D(MeshBase):
             element_types, element_tags, element_nodes = gmsh.model.mesh.getElements()
 
             group_ids = {self.default_group: 0}
-            element_groups = {}
+            max_element_tag = max(
+                (int(np.max(tags, initial=0)) for tags in element_tags), default=0
+            )
+            element_groups = np.full(max_element_tag + 1, -1, dtype=int)
 
             for dim, tag in gmsh.model.getPhysicalGroups():
                 group = gmsh.model.getPhysicalName(dim, tag)
@@ -726,7 +729,7 @@ class DelaunayMesh2D(MeshBase):
                     _, entity_elements, _ = gmsh.model.mesh.getElements(dim, entity)
 
                     for tags in entity_elements:
-                        element_groups.update(dict.fromkeys(tags, gid))
+                        element_groups[tags] = gid
 
             max_tag = int(np.max(node_tags) if len(node_tags) > 0 else 0)
             tag_to_idx = np.empty(max_tag + 1, dtype=np.int64)
@@ -740,14 +743,14 @@ class DelaunayMesh2D(MeshBase):
                 if vtk_type:
                     n = gmsh.model.mesh.getElementProperties(type_)[3]
                     mapped_nodes = tag_to_idx[np.reshape(nodes, (-1, n))]
-                    cell_groups = np.array(
-                        [element_groups.get(tag, 0) for tag in tags], dtype=int
-                    )
+                    cell_groups = element_groups[tags]
 
                     if type_ in {1, 15}:
-                        keep = np.array([tag in element_groups for tag in tags])
+                        keep = cell_groups >= 0
                         mapped_nodes = mapped_nodes[keep]
                         cell_groups = cell_groups[keep]
+
+                    np.maximum(cell_groups, 0, out=cell_groups)
 
                     if not len(mapped_nodes):
                         continue
