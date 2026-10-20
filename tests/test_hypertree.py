@@ -69,28 +69,6 @@ def test_quadtree_init_cell_groups(default_group, n_cells_ref, n_layer1_cells, n
 
 
 @pytest.mark.parametrize(
-    "tolerance, balance, conformal, n_cells_ref, n_connections_ref",
-    [
-        pytest.param(1.0e-8, False, False, 24, 32, id="base"),
-        pytest.param(1.0e-6, False, False, 24, 32, id="tolerance=1.0e-6"),
-        pytest.param(1.0e-8, True, False, 36, 40, id="balance=True"),
-        pytest.param(1.0e-8, False, True, 24, 48, id="conformal=True"),
-    ],
-)
-def test_quadtree_generate_mesh(tolerance, balance, conformal, n_cells_ref, n_connections_ref):
-    """Test the method pvgridder.QuadTree.generate_mesh."""
-    bmesh = pvg.Square(3.0, resolution=3)
-    mesh = (
-        pvg.QuadTree(bmesh, max_depth=2)
-        .add_point((1.5, 1.5))
-        .generate_mesh(tolerance=tolerance, balance=balance, conformal=conformal)
-    )
-    assert mesh.n_cells == n_cells_ref
-    assert pvg.get_connectivity(mesh).n_cells == n_connections_ref
-    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 9.0)
-
-
-@pytest.mark.parametrize(
     "depth, cellsize, n_cells_ref",
     [
         pytest.param(0, None, 5, id="base"),
@@ -285,3 +263,25 @@ def test_quadtree_add_square(dx, origin, boundary_only, depth, cellsize, group, 
     )
     assert mesh.n_cells == n_cells_ref
     assert (pvg.get_cell_group(mesh) == "square").sum() == n_square_cells
+
+
+@pytest.mark.parametrize(
+    "tolerance, balance, conformal, n_cells_ref, n_connections_ref",
+    [
+        pytest.param(1.0e-8, False, False, 24, 32, id="base"),
+        pytest.param(1.0e-6, False, False, 24, 32, id="tolerance=1.0e-6"),
+        pytest.param(1.0e-8, True, False, 36, 40, id="balance=True"),
+        pytest.param(1.0e-8, False, True, 24, 48, id="conformal=True"),
+    ],
+)
+def test_quadtree_generate_mesh(tolerance, balance, conformal, n_cells_ref, n_connections_ref):
+    """Test the method pvgridder.QuadTree.generate_mesh."""
+    bmesh = pvg.Square(3.0, resolution=3)
+    mesh = (
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_point((1.5, 1.5))
+        .generate_mesh(tolerance=tolerance, balance=balance, conformal=conformal)
+    )
+    assert mesh.n_cells == n_cells_ref
+    assert pvg.get_connectivity(mesh).n_cells == n_connections_ref
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 9.0)

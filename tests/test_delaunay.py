@@ -32,6 +32,47 @@ def test_delaunay2d_init(polygon, cellsize, default_group, n_points_ref, n_cells
 
 
 @pytest.mark.parametrize(
+    "engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_circle_points, n_circle_cells",
+    [
+        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.0, False, 60, 128, 27, 65, id="base"),
+        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, False, 64, 134, 28, 67, id="center=(3.0,3.0)"),
+        pytest.param("gmsh", (2.0, 2.0), True, 0.5, 1.0, False, 60, 128, 13, 26, id="boundary_only=True"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.2, None, False, 167, 380, 123, 276, id="cellsize=None"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.2, 1.0, False, 167, 380, 123, 276, id="cellsize=0.2"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.05, False, 107, 206, 27, 65, id="growth=1.05"),
+        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.0, True, 46, 89, 13, 26, id="hole=True"),
+        pytest.param("gmsh", (2.0, 2.0), False, None, 1.0, True, 162, 372, 64, 128, id="hole=True,cellsize=None"),
+    ]
+)
+def test_delaunay2d_add_circle(engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_circle_points, n_circle_cells, request):
+    """Test the method pvgridder.DelaunayMesh2D.add_circle."""
+    polygon = request.getfixturevalue("polygon_square") 
+    mesh = (
+        pvg.DelaunayMesh2D(polygon)
+        .add_circle(
+            1.0,
+            center=center,
+            boundary_only=boundary_only,
+            cellsize=cellsize,
+            growth=growth,
+            hole=hole,
+            group="circle",
+        )
+        .generate_mesh(max_cellsize=1.0, engine=engine)
+    )
+    assert mesh.n_points == n_points_ref
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_point_group(mesh) == "circle").sum() == n_circle_points
+    assert (pvg.get_cell_group(mesh) == "circle").sum() == n_circle_cells
+
+    if hole:
+        radius = 1.0
+        resolution = max(np.ceil(2.0 * np.pi * radius / cellsize), 3) if cellsize else 64
+        unit_circle = pvg.Circle(resolution=int(resolution)).compute_cell_sizes()
+        assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), polygon.area - unit_circle.cell_data["Area"].sum())
+
+
+@pytest.mark.parametrize(
     "engine, cellsize, constraint, growth, n_points_ref, n_cells_ref",
     [
         pytest.param("gmsh", 0.4, 0, 1.0, 42, 67, id="base"),
@@ -125,47 +166,6 @@ def test_delaunay2d_add_polyline(engine, cellsize, growth, n_points_ref, n_cells
     assert mesh.n_cells == n_cells_ref
     assert (pvg.get_point_group(mesh) == "line").sum() == n_line_points
     assert (pvg.get_cell_group(mesh) == "line").sum() == n_line_cells
-
-
-@pytest.mark.parametrize(
-    "engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_circle_points, n_circle_cells",
-    [
-        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.0, False, 60, 128, 27, 65, id="base"),
-        pytest.param("gmsh", (3.0, 3.0), False, 0.5, 1.0, False, 64, 134, 28, 67, id="center=(3.0,3.0)"),
-        pytest.param("gmsh", (2.0, 2.0), True, 0.5, 1.0, False, 60, 128, 13, 26, id="boundary_only=True"),
-        pytest.param("gmsh", (2.0, 2.0), False, 0.2, None, False, 167, 380, 123, 276, id="cellsize=None"),
-        pytest.param("gmsh", (2.0, 2.0), False, 0.2, 1.0, False, 167, 380, 123, 276, id="cellsize=0.2"),
-        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.05, False, 107, 206, 27, 65, id="growth=1.05"),
-        pytest.param("gmsh", (2.0, 2.0), False, 0.5, 1.0, True, 46, 89, 13, 26, id="hole=True"),
-        pytest.param("gmsh", (2.0, 2.0), False, None, 1.0, True, 162, 372, 64, 128, id="hole=True,cellsize=None"),
-    ]
-)
-def test_delaunay2d_add_circle(engine, center, boundary_only, cellsize, growth, hole, n_points_ref, n_cells_ref, n_circle_points, n_circle_cells, request):
-    """Test the method pvgridder.DelaunayMesh2D.add_circle."""
-    polygon = request.getfixturevalue("polygon_square") 
-    mesh = (
-        pvg.DelaunayMesh2D(polygon)
-        .add_circle(
-            1.0,
-            center=center,
-            boundary_only=boundary_only,
-            cellsize=cellsize,
-            growth=growth,
-            hole=hole,
-            group="circle",
-        )
-        .generate_mesh(max_cellsize=1.0, engine=engine)
-    )
-    assert mesh.n_points == n_points_ref
-    assert mesh.n_cells == n_cells_ref
-    assert (pvg.get_point_group(mesh) == "circle").sum() == n_circle_points
-    assert (pvg.get_cell_group(mesh) == "circle").sum() == n_circle_cells
-
-    if hole:
-        radius = 1.0
-        resolution = max(np.ceil(2.0 * np.pi * radius / cellsize), 3) if cellsize else 64
-        unit_circle = pvg.Circle(resolution=int(resolution)).compute_cell_sizes()
-        assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), polygon.area - unit_circle.cell_data["Area"].sum())
 
 
 @pytest.mark.parametrize(
