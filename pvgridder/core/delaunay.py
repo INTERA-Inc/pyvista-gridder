@@ -910,6 +910,9 @@ class DelaunayMesh2D(MeshBase):
             gmsh.clear()
             gmsh.finalize()
 
+        # Add cell centers
+        mesh.cell_data["CellCenter"] = mesh.cell_centers().points
+
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
 
     @staticmethod

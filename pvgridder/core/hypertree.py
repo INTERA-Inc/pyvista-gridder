@@ -669,6 +669,7 @@ class QuadTree(MeshBase):
             geometry.SetInputData(htg)
             geometry.Update()
             mesh = pv.wrap(geometry.GetOutput()).cast_to_unstructured_grid()
+            centers = mesh.cell_centers().points
 
         else:
             # Collect all leaf nodes to determine the maximum depth for scaling
@@ -865,6 +866,9 @@ class QuadTree(MeshBase):
         if self._boundary_polygon is not None:
             mask = contains_xy(self._boundary_polygon, centers[:, 0], centers[:, 1])
             mesh = mesh.extract_cells(mask)
+
+        # Add cell centers
+        mesh.cell_data["CellCenter"] = centers
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
 
