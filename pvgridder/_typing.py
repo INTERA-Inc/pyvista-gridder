@@ -6,7 +6,7 @@ from typing import Any, Tuple, Union
 import numpy as np
 import pyvista as pv
 from numpy.typing import NDArray
-from shapely import LineString, Polygon
+from shapely import LineString, Point, Polygon
 from typing_extensions import TypeAlias
 
 
@@ -39,13 +39,19 @@ MatrixLike: TypeAlias = Union[
         np.dtype[Union[np.integer[Any], np.floating[Any]]],
     ],
 ]
+PointLike: TypeAlias = Union[
+    VectorLike,
+    MatrixLike,
+    Point,
+    pv.PolyData,
+]
 PolygonLike: TypeAlias = Union[
     MatrixLike,
-    pv.PolyData,
     Polygon,
+    pv.PolyData,
 ]
 PolyLineLike: TypeAlias = Union[
-    LineString,
     MatrixLike,
+    LineString,
     pv.PolyData,
 ]

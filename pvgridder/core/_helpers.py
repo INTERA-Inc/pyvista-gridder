@@ -104,8 +104,8 @@ def generate_line_from_two_points(
         if points.shape[1] == 3
         else np.column_stack((points, np.zeros(len(points))))
     )
-    mesh = pv.MultipleLines(points)
-    mesh.clear_data()
+    mesh = pv.lines_from_points(points.astype(np.float32))
+    mesh.cell_data["CellCenter"] = 0.5 * (mesh.points[:-1] + mesh.points[1:])
 
     return mesh
 
@@ -141,7 +141,9 @@ def generate_surface_from_two_lines(
     Returns
     -------
     pyvista.StructuredGrid
-        Surface mesh.
+        Surface mesh. Inherited ``CellCenter`` data preserves the base-line
+        coordinates and interpolates the extrusion coordinate from the mean
+        line-segment heights at each sublayer midpoint.
 
     """
     from shapely import LineString, get_coordinates
@@ -217,11 +219,34 @@ def generate_surface_from_two_lines(
     if isinstance(line_a, pv.PolyData):
         reps = (perc.size, 1)
         for k, v in line_a.point_data.items():
-            mesh.point_data[k] = np.tile(v, reps[: v.ndim]).copy()
+            mesh.point_data[k] = (
+                np.repeat(v, perc.size, axis=0)
+                if plane in {"yx", "zx", "zy"}
+                else np.tile(v, reps[: v.ndim])
+            ).copy()
 
         reps = (perc.size - 1, 1)
         for k, v in line_a.cell_data.items():
-            mesh.cell_data[k] = np.tile(v, reps[: v.ndim]).copy()
+            mesh.cell_data[k] = (
+                np.repeat(v, perc.size - 1, axis=0)
+                if plane in {"yx", "zx", "zy"}
+                else np.tile(v, reps[: v.ndim])
+            ).copy()
+
+        if "CellCenter" in line_a.cell_data:
+            axis = "xyz".index(plane[1])
+            lower = 0.5 * (line_points_a[:-1, axis] + line_points_a[1:, axis])
+            upper = 0.5 * (line_points_b[:-1, axis] + line_points_b[1:, axis])
+            fractions = perc.ravel()
+            midpoints = 0.5 * (fractions[:-1] + fractions[1:])
+            heights = lower + midpoints[:, None] * (upper - lower)
+
+            if plane in {"yx", "zx", "zy"}:
+                heights = heights.T
+
+            centers = np.array(mesh.cell_data["CellCenter"], dtype=float)
+            centers[:, axis] = heights.ravel()
+            mesh.cell_data["CellCenter"] = centers
 
     # Handle collapsed cells
     if "vtkGhostType" not in mesh.cell_data:
@@ -241,6 +266,7 @@ def generate_volume_from_two_surfaces(
     resolution: Optional[int | ArrayLike] = None,
     method: Optional[Literal["constant", "log", "log_r"]] = None,
     invert_polyhedron_faces: bool = True,
+    axis: int = 2,
 ) -> pv.StructuredGrid | pv.UnstructuredGrid:
     """
     Generate a volume from two surface meshes.
@@ -264,6 +290,9 @@ def generate_volume_from_two_surfaces(
     invert_polyhedron_faces : bool, default True
         If True, ensure that normal vectors of polyhedron faces point outwards by
         inverting the faces of polyhedral cells if necessary.
+    axis : int, default 2
+        Extrusion axis for updating inherited ``CellCenter`` data. For structured
+        surfaces, determined from the singleton dimension instead.
 
     Returns
     -------
@@ -446,6 +475,37 @@ def generate_volume_from_two_surfaces(
     else:
         raise ValueError(f"could not generate volume from {type(surface_a)}")
 
+    # Add cell centers if they exist in the original surface
+    if "CellCenter" in surface_a.cell_data:
+        surface = surface_a.cast_to_unstructured_grid()
+        offsets = surface.cell_offsets
+        connectivity = surface.cell_connectivity
+        counts = np.diff(offsets)
+        lower = (
+            np.add.reduceat(surface_a.points[connectivity, axis], offsets[:-1]) / counts
+        )
+        upper = (
+            np.add.reduceat(surface_b.points[connectivity, axis], offsets[:-1]) / counts
+        )
+        fractions = perc.ravel()
+        midpoints = 0.5 * (fractions[:-1] + fractions[1:])
+
+        if isinstance(surface_a, pv.StructuredGrid):
+            shape = [max(1, size - 1) for size in surface_a.dimensions]
+            lower = lower.reshape(shape, order="F")
+            upper = upper.reshape(shape, order="F")
+            fraction_shape = [1, 1, 1]
+            fraction_shape[axis] = midpoints.size
+            heights = lower + midpoints.reshape(fraction_shape) * (upper - lower)
+            heights = heights.ravel(order="F")
+
+        else:
+            heights = (lower + midpoints[:, None] * (upper - lower)).ravel()
+
+        centers = np.array(mesh.cell_data["CellCenter"], dtype=float)
+        centers[:, axis] = heights
+        mesh.cell_data["CellCenter"] = centers
+
     # Handle collapsed cells
     if "vtkGhostType" not in mesh.cell_data:
         mesh.cell_data["vtkGhostType"] = np.zeros(mesh.n_cells, dtype=np.uint8)
@@ -578,6 +638,11 @@ def translate(
             Union[pv.StructuredGrid, pv.UnstructuredGrid],
             mesh.translate(vector),
         )
+
+        if "CellCenter" in mesh.cell_data:
+            mesh.cell_data["CellCenter"] = (
+                np.asarray(mesh.cell_data["CellCenter"]) + vector
+            )
 
     return mesh
 

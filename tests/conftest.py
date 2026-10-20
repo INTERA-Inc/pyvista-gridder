@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 import pyvista as pv
+from shapely import Polygon
 
 import pvgridder as pvg
 
@@ -144,15 +145,33 @@ def concave_polyhedron():
 
 
 @pytest.fixture(scope="session")
-def freyberg():
-    """Fixture for Freyberg example mesh."""
-    return pvg.examples.load_freyberg(conformal=True)
+def freyberg_delaunay():
+    """Fixture for Freyberg delaunay example mesh."""
+    return pvg.examples.load_freyberg(type_="delaunay")
 
 
 @pytest.fixture(scope="session")
-def freyberg_nonconformal():
-    """Fixture for Freyberg example mesh (non-conformal)."""
-    return pvg.examples.load_freyberg(conformal=False)
+def freyberg_delaunay_voronoi():
+    """Fixture for Freyberg delaunay voronoi example mesh."""
+    return pvg.examples.load_freyberg(type_="delaunay", voronoi=True)
+
+
+@pytest.fixture(scope="session")
+def freyberg_quadtree():
+    """Fixture for Freyberg quadtree example mesh."""
+    return pvg.examples.load_freyberg(type_="quadtree", conformal=True)
+
+
+@pytest.fixture(scope="session")
+def freyberg_quadtree_voronoi():
+    """Fixture for Freyberg quadtree voronoi example mesh."""
+    return pvg.examples.load_freyberg(type_="quadtree", conformal=True, voronoi=True)
+
+
+@pytest.fixture(scope="session")
+def freyberg_quadtree_nonconformal():
+    """Fixture for Freyberg quadtree example mesh (non-conformal)."""
+    return pvg.examples.load_freyberg(type_="quadtree", conformal=False)
 
 
 @pytest.fixture
@@ -328,3 +347,24 @@ def structured_grid_3d():
     return pv.RectilinearGrid(
         [0.0, 1.0, 2.0], [0.0, 1.0, 2.0], [0.0, 1.0, 2.0]
     ).cast_to_structured_grid()
+
+
+@pytest.fixture(scope="session")
+def structured_square():
+    """Create a structured square grid."""
+    return pvg.Square(3.0, resolution=3)
+
+
+@pytest.fixture(scope="session")
+def polygon_square():
+    """Create a square polygon."""
+    return Polygon([(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)])
+
+
+@pytest.fixture(scope="session")
+def polygon_square_with_hole():
+    """Create a square polygon with a hole."""
+    return Polygon(
+        [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)],
+        holes=[[(1.0, 1.0), (3.0, 1.0), (3.0, 3.0), (1.0, 3.0)]],
+    )

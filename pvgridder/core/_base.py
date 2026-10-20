@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Union, cast
 import numpy as np
 import pyvista as pv
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
-from shapely import Polygon, prepare
+from shapely import LineString, Point, Polygon, get_coordinates, prepare
 
 
 if TYPE_CHECKING:
@@ -14,9 +14,10 @@ if TYPE_CHECKING:
     from typing import Literal, Optional
 
     from numpy.typing import ArrayLike, NDArray
+    from shapely import LinearRing
     from typing_extensions import Self
 
-    from .._typing import DataSetLike, GridLike, PolygonLike
+    from .._typing import DataSetLike, GridLike, PointLike, PolygonLike, PolyLineLike
 
 
 class MeshItem:
@@ -27,13 +28,22 @@ class MeshItem:
     ----------
     mesh : DataSetLike
         Input mesh.
+    **kwargs
+        Additional keyword arguments for the mesh item.
+
+    Notes
+    -----
+    Keyword arguments can be used as attributes for the mesh item.
 
     """
 
     __name__: str = "MeshItem"
     __qualname__: str = "pvgridder.MeshItem"
 
+    cellsize: float
+    geometry: Point | LineString | Polygon
     group: str
+    hole: bool
     method: Literal["constant", "log", "log_r"]
     priority: int
     resolution: int
@@ -82,23 +92,6 @@ class MeshBase(ABC):
         self._ignore_groups = list(ignore_groups) if ignore_groups else []
         self._items = list(items) if items else []
 
-    def _convert_polygon(self, polygon: PolygonLike) -> Polygon:
-        """Convert a PolygonLike object to a Shapely Polygon."""
-        if isinstance(polygon, pv.PolyData):
-            irregular_faces = polygon.irregular_faces
-
-            if len(irregular_faces) == 0:
-                raise ValueError(
-                    "could not create a valid polygon from the given PolyData"
-                )
-
-            polygon = polygon.points[irregular_faces[0], :2]
-
-        polygon = Polygon(polygon) if not isinstance(polygon, Polygon) else polygon
-        prepare(polygon)
-
-        return polygon
-
     def _check_point_array(
         self, points: ArrayLike, axis: Optional[int] = None
     ) -> NDArray:
@@ -109,11 +102,7 @@ class MeshBase(ABC):
 
         if points.ndim == 1:
             points = np.insert(points, axis, 0.0) if points.size == 2 else points
-
-            if points.shape != (3,):
-                raise ValueError(
-                    f"invalid 1D point array (expected shape (2,) or (3,), got {points.shape})"
-                )
+            points = points[:3]
 
         elif points.ndim == 2:
             points = (
@@ -121,11 +110,8 @@ class MeshBase(ABC):
                 if points.shape[1] == 2
                 else points
             )
-
-            if points.shape[1] != 3:
-                raise ValueError(
-                    f"invalid 2D point array (expected size 2 or 3 along axis 1, got {points.shape[1]})"
-                )
+            points[:, axis] = 0.0
+            points = points[:, :3]
 
         else:
             raise ValueError(
@@ -215,6 +201,55 @@ class MeshBase(ABC):
 
         return arr
 
+    def _validate_points(
+        self, points: PointLike, axis: Optional[int] = None
+    ) -> NDArray:
+        """Convert a PointLike object to a NumPy array."""
+        if isinstance(points, pv.PolyData):
+            if points.n_verts == 0:
+                raise ValueError("could not extract points from the given PolyData")
+
+            points = points.points[points.verts.reshape((points.n_verts, -1))[:, 1]]
+
+        elif isinstance(points, Point):
+            points = get_coordinates(points)
+
+        return self._check_point_array(points, axis=axis)
+
+    def _validate_polygon(self, polygon: PolygonLike) -> Polygon:
+        """Convert a PolygonLike object to a Shapely Polygon."""
+        if isinstance(polygon, pv.PolyData):
+            irregular_faces = polygon.irregular_faces
+
+            if len(irregular_faces) == 0:
+                raise ValueError(
+                    "could not create a valid polygon from the given PolyData"
+                )
+
+            polygon = polygon.points[irregular_faces[0], :2]
+
+        polygon = Polygon(polygon) if not isinstance(polygon, Polygon) else polygon
+        prepare(polygon)
+
+        return polygon
+
+    def _validate_polyline(self, line: PolyLineLike) -> LineString:
+        """Convert a PolyLineLike object to a Shapely LineString."""
+        from .. import split_lines
+
+        if isinstance(line, pv.PolyData):
+            if not line.n_lines:
+                raise ValueError(
+                    "could not create a valid polyline from the given PolyData"
+                )
+
+            line = split_lines(line, as_lines=False)[0].points[:, :2]
+
+        line = LineString(line) if not isinstance(line, LineString) else line
+        prepare(line)
+
+        return line
+
     @staticmethod
     def _clean(mesh: DataSetLike, tolerance: Optional[float] = None) -> DataSetLike:
         """Clean generated mesh."""
@@ -251,6 +286,38 @@ class MeshBase(ABC):
     def _get_group_number(group: str, groups: dict) -> int:
         """Get group number."""
         return groups.setdefault(group, len(groups))
+
+    @staticmethod
+    def _get_ring_sizes(
+        ring: LinearRing, cellsize: Optional[float | ArrayLike]
+    ) -> dict[tuple[float, float], float]:
+        """Get one mesh size for each unique vertex of a closed ring."""
+        coordinates = get_coordinates(ring)[:-1, :2]
+        edge_lengths = np.linalg.norm(
+            np.roll(coordinates, -1, axis=0) - coordinates, axis=1
+        )
+
+        if cellsize is None:
+            values = np.maximum(edge_lengths, np.roll(edge_lengths, 1))
+
+        else:
+            cellsize_array = np.asarray(cellsize, dtype=float)
+
+            if cellsize_array.ndim == 0:
+                values = np.full(len(coordinates), float(cellsize_array))
+
+            elif cellsize_array.ndim == 1 and len(cellsize_array) == len(coordinates):
+                values = cellsize_array
+
+            else:
+                raise ValueError(
+                    "could not interpret cellsize array for polygon vertices"
+                )
+
+        return {
+            tuple(coordinate): float(value)
+            for coordinate, value in zip(coordinates, values)
+        }
 
     @abstractmethod
     def generate_mesh(self) -> None: ...
@@ -316,8 +383,15 @@ class MeshStackBase(MeshBase):
                 f"invalid mesh or axis, dimension along axis {axis} should be 1 (got {mesh.dimensions[axis]})"
             )
 
+        mesh = mesh.copy()
+
+        if "CellCenter" not in mesh.cell_data:
+            centers = np.asarray(mesh.cell_centers().points)
+            centers[:, axis] = 0.0
+            mesh.cell_data["CellCenter"] = centers
+
         super().__init__(default_group, ignore_groups)
-        self._mesh = mesh.copy()
+        self._mesh = mesh
         self._axis = axis
         self._bottom_up = bottom_up
         self._transition_flag = False

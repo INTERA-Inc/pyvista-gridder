@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Optional
 
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
     from typing_extensions import Self
 
     from .._typing import (
@@ -212,7 +212,7 @@ class QuadTree(MeshBase):
     max_depth : int, default 5
         Maximum depth of the quadtree.
     min_cellsize : scalar, optional
-        Lower bound on refined cell edge lengths. Supersedes *max_depth* if specified.
+        Minimum cell size for the quadtree. Supersedes *max_depth* if specified.
     default_group : str, optional
         Default group name.
     ignore_groups : Sequence[str], optional
@@ -261,6 +261,7 @@ class QuadTree(MeshBase):
     def add_boundary_polygon(
         self,
         polygon: PolygonLike,
+        *,
         depth: int = 0,
         cellsize: Optional[float] = None,
     ) -> Self:
@@ -289,7 +290,7 @@ class QuadTree(MeshBase):
         if self._boundary_polygon is not None:
             raise ValueError("could not add a second boundary polygon")
 
-        polygon = self._convert_polygon(polygon)
+        polygon = self._validate_polygon(polygon)
         depth = min(depth, self.max_depth)
         depth = self._get_depth(depth, cellsize)
 
@@ -387,6 +388,44 @@ class QuadTree(MeshBase):
 
         return self
 
+    def add_points(
+        self,
+        points: ArrayLike,
+        *,
+        depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
+        group: Optional[str] = None,
+    ) -> Self:
+        """
+        Refine cells containing multiple points.
+
+        Parameters
+        ----------
+        points : ArrayLike
+            Two-dimensional array of point coordinates, one point per row.
+        depth : int, optional
+            Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
+        group : str, optional
+            Group name applied to all points.
+
+        Returns
+        -------
+        Self
+            Self (for daisy chaining).
+
+        """
+        points = np.asanyarray(points)
+
+        if points.ndim != 2:
+            raise ValueError("points must be a two-dimensional array")
+
+        for point in points:
+            self.add_point(point, depth=depth, cellsize=cellsize, group=group)
+
+        return self
+
     def add_polygon(
         self,
         polygon: PolygonLike,
@@ -419,7 +458,7 @@ class QuadTree(MeshBase):
             Self (for daisy chaining).
 
         """
-        polygon = self._convert_polygon(polygon)
+        polygon = self._validate_polygon(polygon)
         depth = self.max_depth if depth is None else min(depth, self.max_depth)
         depth = self._get_depth(depth, cellsize)
 
@@ -449,6 +488,7 @@ class QuadTree(MeshBase):
     def add_polyline(
         self,
         line: PolyLineLike,
+        *,
         depth: Optional[int] = None,
         cellsize: Optional[float] = None,
         group: Optional[str] = None,
@@ -504,6 +544,7 @@ class QuadTree(MeshBase):
         self,
         dx: float,
         dy: float,
+        *,
         origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
@@ -550,6 +591,7 @@ class QuadTree(MeshBase):
     def add_square(
         self,
         dx: float,
+        *,
         origin: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
@@ -592,23 +634,24 @@ class QuadTree(MeshBase):
 
     def generate_mesh(
         self,
+        *,
+        tolerance: float = 1.0e-8,
         balance: bool = False,
         conformal: bool = False,
-        tolerance: float = 1.0e-8,
     ) -> pv.UnstructuredGrid:
         """
         Generate a QuadTree mesh.
 
         Parameters
         ----------
+        tolerance : scalar, default 1.0e-8
+            Set merging tolerance of duplicate points.
         balance : bool, default False
             If True, balance the tree so that adjacent cells differ in depth by at most
             one.
         conformal : bool, default False
             If True, generate a conforming mesh (i.e., polygons with hanging nodes
             instead of quads).
-        tolerance : scalar, default 1.0e-8
-            Set merging tolerance of duplicate points.
 
         Returns
         -------
@@ -664,6 +707,7 @@ class QuadTree(MeshBase):
             geometry.SetInputData(htg)
             geometry.Update()
             mesh = pv.wrap(geometry.GetOutput()).cast_to_unstructured_grid()
+            centers = mesh.cell_centers().points
 
         else:
             # Collect all leaf nodes to determine the maximum depth for scaling
@@ -860,6 +904,10 @@ class QuadTree(MeshBase):
         if self._boundary_polygon is not None:
             mask = contains_xy(self._boundary_polygon, centers[:, 0], centers[:, 1])
             mesh = mesh.extract_cells(mask)
+            centers = centers[mask]
+
+        # Add cell centers
+        mesh.cell_data["CellCenter"] = centers
 
         return cast(pv.UnstructuredGrid, self._clean(mesh, tolerance))
 

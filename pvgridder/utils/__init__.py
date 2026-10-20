@@ -33,4 +33,5 @@ from ._properties import (
     get_cell_connectivity as get_cell_connectivity,
     get_cell_group as get_cell_group,
     get_dimension as get_dimension,
+    get_point_group as get_point_group,
 )

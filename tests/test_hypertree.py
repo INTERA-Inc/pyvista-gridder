@@ -6,52 +6,133 @@ import pvgridder as pvg
 
 
 @pytest.mark.parametrize(
-    "bmesh",
+    "bmesh, max_depth, min_cellsize, default_group, ignore_groups, n_cells_ref, max_depth_ref, n_point_cells",
     [
-        pytest.param(pv.ImageData(dimensions=(4, 4, 1)), id="image_data"),
-        pytest.param(pv.RectilinearGrid(range(3), range(3), [0.0]), id="rectilinear"),
-        pytest.param(pvg.Square(3.0, resolution=3), id="structured"),
+        pytest.param(
+            "structured_square", 1, None, "default", None, 12, 1, 4, id="base"
+        ),
+        pytest.param(
+            pv.ImageData(dimensions=(4, 4, 1)),
+            1,
+            None,
+            "default",
+            None,
+            12,
+            1,
+            4,
+            id="mesh=image_data",
+        ),
+        pytest.param(
+            pv.RectilinearGrid(range(4), range(4), [0.0]),
+            1,
+            None,
+            "default",
+            None,
+            12,
+            1,
+            4,
+            id="mesh=rectilinear",
+        ),
+        pytest.param(
+            "structured_square", 2, None, "default", None, 24, 2, 4, id="max_depth=2"
+        ),
+        pytest.param(
+            "structured_square", 1, 1.0, "default", None, 9, 0, 1, id="min_cellsize=1.0"
+        ),
+        pytest.param(
+            "structured_square",
+            1,
+            0.5,
+            "default",
+            None,
+            12,
+            1,
+            4,
+            id="min_cellsize=0.5",
+        ),
+        pytest.param(
+            "structured_square",
+            1,
+            0.1,
+            "default",
+            None,
+            36,
+            3,
+            4,
+            id="min_cellsize=0.1",
+        ),
+        pytest.param(
+            "structured_square",
+            1,
+            None,
+            "test",
+            None,
+            12,
+            1,
+            4,
+            id="default_group=test",
+        ),
+        pytest.param(
+            "structured_square",
+            1,
+            None,
+            "default",
+            ["unused"],
+            12,
+            1,
+            4,
+            id="ignore_groups=unused",
+        ),
     ],
 )
-def test_quadtree_base_mesh(bmesh):
-    """Test the base mesh type."""
-    qtree = pvg.QuadTree(bmesh)
-    mesh = qtree.generate_mesh(balance=False)
+def test_quadtree_init(
+    bmesh,
+    max_depth,
+    min_cellsize,
+    default_group,
+    ignore_groups,
+    n_cells_ref,
+    max_depth_ref,
+    n_point_cells,
+    request,
+):
+    """Test the initialization of the QuadTree class."""
+    bmesh = request.getfixturevalue(bmesh) if isinstance(bmesh, str) else bmesh
+    qtree = pvg.QuadTree(
+        bmesh,
+        max_depth=max_depth,
+        min_cellsize=min_cellsize,
+        default_group=default_group,
+        ignore_groups=ignore_groups,
+    )
+    mesh = qtree.add_point((1.5, 1.5), group="point").generate_mesh(balance=False)
     assert isinstance(qtree.mesh, pv.RectilinearGrid)
-    assert mesh.n_cells == bmesh.n_cells
+    assert qtree.max_depth == max_depth_ref
+    assert qtree.ignore_groups == (ignore_groups or [])
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "point").sum() == n_point_cells
+    assert (
+        pvg.get_cell_group(mesh) == default_group
+    ).sum() == n_cells_ref - n_point_cells
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 9.0)
 
 
 @pytest.mark.parametrize(
-    "min_cellsize, max_depth_ref",
+    "default_group, n_cells_ref, n_layer1_cells, n_layer2_cells, n_layer3_cells, n_point_cells",
     [
-        pytest.param(1.0, 0, id="min_cellsize_1.0"),
-        pytest.param(0.5, 1, id="min_cellsize_0.5"),
-        pytest.param(0.1, 3, id="min_cellsize_0.1"),
+        pytest.param("default", 12, 3, 2, 3, 4, id="base"),
+        pytest.param("test", 12, 3, 2, 3, 4, id="default_group=test"),
     ],
 )
-def test_quadtree_min_cellsize(min_cellsize, max_depth_ref):
-    """Test the minimum cell size option."""
-    bmesh = pvg.Square(3.0, resolution=3)
-    qtree = pvg.QuadTree(bmesh, min_cellsize=min_cellsize)
-    assert qtree.max_depth == max_depth_ref
-
-
-def test_quadtree_target_cellsize():
-    """Test the target cell size option."""
-    cellsize = 1.0 / 2.0**5
-    bmesh = pvg.Square(3.0, resolution=3)
-    mesh = (
-        pvg.QuadTree(bmesh, min_cellsize=0.001)
-        .add_point((1.5, 1.5), cellsize=cellsize)
-        .generate_mesh(balance=False)
-        .compute_cell_sizes()
-    )
-    assert mesh.n_cells == 60
-    assert mesh.cell_data["Area"].min() == cellsize**2
-
-
-def test_quadtree_cell_group():
-    """Test cell groups in base mesh being correctly passed."""
+def test_quadtree_init_cell_groups(
+    default_group,
+    n_cells_ref,
+    n_layer1_cells,
+    n_layer2_cells,
+    n_layer3_cells,
+    n_point_cells,
+):
+    """Test the initialization of the QuadTree class with cell groups."""
     bmesh = (
         pvg.MeshStack2D(np.arange(4), axis=1)
         .add(0.0)
@@ -61,183 +142,377 @@ def test_quadtree_cell_group():
         .generate_mesh()
     )
     mesh = (
-        pvg.QuadTree(bmesh, max_depth=1)
+        pvg.QuadTree(bmesh, max_depth=1, default_group=default_group)
         .add_point((1.5, 1.5), group="point")
         .generate_mesh(balance=False)
     )
     cell_groups = pvg.get_cell_group(mesh)
-    assert mesh.extract_cells(cell_groups == "layer1").n_cells == 3
-    assert mesh.extract_cells(cell_groups == "layer2").n_cells == 2
-    assert mesh.extract_cells(cell_groups == "layer3").n_cells == 3
-    assert mesh.extract_cells(cell_groups == "point").n_cells == 4
-
-
-def test_quadtree_conformal():
-    """Test the option conformal."""
-    bmesh = pvg.Square(3.0, resolution=3)
-    mesh = (
-        pvg.QuadTree(bmesh, max_depth=1)
-        .add_point((1.5, 1.5))
-        .generate_mesh(conformal=True)
-    )
-    connectivity = pvg.get_connectivity(mesh)
-    assert connectivity.n_cells == 20
-
-
-@pytest.mark.parametrize(
-    "max_depth, balance, n_cells_ref",
-    [
-        pytest.param(1, False, 12, id="max_depth_1_balance_false"),
-        pytest.param(1, True, 12, id="max_depth_1_balance_true"),
-        pytest.param(2, False, 24, id="max_depth_2_balance_false"),
-        pytest.param(2, True, 36, id="max_depth_2_balance_true"),
-    ],
-)
-def test_quadtree_max_depth(max_depth, balance, n_cells_ref):
-    """Test the options max_depth and balance."""
-    bmesh = pvg.Square(3.0, resolution=3)
-    mesh = (
-        pvg.QuadTree(bmesh, max_depth=max_depth)
-        .add_point((1.5, 1.5))
-        .generate_mesh(balance=balance)
-    )
     assert mesh.n_cells == n_cells_ref
+    assert (cell_groups == "layer1").sum() == n_layer1_cells
+    assert (cell_groups == "layer2").sum() == n_layer2_cells
+    assert (cell_groups == "layer3").sum() == n_layer3_cells
+    assert (cell_groups == "point").sum() == n_point_cells
 
 
 @pytest.mark.parametrize(
-    "depth, n_cells_ref",
+    "depth, cellsize, n_cells_ref",
     [
-        pytest.param(0, 5, id="depth_0"),
-        pytest.param(1, 9, id="depth_1"),
-        pytest.param(2, 45, id="depth_2"),
+        pytest.param(0, None, 5, id="base"),
+        pytest.param(1, None, 9, id="depth=1"),
+        pytest.param(2, None, 45, id="depth=2"),
+        pytest.param(0, 0.25, 45, id="cellsize=0.25"),
     ],
 )
-def test_quadtree_add_boundary_polygon(depth, n_cells_ref):
-    """Test method pvgridder.QuadTree.add_boundary_polygon."""
-    bmesh = pvg.Square(3.0, resolution=3)
+def test_quadtree_add_boundary_polygon(depth, cellsize, n_cells_ref, request):
+    """Test the method pvgridder.QuadTree.add_boundary_polygon."""
+    bmesh = request.getfixturevalue("structured_square")
     boundary_polygon = [(0.0, 1.5), (1.5, 0.0), (3.0, 1.5), (1.5, 3.0)]
     mesh = (
-        pvg.QuadTree(bmesh)
-        .add_boundary_polygon(boundary_polygon, depth=depth)
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_boundary_polygon(boundary_polygon, depth=depth, cellsize=cellsize)
         .generate_mesh(balance=False)
     )
     assert mesh.n_cells == n_cells_ref
 
 
 @pytest.mark.parametrize(
-    "depth, boundary_only, n_cells_ref",
+    "radius, center, boundary_only, depth, group, n_cells_ref, n_circle_cells",
     [
-        pytest.param(1, False, 12, id="depth_1_boundary_only_false"),
-        pytest.param(1, True, 9, id="depth_1_boundary_only_true"),
-        pytest.param(2, False, 52, id="depth_2_boundary_only_false"),
-        pytest.param(2, True, 37, id="depth_2_boundary_only_true"),
+        pytest.param(1.0, (1.5, 1.5), False, 1, "circle", 36, 12, id="base"),
+        pytest.param(0.5, (1.5, 1.5), False, 1, "circle", 24, 4, id="radius=0.5"),
+        pytest.param(1.0, None, False, 1, "circle", 18, 3, id="center=None"),
+        pytest.param(
+            1.0, (1.5, 1.5), True, 1, "circle", 33, 9, id="boundary_only=True"
+        ),
+        pytest.param(1.0, (1.5, 1.5), False, 2, "circle", 102, 52, id="depth=2"),
+        pytest.param(1.0, (1.5, 1.5), False, None, "circle", 102, 52, id="depth=None"),
+        pytest.param(1.0, (1.5, 1.5), False, 1, None, 36, 0, id="group=None"),
     ],
 )
-def test_quadtree_add_circle(depth, boundary_only, n_cells_ref):
-    """Test method pvgridder.QuadTree.add_circle."""
-    bmesh = pvg.Square(3.0, resolution=3)
+def test_quadtree_add_circle(
+    radius, center, boundary_only, depth, group, n_cells_ref, n_circle_cells, request
+):
+    """Test the method pvgridder.QuadTree.add_circle."""
+    bmesh = request.getfixturevalue("structured_square")
     mesh = (
-        pvg.QuadTree(bmesh)
+        pvg.QuadTree(bmesh, max_depth=2)
         .add_circle(
-            radius=1.0,
-            center=(1.5, 1.5),
+            radius=radius,
+            center=center,
             boundary_only=boundary_only,
             depth=depth,
-            group="circle",
+            group=group,
         )
         .generate_mesh(balance=False)
     )
-    assert (
-        mesh.extract_cells(pvg.get_cell_group(mesh) == "circle").n_cells == n_cells_ref
-    )
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "circle").sum() == n_circle_cells
 
 
 @pytest.mark.parametrize(
-    "depth, n_cells_ref",
+    "point, depth, cellsize, group, n_cells_ref, n_point_cells",
     [
-        pytest.param(1, 15, id="depth_1"),
-        pytest.param(2, 30, id="depth_2"),
+        pytest.param((1.5, 1.5), 1, None, "point", 12, 4, id="base"),
+        pytest.param((1.6, 1.6), 1, None, "point", 12, 1, id="point=(1.6,1.6)"),
+        pytest.param((1.5, 1.5), 2, None, "point", 24, 4, id="depth=2"),
+        pytest.param((1.5, 1.5), None, None, "point", 60, 4, id="depth=None"),
+        pytest.param((1.5, 1.5), 1, 0.25, "point", 24, 4, id="cellsize=0.25"),
+        pytest.param((1.5, 1.5), 1, 0.03125, "point", 60, 4, id="cellsize=0.03125"),
+        pytest.param((1.5, 1.5), 1, None, None, 12, 0, id="group=None"),
     ],
 )
-def test_quadtree_add_point(depth, n_cells_ref):
-    """Test method pvgridder.QuadTree.add_point."""
-    bmesh = pvg.Square(3.0, resolution=3)
+def test_quadtree_add_point(
+    point, depth, cellsize, group, n_cells_ref, n_point_cells, request
+):
+    """Test the method pvgridder.QuadTree.add_point."""
+    bmesh = request.getfixturevalue("structured_square")
     mesh = (
-        pvg.QuadTree(bmesh)
-        .add_point(
-            (0.5, 0.5), depth=depth, group="point"
-        )  # center of a cell, 4 points in group 'point'
-        .add_point((1.6, 1.6), depth=depth, group="point")  # 1 point in group 'point'
+        pvg.QuadTree(bmesh, max_depth=5)
+        .add_point(point, depth=depth, cellsize=cellsize, group=group)
         .generate_mesh(balance=False)
     )
     assert mesh.n_cells == n_cells_ref
-    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "point").n_cells == 5
+    assert (pvg.get_cell_group(mesh) == "point").sum() == n_point_cells
+
+    if cellsize is not None:
+        assert mesh.compute_cell_sizes().cell_data["Area"].min() == cellsize**2
 
 
 @pytest.mark.parametrize(
-    "depth, boundary_only, n_cells_ref",
+    "points, depth, cellsize, group, n_cells_ref, n_point_cells",
     [
-        pytest.param(1, False, 12, id="depth_1_boundary_only_false"),
-        pytest.param(1, True, 9, id="depth_1_boundary_only_true"),
-        pytest.param(2, False, 60, id="depth_2_boundary_only_false"),
-        pytest.param(2, True, 45, id="depth_2_boundary_only_true"),
+        pytest.param(
+            np.array([[0.5, 0.5], [1.6, 1.6]]), 1, None, "points", 15, 5, id="base"
+        ),
+        pytest.param(
+            np.array([[0.5, 0.5, 0.0], [1.6, 1.6, 0.0]]),
+            1,
+            None,
+            "points",
+            15,
+            5,
+            id="points=3d",
+        ),
+        pytest.param(np.empty((0, 2)), 1, None, "points", 9, 0, id="points=empty"),
+        pytest.param(
+            np.array([[0.5, 0.5], [1.6, 1.6]]), 2, None, "points", 30, 5, id="depth=2"
+        ),
+        pytest.param(
+            np.array([[0.5, 0.5], [1.6, 1.6]]),
+            None,
+            None,
+            "points",
+            30,
+            5,
+            id="depth=None",
+        ),
+        pytest.param(
+            np.array([[0.5, 0.5], [1.6, 1.6]]),
+            1,
+            0.25,
+            "points",
+            30,
+            5,
+            id="cellsize=0.25",
+        ),
+        pytest.param(
+            np.array([[0.5, 0.5], [1.6, 1.6]]), 1, None, None, 15, 0, id="group=None"
+        ),
     ],
 )
-def test_quadtree_add_polygon(depth, boundary_only, n_cells_ref):
-    """Test method pvgridder.QuadTree.add_polygon."""
-    bmesh = pvg.Square(3.0, resolution=3)
+def test_quadtree_add_points(
+    points, depth, cellsize, group, n_cells_ref, n_point_cells, request
+):
+    """Test the method pvgridder.QuadTree.add_points."""
+    bmesh = request.getfixturevalue("structured_square")
+    qtree = pvg.QuadTree(bmesh, max_depth=2)
+    assert (
+        qtree.add_points(points, depth=depth, cellsize=cellsize, group=group) is qtree
+    )
+    mesh = qtree.generate_mesh(balance=False)
+    reference = pvg.QuadTree(bmesh, max_depth=2)
+
+    for point in points:
+        reference.add_point(point, depth=depth, cellsize=cellsize, group=group)
+
+    reference = reference.generate_mesh(balance=False)
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "points").sum() == n_point_cells
+    assert np.array_equal(mesh.points, reference.points)
+    assert np.array_equal(mesh.cells, reference.cells)
+
+    cell_group = pvg.get_cell_group(mesh)
+    cell_group_ref = pvg.get_cell_group(reference)
+    assert cell_group is not None
+    assert cell_group_ref is not None
+    assert np.array_equal(cell_group, cell_group_ref)
+
+
+@pytest.mark.parametrize(
+    "boundary_only, depth, cellsize, group, n_cells_ref, n_polygon_cells",
+    [
+        pytest.param(False, 1, None, "polygon", 36, 12, id="base"),
+        pytest.param(True, 1, None, "polygon", 33, 9, id="boundary_only=True"),
+        pytest.param(False, 2, None, "polygon", 132, 60, id="depth=2"),
+        pytest.param(False, None, None, "polygon", 132, 60, id="depth=None"),
+        pytest.param(False, 1, 0.25, "polygon", 132, 60, id="cellsize=0.25"),
+        pytest.param(False, 1, None, None, 36, 0, id="group=None"),
+    ],
+)
+def test_quadtree_add_polygon(
+    boundary_only, depth, cellsize, group, n_cells_ref, n_polygon_cells, request
+):
+    """Test the method pvgridder.QuadTree.add_polygon."""
+    bmesh = request.getfixturevalue("structured_square")
     polygon = [(0.0, 1.5), (1.5, 0.0), (3.0, 1.5), (1.5, 3.0)]
     mesh = (
-        pvg.QuadTree(bmesh)
-        .add_polygon(polygon, depth=depth, boundary_only=boundary_only, group="polygon")
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_polygon(
+            polygon,
+            boundary_only=boundary_only,
+            depth=depth,
+            cellsize=cellsize,
+            group=group,
+        )
         .generate_mesh(balance=False)
     )
-    assert (
-        mesh.extract_cells(pvg.get_cell_group(mesh) == "polygon").n_cells == n_cells_ref
-    )
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "polygon").sum() == n_polygon_cells
 
 
 @pytest.mark.parametrize(
-    "depth, n_cells_ref",
+    "depth, cellsize, group, n_cells_ref, n_line_cells",
     [
-        pytest.param(1, 16, id="depth_1"),
-        pytest.param(2, 28, id="depth_2"),
+        pytest.param(1, None, "polyline", 24, 16, id="base"),
+        pytest.param(2, None, "polyline", 72, 28, id="depth=2"),
+        pytest.param(None, None, "polyline", 72, 28, id="depth=None"),
+        pytest.param(1, 0.25, "polyline", 72, 28, id="cellsize=0.25"),
+        pytest.param(1, None, None, 24, 0, id="group=None"),
     ],
 )
-def test_quadtree_add_polyline(depth, n_cells_ref):
-    """Test method pvgridder.QuadTree.add_polyline."""
-    bmesh = pvg.Square(3.0, resolution=3)
+def test_quadtree_add_polyline(
+    depth, cellsize, group, n_cells_ref, n_line_cells, request
+):
+    """Test the method pvgridder.QuadTree.add_polyline."""
+    bmesh = request.getfixturevalue("structured_square")
     polyline = [(0.5, 0.5), (0.5, 1.5), (2.5, 2.5)]
     mesh = (
-        pvg.QuadTree(bmesh)
-        .add_polyline(polyline, depth=depth, group="polyline")
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_polyline(polyline, depth=depth, cellsize=cellsize, group=group)
         .generate_mesh(balance=False)
     )
-    assert (
-        mesh.extract_cells(pvg.get_cell_group(mesh) == "polyline").n_cells
-        == n_cells_ref
-    )
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "polyline").sum() == n_line_cells
 
 
-def test_quadtree_add_rectangle():
-    """Test method pvgridder.QuadTree.add_rectangle."""
-    bmesh = pvg.Square(3.0, resolution=3)
+@pytest.mark.parametrize(
+    "dx, dy, origin, boundary_only, depth, cellsize, group, n_cells_ref, n_rectangle_cells",
+    [
+        pytest.param(
+            1.0, 1.5, (1.0, 1.0), False, 2, None, "rectangle", 96, 24, id="base"
+        ),
+        pytest.param(
+            0.5, 1.5, (1.0, 1.0), False, 2, None, "rectangle", 72, 12, id="dx=0.5"
+        ),
+        pytest.param(
+            1.0, 1.0, (1.0, 1.0), False, 2, None, "rectangle", 84, 16, id="dy=1.0"
+        ),
+        pytest.param(
+            1.0, 1.5, None, False, 2, None, "rectangle", 57, 24, id="origin=None"
+        ),
+        pytest.param(
+            1.0,
+            1.5,
+            (1.0, 1.0),
+            True,
+            2,
+            None,
+            "rectangle",
+            96,
+            24,
+            id="boundary_only=True",
+        ),
+        pytest.param(
+            1.0, 1.5, (1.0, 1.0), False, 1, None, "rectangle", 36, 6, id="depth=1"
+        ),
+        pytest.param(
+            1.0,
+            1.5,
+            (1.0, 1.0),
+            False,
+            None,
+            None,
+            "rectangle",
+            96,
+            24,
+            id="depth=None",
+        ),
+        pytest.param(
+            1.0, 1.5, (1.0, 1.0), False, 2, 0.5, "rectangle", 36, 6, id="cellsize=0.5"
+        ),
+        pytest.param(
+            1.0, 1.5, (1.0, 1.0), False, 2, None, None, 96, 0, id="group=None"
+        ),
+    ],
+)
+def test_quadtree_add_rectangle(
+    dx,
+    dy,
+    origin,
+    boundary_only,
+    depth,
+    cellsize,
+    group,
+    n_cells_ref,
+    n_rectangle_cells,
+    request,
+):
+    """Test the method pvgridder.QuadTree.add_rectangle."""
+    bmesh = request.getfixturevalue("structured_square")
     mesh = (
         pvg.QuadTree(bmesh, max_depth=2)
-        .add_rectangle(1.0, 1.5, origin=(1.0, 1.0), group="rectangle")
+        .add_rectangle(
+            dx,
+            dy,
+            origin=origin,
+            boundary_only=boundary_only,
+            depth=depth,
+            cellsize=cellsize,
+            group=group,
+        )
         .generate_mesh(balance=False)
     )
-    assert mesh.n_cells == 96
-    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "rectangle").n_cells == 24
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "rectangle").sum() == n_rectangle_cells
 
 
-def test_quadtree_add_square():
-    """Test method pvgridder.QuadTree.add_square."""
-    bmesh = pvg.Square(3.0, resolution=3)
+@pytest.mark.parametrize(
+    "dx, origin, boundary_only, depth, cellsize, group, n_cells_ref, n_square_cells",
+    [
+        pytest.param(1.0, (1.0, 1.0), False, 2, None, "square", 84, 16, id="base"),
+        pytest.param(0.5, (1.0, 1.0), False, 2, None, "square", 48, 4, id="dx=0.5"),
+        pytest.param(1.0, None, False, 2, None, "square", 48, 16, id="origin=None"),
+        pytest.param(
+            1.0, (1.0, 1.0), True, 2, None, "square", 84, 16, id="boundary_only=True"
+        ),
+        pytest.param(1.0, (1.0, 1.0), False, 1, None, "square", 36, 4, id="depth=1"),
+        pytest.param(
+            1.0, (1.0, 1.0), False, None, None, "square", 84, 16, id="depth=None"
+        ),
+        pytest.param(
+            1.0, (1.0, 1.0), False, 2, 0.5, "square", 36, 4, id="cellsize=0.5"
+        ),
+        pytest.param(1.0, (1.0, 1.0), False, 2, None, None, 84, 0, id="group=None"),
+    ],
+)
+def test_quadtree_add_square(
+    dx,
+    origin,
+    boundary_only,
+    depth,
+    cellsize,
+    group,
+    n_cells_ref,
+    n_square_cells,
+    request,
+):
+    """Test the method pvgridder.QuadTree.add_square."""
+    bmesh = request.getfixturevalue("structured_square")
     mesh = (
         pvg.QuadTree(bmesh, max_depth=2)
-        .add_square(1.0, origin=(1.0, 1.0), group="square")
+        .add_square(
+            dx,
+            origin=origin,
+            boundary_only=boundary_only,
+            depth=depth,
+            cellsize=cellsize,
+            group=group,
+        )
         .generate_mesh(balance=False)
     )
-    assert mesh.n_cells == 84
-    assert mesh.extract_cells(pvg.get_cell_group(mesh) == "square").n_cells == 16
+    assert mesh.n_cells == n_cells_ref
+    assert (pvg.get_cell_group(mesh) == "square").sum() == n_square_cells
+
+
+@pytest.mark.parametrize(
+    "tolerance, balance, conformal, n_cells_ref, n_connections_ref",
+    [
+        pytest.param(1.0e-8, False, False, 24, 32, id="base"),
+        pytest.param(1.0e-6, False, False, 24, 32, id="tolerance=1.0e-6"),
+        pytest.param(1.0e-8, True, False, 36, 40, id="balance=True"),
+        pytest.param(1.0e-8, False, True, 24, 48, id="conformal=True"),
+    ],
+)
+def test_quadtree_generate_mesh(
+    tolerance, balance, conformal, n_cells_ref, n_connections_ref, request
+):
+    """Test the method pvgridder.QuadTree.generate_mesh."""
+    bmesh = request.getfixturevalue("structured_square")
+    mesh = (
+        pvg.QuadTree(bmesh, max_depth=2)
+        .add_point((1.5, 1.5))
+        .generate_mesh(tolerance=tolerance, balance=balance, conformal=conformal)
+    )
+    assert mesh.n_cells == n_cells_ref
+    assert pvg.get_connectivity(mesh).n_cells == n_connections_ref
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 9.0)

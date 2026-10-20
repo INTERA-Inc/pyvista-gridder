@@ -55,21 +55,23 @@ def test_cylindrical_shell_sector():
 
 
 @pytest.mark.parametrize(
-    "shell, holes, engine, ref_area",
+    "shell, holes, engine, area_ref, n_cells_triangle_ref",
     [
-        (pv.Polygon(radius=8.0, n_sides=42), None, "gmsh", 200.3128038269316),
-        (pv.Polygon(radius=8.0, n_sides=42), None, "occ", 200.3128038269316),
+        (pv.Polygon(radius=8.0, n_sides=42), None, "gmsh", 200.3128038269316, 342),
+        (pv.Polygon(radius=8.0, n_sides=42), None, "occ", 200.3128038269316, 342),
         (
             pv.Polygon(radius=8.0, n_sides=42),
             [pv.Polygon(radius=4.0, n_sides=42)],
             "gmsh",
             150.2346028701987,
+            500,
         ),
         (
             pv.Polygon(radius=8.0, n_sides=42),
             [pv.Polygon(radius=4.0, n_sides=42)],
             "occ",
             150.2346028701987,
+            500,
         ),
         (
             pv.Polygon(radius=8.0, n_sides=42),
@@ -79,10 +81,11 @@ def test_cylindrical_shell_sector():
             ],
             "occ",
             110.45831838912522,
+            206,
         ),
     ],
 )
-def test_polygon(shell, holes, engine, ref_area):
+def test_polygon(shell, holes, engine, area_ref, n_cells_triangle_ref):
     """Test polygon geometric object."""
     for celltype in ("polygon", "triangle", "quad"):
         if celltype == "polygon" and holes:
@@ -92,8 +95,11 @@ def test_polygon(shell, holes, engine, ref_area):
             shell.points[:, :2], holes, celltype, optimization="Netgen", engine=engine
         )
         mesh = mesh.compute_cell_sizes()
-        assert np.allclose(np.abs(mesh.cell_data["Area"]).sum(), ref_area)
+        assert np.allclose(np.abs(mesh.cell_data["Area"]).sum(), area_ref)
         assert getattr(pv.CellType, celltype.upper()) in mesh.celltypes
+
+        if celltype == "triangle":
+            assert mesh.n_cells == n_cells_triangle_ref
 
 
 def test_quadrilateral():
