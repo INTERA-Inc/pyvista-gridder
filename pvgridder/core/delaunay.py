@@ -64,6 +64,7 @@ class DelaunayMesh2D(MeshBase):
 
     """
 
+    @require_package("gmsh")
     def __init__(
         self,
         polygon: PolygonLike,
@@ -308,7 +309,6 @@ class DelaunayMesh2D(MeshBase):
 
         return self
 
-    @require_package("gmsh")
     def generate_mesh(
         self,
         *,
