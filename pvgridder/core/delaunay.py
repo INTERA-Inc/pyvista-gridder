@@ -631,6 +631,9 @@ class DelaunayMesh2D(MeshBase):
             gmsh.option.setNumber("Mesh.ElementOrder", 1)
             gmsh.option.setNumber("Mesh.RecombineAll", 0)
 
+            if celltype == "quad":
+                gmsh.option.setNumber("Mesh.MeshSizeFactor", 2.0)
+
             engine_ = gmsh.model.geo if engine == "gmsh" else gmsh.model.occ
             point_tags, curve_tags = {}, {}
 

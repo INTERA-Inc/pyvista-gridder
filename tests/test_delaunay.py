@@ -769,9 +769,9 @@ def test_delaunay2d_add_square(
         pytest.param(
             0.1, 0.4, "triangle", 6, None, "gmsh", 144, 246, id="max_cellsize=0.4"
         ),
-        pytest.param(0.1, 2.0, "quad", 6, None, "gmsh", 98, 81, id="celltype=quad"),
+        pytest.param(0.1, 2.0, "quad", 6, None, "gmsh", 31, 22, id="celltype=quad"),
         pytest.param(
-            0.1, 2.0, "quad", 8, None, "gmsh", 81, 64, id="celltype=quad,algorithm=8"
+            0.1, 2.0, "quad", 8, None, "gmsh", 25, 16, id="celltype=quad,algorithm=8"
         ),
         pytest.param(
             0.1, 2.0, "triangle", 6, "Netgen", "gmsh", 99, 164, id="algorithm=Netgen"

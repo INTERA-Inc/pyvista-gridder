@@ -521,9 +521,37 @@ def Polygon(
         mesh = pv.UnstructuredGrid(cells, celltypes, points)
 
     elif celltype in {"quad", "triangle"}:
-        del2d = DelaunayMesh2D(shell_points, cellsize=cellsize)
+        is_xy = bool(np.all(shell_points[:, 2] == shell_points[0, 2]))
 
-        for hole in holes_points:
+        if is_xy:
+            projected_shell = shell_points[:, :2]
+            projected_holes = [hole[:, :2] for hole in holes_points]
+
+        else:
+            # Fit plane via SVD centered at the centroid
+            origin = shell_points.mean(axis=0)
+            _, _, directions = np.linalg.svd(shell_points - origin, full_matrices=False)
+
+            # Build a right-handed orthonormal 2D basis
+            u = directions[0]
+            normal = directions[-1]
+            v = np.cross(normal, u)
+            basis = np.vstack([u, v])
+
+            def to_2d(pts: NDArray) -> NDArray:
+                """Isometrically projects 3D planar points into 2D."""
+                return (pts[:, :3] - origin) @ basis.T
+
+            def to_3d(pts_2d: NDArray) -> NDArray:
+                """Restores 2D coordinates back to 3D space with zero metric distortion."""
+                return pts_2d[:, :2] @ basis + origin
+
+            projected_shell = to_2d(shell_points)
+            projected_holes = [to_2d(hole) for hole in holes_points]
+
+        del2d = DelaunayMesh2D(projected_shell, cellsize=cellsize)
+
+        for hole in projected_holes:
             del2d = del2d.add_polygon(hole, cellsize=cellsize, hole=True)
 
         mesh = del2d.generate_mesh(
@@ -532,6 +560,22 @@ def Polygon(
             optimization=optimization,
             engine=engine,
         )
+        if not is_xy:
+            mesh.points = to_3d(mesh.points)
+
+            if "CellCenter" in mesh.cell_data:
+                mesh.cell_data["CellCenter"] = to_3d(
+                    np.asarray(mesh.cell_data["CellCenter"])
+                )
+
+        elif shell_points[0, 2] != 0.0:
+            coordinates = np.array(mesh.points)
+            coordinates[:, 2] = shell_points[0, 2]
+            mesh.points = coordinates
+            if "CellCenter" in mesh.cell_data:
+                centers = np.array(mesh.cell_data["CellCenter"])
+                centers[:, 2] = shell_points[0, 2]
+                mesh.cell_data["CellCenter"] = centers
 
     else:
         raise ValueError(f"invalid cell type '{celltype}'")
