@@ -58,48 +58,124 @@ p.add_axes()  # type: ignore
 p.view_xy()  # type: ignore
 p.screenshot("nightmare_fuel.png", transparent_background=True, return_img=False)
 
-# Example 3: conformal QuadTree
-bmesh = pvg.Rectangle(5000.0, 10000.0, 20, 40)
-qtree = pvg.QuadTree(bmesh, max_depth=2)
-qtree = qtree.add_boundary_polygon(pvg.examples.freyberg.load_outcrop())
-qtree = qtree.add_polyline(pvg.examples.freyberg.load_river(), group="River")
+# # Example 3: conformal QuadTree
+# bmesh = pvg.Rectangle(5000.0, 10000.0, 20, 40)
+# qtree = pvg.QuadTree(bmesh, max_depth=2)
+# qtree = qtree.add_boundary_polygon(pvg.examples.freyberg.load_outcrop())
+# qtree = qtree.add_polyline(pvg.examples.freyberg.load_river(), group="River")
 
-for well in pvg.examples.freyberg.load_wells():
-    qtree = qtree.add_point(well, group="Well")
+# for well in pvg.examples.freyberg.load_wells():
+#     qtree = qtree.add_point(well, group="Well")
 
-mesh = qtree.generate_mesh(balance=True, conformal=False)
-mesh_conformal = qtree.generate_mesh(balance=True, conformal=True)
-connectivity = pvg.get_connectivity(mesh)
-connectivity_conformal = pvg.get_connectivity(mesh_conformal)
+# mesh = qtree.generate_mesh(balance=True, conformal=False)
+# mesh_conformal = qtree.generate_mesh(balance=True, conformal=True)
+# connectivity = pvg.get_connectivity(mesh)
+# connectivity_conformal = pvg.get_connectivity(mesh_conformal)
+
+# p = pv.Plotter(
+#     window_size=[1200, 800],
+#     shape=(1, 3),
+#     off_screen=True,
+#     border=False,
+# )
+# p.theme.font.color = "#808080"
+# p.link_views()
+
+# p.subplot(0, 0)
+# p.add_mesh(mesh, style="wireframe", line_width=1.6, color="#7D8590")
+# p.add_title("Mesh", font_size=12)
+
+# p.subplot(0, 1)
+# p.add_mesh(mesh, style="wireframe", line_width=1.6, color="#7D8590")
+# p.add_mesh(connectivity, color="#46D3CF", line_width=1.2, opacity=0.8)
+# p.add_title("Nonconformal", font_size=12)
+
+# p.subplot(0, 2)
+# p.add_mesh(mesh_conformal, style="wireframe", line_width=1.6, color="#7D8590")
+# p.add_mesh(connectivity_conformal, color="#46D3CF", line_width=1.2, opacity=0.8)
+# p.add_title("Conformal", font_size=12)
+
+# p.view_xy()  # type: ignore
+# p.camera.parallel_projection = True
+# p.camera.parallel_scale = 6400.0
+# p.screenshot("quadtree.png", transparent_background=True, return_img=False)
+# p.close()
+
+# Example 3: Delaunay and QuadTree mesh
+outcrop = pvg.examples.freyberg.load_outcrop()
+river = pvg.examples.freyberg.load_river()
+wells = pvg.examples.freyberg.load_wells()
+tri = (
+    pvg.DelaunayMesh2D(outcrop, cellsize=1000.0)
+    .add_polyline(river, cellsize=150.0, growth=1.2, group="River")
+    .add_points(wells, cellsize=150.0, constraint=6, group="Well")
+    .generate_mesh()
+)
+quad = (
+    pvg.QuadTree(pvg.Rectangle(5000.0, 10000.0, 20, 40), max_depth=2)
+    .add_boundary_polygon(outcrop)
+    .add_polyline(river, group="River")
+    .add_points(wells, group="Well")
+    .generate_mesh(balance=True, conformal=True)
+)
+tri_voro = pvg.VoronoiMesh2D(tri, preference="point").generate_mesh()
+quad_voro = pvg.VoronoiMesh2D(quad, preference="cell").generate_mesh()
 
 p = pv.Plotter(
-    window_size=[1200, 800],
-    shape=(1, 3),
+    window_size=[500, 1000],
+    shape=(2, 2),
     off_screen=True,
+    image_scale=2,
+    lighting="none",
     border=False,
 )
 p.theme.font.color = "#808080"
 p.link_views()
 
 p.subplot(0, 0)
-p.add_mesh(mesh, style="wireframe", line_width=1.6, color="#7D8590")
-p.add_title("Mesh", font_size=12)
+p.add_mesh(tri, style="wireframe", line_width=1.6, color="#7D8590")
+p.add_mesh(
+    tri.extract_cells(pvg.get_cell_group(tri) == "default", invert=True),
+    color="#46D3CF",
+    point_size=8,
+    line_width=4,
+    show_scalar_bar=False,
+)
+p.add_title("Delaunay 2D", font_size=20)
 
 p.subplot(0, 1)
-p.add_mesh(mesh, style="wireframe", line_width=1.6, color="#7D8590")
-p.add_mesh(connectivity, color="#46D3CF", line_width=1.2, opacity=0.8)
-p.add_title("Nonconformal", font_size=12)
+p.add_mesh(quad, style="wireframe", line_width=1.6, color="#7D8590")
+p.add_mesh(
+    quad.extract_cells(pvg.get_cell_group(quad) == "default", invert=True),
+    color="#46D3CF",
+    show_scalar_bar=False,
+)
+p.add_title("QuadTree", font_size=20)
 
-p.subplot(0, 2)
-p.add_mesh(mesh_conformal, style="wireframe", line_width=1.6, color="#7D8590")
-p.add_mesh(connectivity_conformal, color="#46D3CF", line_width=1.2, opacity=0.8)
-p.add_title("Conformal", font_size=12)
+p.subplot(1, 0)
+p.add_mesh(tri_voro, style="wireframe", line_width=1.6, color="#7D8590")
+p.add_mesh(
+    tri_voro.extract_cells(pvg.get_cell_group(tri_voro) == "default", invert=True),
+    color="#46D3CF",
+    show_scalar_bar=False,
+)
+p.add_title("Delaunay 2D\nVoronoi", font_size=20)
 
-p.view_xy()  # type: ignore
-p.camera.parallel_projection = True
-p.camera.parallel_scale = 6400.0
-p.screenshot("quadtree.png", transparent_background=True, return_img=False)
-p.close()
+p.subplot(1, 1)
+p.add_mesh(quad_voro, style="wireframe", line_width=1.6, color="#7D8590")
+p.add_mesh(
+    quad_voro.extract_cells(pvg.get_cell_group(quad_voro) == "default", invert=True),
+    color="#46D3CF",
+    show_scalar_bar=False,
+)
+p.add_title("QuadTree\nVoronoi", font_size=20)
+
+p.camera_position = [
+    (2500.0000000000005, 5942.374795407822, 23763.450109691315),
+    (2500.0000000000005, 5942.374795407822, 0.0),
+    (0.0, 1.0, 0.0),
+]
+p.screenshot("freyberg.png", transparent_background=True, return_img=False)
 
 # Example 4: topographic terrain
 terrain = pv.examples.download_crater_topo().extract_subset(

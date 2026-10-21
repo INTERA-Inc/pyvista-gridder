@@ -521,11 +521,13 @@ def Polygon(
         mesh = pv.UnstructuredGrid(cells, celltypes, points)
 
     elif celltype in {"quad", "triangle"}:
-        is_xy = bool(np.all(shell_points[:, 2] == shell_points[0, 2]))
+        constant_axes = np.flatnonzero(np.all(shell_points == shell_points[0], axis=0))
+        axis = int(constant_axes[-1]) if constant_axes.size else None
 
-        if is_xy:
-            projected_shell = shell_points[:, :2]
-            projected_holes = [hole[:, :2] for hole in holes_points]
+        if axis is not None:
+            in_plane = np.delete(np.arange(3), axis)
+            projected_shell = shell_points[:, in_plane]
+            projected_holes = [hole[:, in_plane] for hole in holes_points]
 
         else:
             # Fit plane via SVD centered at the centroid
@@ -560,7 +562,8 @@ def Polygon(
             optimization=optimization,
             engine=engine,
         )
-        if not is_xy:
+
+        if axis is None:
             mesh.points = to_3d(mesh.points)
 
             if "CellCenter" in mesh.cell_data:
@@ -568,14 +571,18 @@ def Polygon(
                     np.asarray(mesh.cell_data["CellCenter"])
                 )
 
-        elif shell_points[0, 2] != 0.0:
-            coordinates = np.array(mesh.points)
-            coordinates[:, 2] = shell_points[0, 2]
-            mesh.points = coordinates
+        elif axis != 2 or shell_points[0, axis] != 0.0:
+            mesh.points = np.insert(
+                np.asarray(mesh.points)[:, :2], axis, shell_points[0, axis], axis=1
+            )
+
             if "CellCenter" in mesh.cell_data:
-                centers = np.array(mesh.cell_data["CellCenter"])
-                centers[:, 2] = shell_points[0, 2]
-                mesh.cell_data["CellCenter"] = centers
+                mesh.cell_data["CellCenter"] = np.insert(
+                    np.asarray(mesh.cell_data["CellCenter"])[:, :2],
+                    axis,
+                    shell_points[0, axis],
+                    axis=1,
+                )
 
     else:
         raise ValueError(f"invalid cell type '{celltype}'")
