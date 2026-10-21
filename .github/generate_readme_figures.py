@@ -1,7 +1,22 @@
 import numpy as np
 import pyvista as pv
+from PIL import Image
 
 import pvgridder as pvg
+
+
+def save_plot(filename, plotter):
+    img = plotter.screenshot(transparent_background=True, return_img=True)
+    alpha = img[..., 3]
+    rows, cols = np.where(alpha > 0)
+
+    if rows.size > 0 and cols.size > 0:
+        img = img[
+            rows.min() : rows.max() + 1,
+            cols.min() : cols.max() + 1,
+        ]
+
+    Image.fromarray(img).save(filename)
 
 
 # Example 1: anticline
@@ -29,7 +44,7 @@ p.camera_position = [
     (0.0, 0.0, 1.0),
 ]
 p.add_axes()  # type: ignore
-p.screenshot("anticline.png", transparent_background=True, return_img=False)
+save_plot("anticline.png", p)
 
 # Example 2: nightmare fuel
 smile_radius = 0.64
@@ -56,7 +71,7 @@ p.add_mesh(
 )
 p.add_axes()  # type: ignore
 p.view_xy()  # type: ignore
-p.screenshot("nightmare_fuel.png", transparent_background=True, return_img=False)
+save_plot("nightmare_fuel.png", p)
 
 # # Example 3: conformal QuadTree
 # bmesh = pvg.Rectangle(5000.0, 10000.0, 20, 40)
@@ -98,7 +113,7 @@ p.screenshot("nightmare_fuel.png", transparent_background=True, return_img=False
 # p.view_xy()  # type: ignore
 # p.camera.parallel_projection = True
 # p.camera.parallel_scale = 6400.0
-# p.screenshot("quadtree.png", transparent_background=True, return_img=False)
+# save_plot("quadtree.png", p)
 # p.close()
 
 # Example 3: Delaunay and QuadTree mesh
@@ -175,7 +190,7 @@ p.camera_position = [
     (2500.0000000000005, 5942.374795407822, 0.0),
     (0.0, 1.0, 0.0),
 ]
-p.screenshot("freyberg.png", transparent_background=True, return_img=False)
+save_plot("freyberg.png", p)
 
 # Example 4: topographic terrain
 terrain = pv.examples.download_crater_topo().extract_subset(
@@ -211,4 +226,4 @@ p.camera_position = [
     (0.0, 0.0, 1.0),
 ]
 p.add_axes()  # type: ignore
-p.screenshot("topographic_terrain.png", transparent_background=True, return_img=False)
+save_plot("topographic_terrain.png", p)
