@@ -575,7 +575,7 @@ def Polygon(
             mesh.points = np.insert(
                 np.asarray(mesh.points)[:, :2], axis, shell_points[0, axis], axis=1
             )
-            
+
             if "CellCenter" in mesh.cell_data:
                 mesh.cell_data["CellCenter"] = np.insert(
                     np.asarray(mesh.cell_data["CellCenter"])[:, :2],
