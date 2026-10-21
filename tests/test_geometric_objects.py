@@ -102,6 +102,30 @@ def test_polygon(shell, holes, engine, area_ref, n_cells_triangle_ref):
             assert mesh.n_cells == n_cells_triangle_ref
 
 
+@pytest.mark.parametrize(
+    "axis, n_cells_ref",
+    [
+        pytest.param(2, 104, id="base"),
+        pytest.param(1, 104, id="plane=xz"),
+        pytest.param(0, 104, id="plane=yz"),
+    ],
+)
+def test_polygon_plane(axis, n_cells_ref):
+    """Test polygon meshing without rotation in coordinate-aligned planes."""
+    shell = np.insert(np.array([[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]]), axis, 5.0, axis=1)
+    hole = np.insert(np.array([[1.0, 1.0], [3.0, 1.0], [3.0, 3.0], [1.0, 3.0]]), axis, 5.0, axis=1)
+    mesh = pvg.Polygon(shell, holes=[hole], celltype="triangle", cellsize=0.5)
+    centers = mesh.cell_data["CellCenter"]
+    projected = np.delete(centers, axis, axis=1)
+    
+    assert mesh.n_cells == n_cells_ref
+    assert np.all(mesh.points[:, axis] == 5.0)
+    assert np.all(centers[:, axis] == 5.0)
+    assert np.allclose(centers, mesh.cell_centers().points)
+    assert not ((projected > 1.0) & (projected < 3.0)).all(axis=1).any()
+    assert np.isclose(mesh.compute_cell_sizes().cell_data["Area"].sum(), 12.0)
+
+
 def test_quadrilateral():
     """Test quadrilateral geometric object."""
     points = [
