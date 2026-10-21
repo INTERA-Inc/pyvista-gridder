@@ -14,7 +14,7 @@ Structured and unstructured mesh generation using PyVista for the Finite-Element
 
 ## Features
 
-- **Pre-Meshed Geometric Primitives**: Create basic geometric objects with pre-configured structured meshes, using structured grids whenever possible.
+- **Pre-Meshed Geometric Primitives**: Create basic geometric objects with pre-configured meshes, using structured grids whenever possible.
 - **Line/Polyline Extrusion**: Extrude lines or polylines into 2D structured quadrilateral grids.
 - **Surface Extrusion**: Extrude surface meshes into 3D volumetric meshes while preserving cell types.
 - **1.5D/2.5D Mesh Creation**: Stack polylines or surfaces to build layered meshes, ideal for geological modeling and similar applications.
@@ -66,7 +66,9 @@ mesh = (
 mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 ```
 
-![anticline](https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/anticline.png?raw=true)
+<p align="center">
+  <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/anticline.png?raw=true" alt="anticline" width="80%">
+</p>
 
 ### 2D Voronoi Mesh
 
@@ -90,7 +92,9 @@ mesh = (
 mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 ```
 
-![nightmare-fuel](https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true)
+<p align="center">
+  <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/nightmare_fuel.png?raw=true" alt="nightmare-fuel" width="80%">
+</p>
 
 ### Freyberg Model
 
@@ -117,7 +121,9 @@ tri_voro = pvg.VoronoiMesh2D(tri, preference="point").generate_mesh()
 quad_voro = pvg.VoronoiMesh2D(quad, preference="cell").generate_mesh()
 ```
 
-![freyberg](https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/freyberg.png?raw=true)
+<p align="center">
+  <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/freyberg.png?raw=true" alt="freyberg" width="60%">
+</p>
 
 ### 2.5D Geological Model
 
@@ -144,7 +150,9 @@ mesh = (
 mesh.plot(show_edges=True, scalars=pvg.get_cell_group(mesh))
 ```
 
-![topographic-terrain](https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true)
+<p align="center">
+  <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/topographic_terrain.png?raw=true" alt="topographic-terrain" width="80%">
+</p>
 
 ## Acknowledgements
 
