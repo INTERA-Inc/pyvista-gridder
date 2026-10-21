@@ -30,9 +30,10 @@ def load(
     voronoi : bool, default False
         If True, generate a Voronoi mesh.
     max_depth : int, default 2
-        Maximum depth of the QuadTree mesh. Only if type_ is 'quadtree'.
+        Maximum depth of the QuadTree mesh. Only if *type_* is 'quadtree'.
     conformal : bool, default True
-        If True, generate a conformal mesh. Only if type_ is 'quadtree'.
+        If True, generate a conformal mesh. Only if *type_* is 'quadtree'. Ignored if
+        *voronoi* is True.
 
     Returns
     -------
@@ -61,7 +62,7 @@ def load(
             .add_boundary_polygon(outcrop)
             .add_polyline(river, group="River")
             .add_points(wells, group="Well")
-            .generate_mesh(balance=True, conformal=conformal)
+            .generate_mesh(balance=True, conformal=conformal or voronoi)
         )
 
     if voronoi:
