@@ -1,5 +1,5 @@
 <h1 align="center">
-   <img src=".github/logo/logo.png" width=160px><br>
+   <img src="https://github.com/INTERA-Inc/pyvista-gridder/blob/main/.github/logo/logo.png?raw=true" width=160px><br>
    PyVista Gridder
 </h1>
 

@@ -176,21 +176,34 @@ def test_quadtree_add_boundary_polygon(depth, cellsize, n_cells_ref, request):
 
 
 @pytest.mark.parametrize(
-    "radius, center, boundary_only, depth, group, n_cells_ref, n_circle_cells",
+    "radius, center, boundary_only, depth, cellsize, group, n_cells_ref, n_circle_cells",
     [
-        pytest.param(1.0, (1.5, 1.5), False, 1, "circle", 36, 12, id="base"),
-        pytest.param(0.5, (1.5, 1.5), False, 1, "circle", 24, 4, id="radius=0.5"),
-        pytest.param(1.0, None, False, 1, "circle", 18, 3, id="center=None"),
+        pytest.param(1.0, (1.5, 1.5), False, 1, None, "circle", 36, 12, id="base"),
+        pytest.param(0.5, (1.5, 1.5), False, 1, None, "circle", 24, 4, id="radius=0.5"),
+        pytest.param(1.0, None, False, 1, None, "circle", 18, 3, id="center=None"),
         pytest.param(
-            1.0, (1.5, 1.5), True, 1, "circle", 33, 9, id="boundary_only=True"
+            1.0, (1.5, 1.5), True, 1, None, "circle", 33, 9, id="boundary_only=True"
         ),
-        pytest.param(1.0, (1.5, 1.5), False, 2, "circle", 102, 52, id="depth=2"),
-        pytest.param(1.0, (1.5, 1.5), False, None, "circle", 102, 52, id="depth=None"),
-        pytest.param(1.0, (1.5, 1.5), False, 1, None, 36, 0, id="group=None"),
+        pytest.param(1.0, (1.5, 1.5), False, 2, None, "circle", 102, 52, id="depth=2"),
+        pytest.param(
+            1.0, (1.5, 1.5), False, None, None, "circle", 102, 52, id="depth=None"
+        ),
+        pytest.param(
+            1.0, (1.5, 1.5), False, None, 0.1, "circle", 300, 208, id="cellsize=0.1"
+        ),
+        pytest.param(1.0, (1.5, 1.5), False, 1, None, None, 36, 0, id="group=None"),
     ],
 )
 def test_quadtree_add_circle(
-    radius, center, boundary_only, depth, group, n_cells_ref, n_circle_cells, request
+    radius,
+    center,
+    boundary_only,
+    depth,
+    cellsize,
+    group,
+    n_cells_ref,
+    n_circle_cells,
+    request,
 ):
     """Test the method pvgridder.QuadTree.add_circle."""
     bmesh = request.getfixturevalue("structured_square")
@@ -201,6 +214,7 @@ def test_quadtree_add_circle(
             center=center,
             boundary_only=boundary_only,
             depth=depth,
+            cellsize=cellsize,
             group=group,
         )
         .generate_mesh(balance=False)
