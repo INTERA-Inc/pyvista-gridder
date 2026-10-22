@@ -311,6 +311,7 @@ class QuadTree(MeshBase):
         center: Optional[VectorLike] = None,
         boundary_only: bool = False,
         depth: Optional[int] = None,
+        cellsize: Optional[float] = None,
         group: Optional[str] = None,
     ) -> Self:
         """
@@ -326,6 +327,8 @@ class QuadTree(MeshBase):
             If True, only refine cells intersecting the boundary.
         depth : int, optional
             Depth for refinement.
+        cellsize : scalar, optional
+            Target cell size for refinement. Supersedes *depth* if specified.
         group : str, optional
             Group name.
 
@@ -344,7 +347,11 @@ class QuadTree(MeshBase):
         points = center_ + radius * np.column_stack((np.cos(angles), np.sin(angles)))
 
         return self.add_polygon(
-            points, depth=depth, group=group, boundary_only=boundary_only
+            points,
+            boundary_only=boundary_only,
+            depth=depth,
+            cellsize=cellsize,
+            group=group,
         )
 
     def add_point(
@@ -582,10 +589,10 @@ class QuadTree(MeshBase):
 
         return self.add_polygon(
             points,
+            boundary_only=boundary_only,
             depth=depth,
             cellsize=cellsize,
             group=group,
-            boundary_only=boundary_only,
         )
 
     def add_square(
