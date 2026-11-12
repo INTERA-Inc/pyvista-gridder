@@ -119,7 +119,7 @@ def test_polygon_plane(axis, n_cells_ref):
         np.array([[1.0, 1.0], [3.0, 1.0], [3.0, 3.0], [1.0, 3.0]]), axis, 5.0, axis=1
     )
     mesh = pvg.Polygon(shell, holes=[hole], celltype="triangle", cellsize=0.5)
-    centers = mesh.cell_data["CellCenter"]
+    centers = pvg.get_cell_centers(mesh)
     projected = np.delete(centers, axis, axis=1)
 
     assert mesh.n_cells == n_cells_ref

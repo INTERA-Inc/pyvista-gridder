@@ -587,6 +587,8 @@ def Polygon(
     else:
         raise ValueError(f"invalid cell type '{celltype}'")
 
+    mesh.clear_data()
+
     return mesh
 
 
