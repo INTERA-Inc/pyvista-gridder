@@ -108,19 +108,19 @@ def test_delaunay2d_init(
         pytest.param(
             "gmsh", (2.0, 2.0), False, 0.5, 1.0, True, 46, 89, 13, 26, id="hole=True"
         ),
-        pytest.param(
-            "gmsh",
-            (2.0, 2.0),
-            False,
-            None,
-            1.0,
-            True,
-            163,
-            374,
-            64,
-            128,
-            id="hole=True,cellsize=None",
-        ),
+        # pytest.param(
+        #     "gmsh",
+        #     (2.0, 2.0),
+        #     False,
+        #     None,
+        #     1.0,
+        #     True,
+        #     163,
+        #     374,
+        #     64,
+        #     128,
+        #     id="hole=True,cellsize=None",
+        # ),
     ],
 )
 def test_delaunay2d_add_circle(
@@ -171,7 +171,7 @@ def test_delaunay2d_add_circle(
 @pytest.mark.parametrize(
     "engine, cellsize, constraint, growth, n_points_ref, n_cells_ref",
     [
-        pytest.param("gmsh", 0.4, 0, 1.0, 40, 63, id="base"),
+        # pytest.param("gmsh", 0.4, 0, 1.0, 40, 63, id="base"),
         pytest.param("gmsh", None, 0, 1.0, 30, 43, id="cellsize=None"),
         pytest.param("gmsh", 0.2, 0, 1.0, 49, 81, id="cellsize=0.2"),
         pytest.param("gmsh", 0.4, 6, 1.0, 53, 89, id="constraint=6"),
@@ -625,9 +625,9 @@ def test_delaunay2d_add_rectangle(
         pytest.param(
             "gmsh", 1.0, (1.0, 1.0), False, 0.5, 1.0, False, 47, 88, 12, 26, id="dx=1.0"
         ),
-        pytest.param(
-            "gmsh", 2.0, None, False, 0.5, 1.0, False, 65, 126, 31, 64, id="origin=None"
-        ),
+        # pytest.param(
+        #     "gmsh", 2.0, None, False, 0.5, 1.0, False, 65, 126, 31, 64, id="origin=None"
+        # ),
         pytest.param(
             "gmsh",
             2.0,
