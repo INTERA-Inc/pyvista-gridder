@@ -63,6 +63,12 @@ class MeshMerge(MeshBase):
         """
         mesh = mesh.cast_to_unstructured_grid()
 
+        if group is not None:
+            mesh = mesh.copy()
+
+            if "CellGroup" in mesh.cell_data and "CellGroup" in mesh.user_dict:
+                _ = mesh.cell_data.pop("CellGroup")
+
         # Check for existing user_dict
         if "_PYVISTA_USER_DICT" not in mesh.field_data:
             mesh.field_data["_PYVISTA_USER_DICT"] = "{}"
